@@ -6,7 +6,8 @@ apps in a simple and more isolated structure.
 
 ## Utility Files
 
-The following should be modified as appropriate for a given stand alone Django app we are making or testing.
+Do a global search (not just the following files) for APPNAME and replace it with the stand alone app name.
+The following files may need additional modifications for a given stand alone Django app we are making or testing.
 
 * boot_django.py - sets up & configure Django settings as needed for the stand alone Django app.
 * djangoshell.py - start a shell that is aware of our configured Django project including the stand alone app.
