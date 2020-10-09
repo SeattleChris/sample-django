@@ -1,1 +1,1 @@
--e ../../django-receipts
+-e ../../APPNAME

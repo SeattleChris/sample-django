@@ -4,4 +4,4 @@ find . -name "*.pyc" -exec rm {} \;
 rm db.sqlite3
 
 python manage.py migrate
-python manage.py loaddata receipts
+python manage.py loaddata APPNAME
