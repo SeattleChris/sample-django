@@ -11,21 +11,23 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+from distutils.util import strtobool
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+LOCAL = True if BASE_DIR == os.environ.get('LOCAL_BASE_DIR') else False
+# HOSTED_PYTHONANYWHERE = strtobool(os.environ.get('HOSTED_PYTHONANYWHERE', 'False'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = ')y#rjuqas&ja2(=us4y+6c*5u^i7^ws*)mn&p7$lranqq6l^#u'
-
+SECRET_KEY = os.environ.get('SECRET_KEY', None)
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['127.0.0.1', ]
+DEBUG = strtobool(os.environ.get('DEBUG', 'False'))
+# Update LIVE_ALLOWED_HOSTS in ENV settings if adding another environment.
+ALLOWED_HOSTS = os.environ.get('LOCAL_ALLOWED_HOSTS' if LOCAL else 'LIVE_ALLOWED_HOSTS',
+                               os.environ.get('ALLOWED_HOSTS', '')).split(',')
 
 
 # Application definition
@@ -56,6 +58,7 @@ ROOT_URLCONF = 'project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        # 'DIRS': [os.path.join(BASE_DIR, 'templates')],  # CUSTOM: Added when adding users model app
         'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -69,54 +72,88 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'project.wsgi.application'
-
+WSGI_APPLICATION = 'project.wsgi.application' if LOCAL else os.environ.get('LIVE_WSGI_FILE', 'project.wsgi.application')
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
+DB_LOOKUP = {
+    'postgres': 'django.db.backends.postgresql_psycopg2',
+    'mysql': 'django.db.backends.mysql',  # Support for MySQL 5.6+
+    None: 'django.db.backends.sqlite3'
+    }
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    },
+    # 'default': {
+    #     'ENGINE': DB_LOOKUP[os.environ.get('DB_TYPE')],
+    #     'HOST': os.environ.get('LOCAL_DB_HOST' if LOCAL else 'LIVE_DB_HOST', os.environ.get('DB_HOST', '')),
+    #     'PORT': os.environ.get('LOCAL_DB_PORT' if LOCAL else 'LIVE_DB_PORT', os.environ.get('DB_PORT', '')),  # 5432
+    #     'NAME': os.environ.get('LOCAL_DB_NAME' if LOCAL else 'LIVE_DB_NAME', os.environ.get('DB_NAME', 'postgres')),
+    #     'USER': os.environ.get('LOCAL_DB_USER' if LOCAL else 'LIVE_DB_USER', os.environ.get('DB_USER', 'postgres')),
+    #     'PASSWORD': os.environ.get('LOCAL_DB_PASS' if LOCAL else 'LIVE_DB_PASS', os.environ.get('DB_PASS', '')),
+    #     'TEST': {
+    #         'NAME': 'test_db'
+    #         }
+    #     }
     }
-}
-
+if os.environ.get('DB_TYPE') == 'mysql':
+    DATABASES['default']['OPTIONS'] = {'charset': 'utf8mb4'}
+    MAX_INDEX_CHARACTER_SIZE = 191
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator', },
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', },
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator', },
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator', },
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+LANGUAGE_CODE = os.environ.get('LANGUAGE_CODE', 'en-us')
+TIME_ZONE = os.environ.get('TIME_ZONE', 'UTC')
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
+USE_S3 = strtobool(os.environ.get('USE_S3', 'False'))
+if USE_S3:  # pragma: no cover
+    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
+    AWS_DEFAULT_ACL = None
+    # AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3-website-{AWS_S3_REGION_NAME}.amazonaws.com'
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    AWS_LOCATION = 'www'
+    STATICFILES_LOCATION = 'static'
+    STATICFILES_STORAGE = 'web.storage_backends.StaticStorage'
+    MEDIAFILES_LOCATION = 'media'
+    # TODO: MEDIA_ROOT Seems to still keep them on EC2 not S3
+    # DEFAULT_FILE_STORAGE = 'web.storage_backends.PublicMediaStorage'
+else:
+    STATIC_URL = '/static/'
+    # STATIC_ROOT = os.path.join(BASE_DIR, '..', 'www', 'static')
+    # MEDIA_URL = '/media/'
+    # MEDIA_ROOT = os.path.join(BASE_DIR, '..', 'www', 'media')
+# STATICFILES_DIRS = (os.path.join(BASE_DIR, 'static'),)
+# STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+if DEBUG:  # or HOSTED_PYTHONANYWHERE:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+elif USE_S3:  # pragma: no cover
+    EMAIL_BACKEND = 'django_ses.SESBackend'
+    AWS_SES_REGION_NAME = os.environ.get('AWS_SES_REGION_NAME')
+    AWS_SES_REGION_ENDPOINT = os.environ.get('AWS_SES_REGION_ENDPOINT')
+else:  # pragma: no cover
+    # TODO: Choose appropriate Email backend
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-STATIC_URL = '/static/'
+# CUSTOM Additional Settings for this Project
