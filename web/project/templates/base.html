@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link href="https://fonts.googleapis.com/css?family=Diplomata|Open+Sans&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/normalize.css' %}">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block super_head %}
+
+  {% block head %}
+  <title>DEFAULT SITE TITLE</title>
+  {% endblock head %}
+
+  {% endblock super_head %}
+</head>
+<body>
+<header>
+  <h1>
+    <a href="{% url 'home' %}" title="Home Page">
+      Home Page
+    </a>
+  </h1>
+  <nav role="navigation">
+    <ul class="site-nav">
+      <li><a href="{% url 'admin:index' %}" title="Admin">Admin</a></li>
+      <!-- <li><a href="{% url 'named_path' %}" title="SEO and User helpful title">Short Desc</a></li> -->
+      <!-- <li><a href="{% url 'named_path' %}" title="SEO and User helpful title">Short Desc</a></li> -->
+      <li><a href="#">Info</a></li>
+    </ul>
+  </nav>
+</header>
+
+{% block super_content %}
+<main>
+{% block content %}
+<section>
+  <article>
+    <h2>No Content on this view yet.</h2>
+    <p>This page does not yet have content. </p>
+  </article>
+</section>
+<section>
+
+</section>
+
+{% endblock content %}
+<div id="left-design-layout">
+  <section>
+  </section>
+</div> <!-- div#left-design-layout  -->
+</main>
+{% endblock super_content %}
+
+<footer>
+  <a href="{% url 'home' %}" title="Home Page">
+    Home Page Logo Can Go Here
+  </a>
+  <ul>
+    <li><a href="{% url 'home' %}" title="Home Site">Home</a></li>
+    <!-- <li><a href="{% url 'named_path' %}" title="SEO and User helpful title">Short Desc</a></li> -->
+  </ul>
+  <p>2020 &copy; Business Name</p>
+</footer>
+{% block super_end %}
+<!-- <script src="script.js"></script> -->
+{% endblock super_end %}
+</body>
+</html>
