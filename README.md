@@ -6,7 +6,6 @@ apps in a simple and more isolated structure.
 
 ## Utility Files
 
-Do a global search (not just the following files) for APPNAME and replace it with the stand alone app name.
 The following files may need additional modifications for a given stand alone Django app we are making or testing.
 
 * boot_django.py - sets up & configure Django settings as needed for the stand alone Django app.
@@ -17,15 +16,32 @@ The following files may need additional modifications for a given stand alone Dj
 
 ## Making an Installable Django App as a Package Published to PyPI
 
-An installable Django app needs to be made into a package.
-This generally means it should be made into an egg, wheel, or source distribution.
-These are built with setup tools.
+An installable Django app needs to be made into a package. This generally means it should be made into an egg, wheel, or source distribution. These are built with setup tools.
+
+Overview Steps:
+
+* Create an app with the standard django-admin commands. Develop as desired & confirm it works.
+* Develop tests for the app. Confirm they are working.
+* Move the app code to a new directory at the root of the repo. This directory name can match the app name.
+* Do a global search for APPNAME and replace it with the stand alone app name.
+* Confirm project changes:
+  * settings should include the app in the installed_apps list
+  * urls should include the app urls.
+* Confirm utility files changes: `makemigrations.py`, `load_tests.py`, `boot_django.py`
+* Modify `setup.cfg` with the appropriate name and url, and possibly other settings.
+* Install the local package:
+  * `pipenv install -e .`
+  * TODO: UPDATE PIP COMMAND LINE HERE
+* Confirm the project works, recognizing the app from the installed packages.
+* Create a repo for the standalone Django app. Move all app code and expected typical support files.
+* Update `setup.cfg` with the new repo for url, and any other changes needed.
+* Publish to PyPI (see section below).
 
 Expected typical support files:
 
 * README.rst - general information about the package (README.md is possible with extra parameters).
 * setup.cfg - has metadata and options sections for clearly structured build and description of the package.
-* setup.py -
+* setup.py - shim to execute the setup.cfg file.
 * pyproject.toml - See [Brett Cannon's article](https://snarky.ca/what-the-heck-is-pyproject-toml/)
 * tox.ini - defines which combinations of environments to test.
 * [app directory] - holding the actual Django app code.
