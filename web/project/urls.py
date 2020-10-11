@@ -6,5 +6,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path('', home_view, name='home'),
     path('named', NamedView.as_view(), name='named_path'),
-    # path("APPNAME/", include("APPNAME.urls")),
+    path("receipts/", include("receipts.urls")),
 ]
