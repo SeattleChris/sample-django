@@ -5,10 +5,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <link href="https://fonts.googleapis.com/css?family=Diplomata|Open+Sans&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Diplomata|Open+Sans&display=swap">
   <link rel="stylesheet" href="{% static 'css/normalize.css' %}">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   {% block super_head %}
+
+  {% if css_sheets %}
+  {% for sheet in css_sheets %}
+  <link rel="stylesheet" href="{% static sheet %}" />
+  {% endfor %}
+  {% endif %}
 
   {% block head %}
   <title>DEFAULT SITE TITLE</title>
@@ -26,8 +32,7 @@
   <nav role="navigation">
     <ul class="site-nav">
       <li><a href="{% url 'admin:index' %}" title="Admin">Admin</a></li>
-      <!-- <li><a href="{% url 'named_path' %}" title="SEO and User helpful title">Short Desc</a></li> -->
-      <!-- <li><a href="{% url 'named_path' %}" title="SEO and User helpful title">Short Desc</a></li> -->
+      <li><a href="{% url 'named_path' %}" title="SEO and User helpful title">Named Path</a></li>
       <li><a href="#">Info</a></li>
     </ul>
   </nav>
@@ -60,7 +65,7 @@
   </a>
   <ul>
     <li><a href="{% url 'home' %}" title="Home Site">Home</a></li>
-    <!-- <li><a href="{% url 'named_path' %}" title="SEO and User helpful title">Short Desc</a></li> -->
+    <li><a href="{% url 'named_path' %}" title="SEO and User helpful title">Named Path</a></li>
   </ul>
   <p>2020 &copy; Business Name</p>
 </footer>
