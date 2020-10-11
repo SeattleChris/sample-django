@@ -27,6 +27,7 @@
 <header>
   <h1>
     <a href="{% url 'home' %}" title="Home Page">
+      <img src="{% static 'assets/logo.svg' %}" alt="Company Name Logo" />
       Home Page
     </a>
   </h1>
@@ -53,22 +54,18 @@
 </section>
 
 {% endblock content %}
-<div id="left-design-layout">
-  <section>
-  </section>
-</div> <!-- div#left-design-layout  -->
 </main>
 {% endblock super_content %}
 
 <footer>
   <a href="{% url 'home' %}" title="Home Page">
-    <img src="{% static 'assets/logo.png' %}">
+    <img src="{% static 'assets/logo.svg' %}" alt="Company Name Logo" />
   </a>
   <ul>
     <li><a href="{% url 'home' %}" title="Home Site">Home</a></li>
     <li><a href="{% url 'named_path' %}" title="SEO and User helpful title">Named Path</a></li>
   </ul>
-  <p>2020 &copy; Business Name</p>
+  <p>2020 &copy; Company Name</p>
 </footer>
 {% block super_end %}
 <!-- <script src="script.js"></script> -->
