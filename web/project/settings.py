@@ -58,8 +58,8 @@ ROOT_URLCONF = 'project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        # 'DIRS': [os.path.join(BASE_DIR, 'templates')],  # CUSTOM: Added when adding users model app
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        # 'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -140,10 +140,10 @@ if USE_S3:  # pragma: no cover
     # DEFAULT_FILE_STORAGE = 'web.storage_backends.PublicMediaStorage'
 else:
     STATIC_URL = '/static/'
+    STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'), ]
     # STATIC_ROOT = os.path.join(BASE_DIR, '..', 'www', 'static')
     # MEDIA_URL = '/media/'
     # MEDIA_ROOT = os.path.join(BASE_DIR, '..', 'www', 'media')
-# STATICFILES_DIRS = (os.path.join(BASE_DIR, 'static'),)
 # STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 if DEBUG:  # or HOSTED_PYTHONANYWHERE:

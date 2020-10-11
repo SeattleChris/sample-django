@@ -1,0 +1,162 @@
+.clear { clear: both; }
+.nowrap { white-space: nowrap; }
+/* Default font-size for most browsers is 16px for 1rem */
+html { width: 98%; min-width: 20.03rem; max-width: 73rem; margin: 0 auto; padding: 0; }
+/* font-size: 81.25%;  */
+body {
+    background-color: #cccccc;
+    color: #111;
+    width: 100%; margin: 0; padding: 0;
+    font-family: 'Open Sans', sans-serif;
+    position: relative;
+}
+header, main, footer { width: 100%; }
+body > header h1 img { vertical-align: bottom; }
+/* Main Site Nav inside a nav inside of Header. Repeated page navigation in footer. */
+body > header nav { align-self: flex-end; text-align: right; font-size: 100%; }
+footer { font-size: 90%; text-align: center; }
+nav ul, footer ul {
+    margin: 0; padding: 0;
+    margin-block-start: 0; margin-block-end: 0;
+    padding-inline-start: 0;
+    list-style: none;
+}
+nav ul.site-nav a, body > header h1 a { text-decoration: none; }
+ul#user-login, nav label, nav li, footer li { display: inline-block; text-align: center; }
+nav li::before, footer li::after { content: ' | '; }
+footer li:last-child::after, ul#user-login li:first-child::before, ul li:first-child::before { content: ''; }
+nav ul#user-login { margin: 0.2rem 0 0.55rem; }
+nav ul.site-nav { background-color: #396887; color: #6791AD; font-weight: bold; padding: 0.3rem 0.25rem; }
+nav a, footer a { display: inline-block; padding: 0.1em 0.1em; }
+footer img { width: 9rem; border-radius: 1.25rem; margin: 0; padding: 0; }
+/* footer > a:first-child { display: none; } Hides footer img & link, until we want it */
+/* Nav Menu Toggle Button and Menu Settings (Currently Not Used) */
+/* Opacity & position for hiding in mobile. visibility: collapse is another option, perhaps less good. */
+/* input#menu-toggle[type=checkbox] { position: absolute; top: 0; right: 0; opacity: 0; } */
+/* Default State */
+/* body > header .nav-menu  { display: none; position: absolute; top: 7rem; right: 2rem; text-align: right; } */
+/* Toggled State */
+/* body > header input[type=checkbox]:checked ~ .nav-menu { display: inline-block; } */
+/* body > header label#menu {
+    -webkit-appearance: push-button;
+    -moz-appearance: button;
+    display: inline-block;
+    margin: 0.75rem 0 0.25rem 0;
+    padding: 0.5rem;
+    cursor: pointer;
+    background-color: #66050d;
+    color: #eeeeee;
+    border-radius: 1rem;
+} */
+/* Alternative background_color  #77161e; */
+/* End Nav Menu Toggle Button and Menu Settings (Currently Not Used) */
+/****************** End of Header & Footer Settings ************************/
+/* main > * { flex: 2 3; } */
+/* #left-design-layout {
+    order: -1;
+    flex: 1 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+#left-design-layout img { width: 100%; } */
+main section { display: flex; flex-direction: column; }
+main section p { margin: 1rem 0; }
+/* #offers { justify-content: space-evenly; text-align: center; } */
+/****************** End of Main Page Parts, Now sub-parts ************************/
+.video { position: relative; padding-top: 74.19%; width: 100%; }
+.video iframe, .video video { position: absolute; top:0; right:0; width:100%; height:100%; border-radius: 2rem; }
+/* List view (maybe detail view also) for ClassOffers */
+
+/****************** End of sub-parts. Form Styling ************************/
+/* Note: The .nowrap rule is taken advantage of within forms. */
+form input, form select, form textarea,
+form meter, form progress, form output {
+    margin: 0 1rem 0 0.5rem;
+    padding: 0.125rem 0.25rem;
+    /* font: inherit;
+    color: inherit; */
+    box-shadow: 0.125rem 0.125rem 0.375rem #EBEBEB;
+	-moz-box-shadow: 0.125rem 0.125rem 0.375rem #EBEBEB;
+	-webkit-box-shadow: 0.125rem 0.125rem 0.375rem #EBEBEB;
+	border-radius: 0.25rem;
+	-webkit-border-radius: 0.25rem;
+    -moz-border-radius: 0.25rem;
+}
+form label { text-align: right; }
+.helptext { text-align: left; margin-right: 1rem; }
+form input[type=text] { width: 10rem; }
+form input[type=email] { width: 18rem; }
+form input[type=url] { width: 25rem; }
+form input[type=password] { width: 7rem; }
+form input[maxlength] { width: unset; }
+form th { vertical-align: text-top; text-align: right; font-weight: bold; }
+form td, form th { padding: 0.25rem; }
+form > ul, form ul.fieldset_ul { list-style-type: none; }  /* TODO: update selection to avoid error list or help text */
+form > ul > li, form ul.fieldset_ul > li { margin: 0.5rem 0; }  /* TODO: update selection to avoid error list or help text */
+form .nowrap > .errorlist { white-space: normal; }
+form .fieldset_row { padding-top: 1rem; }
+form .fieldset_row legend { background-color: #80b0c8; padding: 0.125rem 0.5rem; }
+form .fieldset_table { font-size: inherit; }
+form .fieldset_ul { font-size: inherit; }
+
+/****************** End of sub-parts. Adjustments for screen size. ************************/
+/****************** Adjustments for screen size. ************************/
+@media screen and (max-width: 380px) {
+    /* .classoffer p.description, .classoffer ul { display: block; width: unset; } */
+    .shorten {
+        visibility: hidden;
+        font-size: 95%;
+    }
+    .shorten::before {
+        /* content: "stuff" attr("data-text"); */
+        /* content: "stuff"; */
+        content: attr(data-text);
+        /* content: ""; */
+        visibility: visible;
+    }
+}
+@media screen and (max-width: 460px) {
+    body > header h1 { font-size: 7vw; white-space: nowrap; margin: 0; padding: 0.25rem; }
+}
+@media screen and (min-width: 461px) {
+    main { display: flex; align-items: stretch; }
+    main section { margin: 0 1rem; justify-content: flex-start; }
+}
+@media screen and (min-width: 690px) {
+    main { min-height: 16.25rem; justify-content: space-evenly; }
+    /* Flex Header */
+    body > header { display: flex; justify-content: space-between; align-items: flex-start; }
+}
+/* @media screen and (max-width: 689px) { main { justify-content: space-evenly; } } */
+@media screen and (min-width: 833px) { body > header h1 { font-size: 3.6rem; } }
+@media screen and (min-width: 874px) { html { font-size: 1.48741vw; } }
+@media screen and (min-width: 1076px) { html { font-size: unset; } }
+
+/* Color Palette Style Guide
+*/
+
+/* Link Colors: General Page (over light background), Nav Bar and #offers (over dark background) */
+a:link, a:visited {
+    -webkit-transition-duration: 0.4s;
+    transition-duration: 0.4s;
+    color: #0074D9;
+    text-decoration-color: #0074D9;
+    text-decoration-style: solid;
+}
+a:visited { color: #004985; }
+a:hover, a:focus {
+    color: #222;
+    cursor: pointer;
+}
+a:active {
+    background-color: #F1D87A;
+    -webkit-transition-duration: 0s;
+    transition-duration: 0s;
+}
+.site-nav a:link, .site-nav a:visited { color: #F1D87A; }
+.site-nav a:hover, .site-nav a:focus { color: #FFF1BD; }
+nav ul.site-nav a:active { color: #D4AA7D; }
+
+/* End Link Colors */
