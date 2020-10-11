@@ -144,7 +144,6 @@ else:
     # STATIC_ROOT = os.path.join(BASE_DIR, '..', 'www', 'static')
     # MEDIA_URL = '/media/'
     # MEDIA_ROOT = os.path.join(BASE_DIR, '..', 'www', 'media')
-# STATICFILES_DIRS = (os.path.join(BASE_DIR, 'static'),)
 # STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 if DEBUG:  # or HOSTED_PYTHONANYWHERE:
