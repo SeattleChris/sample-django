@@ -1,8 +1,11 @@
 # sample-django
 
-This is useful for testing stand alone Django Apps.
-This is a simplified Django project with some helpful utilities to aid in investigating
-apps in a simple and more isolated structure.
+This serves as a structure for developing, or investigating, stand alone Django app packages. This provides both useful utilities and a simple isolated Django project environment. This also serves as a place to collect tools for general Django project development. This includes a variety of code snippets, utilities, content for mock-up and/or initial templates, and other resources that can be useful for both initial and ongoing Django projects. While these pieces do not warrant their own installable packages, the function snippets or resources that are useful for any given project can be copied and adapted as appropriate.
+
+## Utilities and Resources for Django Projects
+
+The aspects that are primarily concerning general Django Project development are
+[documented in this collection](project_tools.md).
 
 ## Utility Files
 
