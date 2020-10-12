@@ -1,21 +1,11 @@
 # sample-django
 
-This serves as a structure for developing, or investigating, stand alone Django app packages. This provides both useful utilities and a simple isolated Django project environment. This also serves as a place to collect tools for general Django project development. This includes a variety of code snippets, utilities, content for mock-up and/or initial templates, and other resources that can be useful for both initial and ongoing Django projects. While these pieces do not warrant their own installable packages, the function snippets or resources that are useful for any given project can be copied and adapted as appropriate.
+This serves as a structure for developing, or investigating, stand alone Django app packages. This provides useful utilities and a simple isolated Django project environment. This also serves as a place to collect tools for general Django project development. This includes a variety of code snippets, utilities, content for mock-up and/or initial templates, and other resources that can be useful for both initial and ongoing Django projects. While these pieces do not warrant their own installable packages, the function snippets or resources that are useful for any given project can be copied and adapted as appropriate.
 
 ## Utilities and Resources for Django Projects
 
 The aspects that are primarily concerning general Django Project development are
 [documented in this collection](project_tools.md).
-
-## Utility Files
-
-The following files may need additional modifications for a given stand alone Django app we are making or testing.
-
-* boot_django.py - sets up & configure Django settings as needed for the stand alone Django app.
-* djangoshell.py - start a shell that is aware of our configured Django project including the stand alone app.
-* makemigrations.py - creates the migration files needed for the stand alone Django app models.
-* migrate.py - performs table migrations so the database is setup as needed.
-* load_tests.py - can run all or some tests.Used by package manager to get its test suite, and by tox to run its tests.
 
 ## Making an Installable Django App as a Package Published to PyPI
 
@@ -24,7 +14,7 @@ An installable Django app needs to be made into a package. This generally means 
 Overview Steps:
 
 * Create an app with the standard django-admin commands. Develop as desired & confirm it works.
-* Develop tests for the app. Confirm they are working.
+* Make sure there are tests for the app, and they work, before the following steps to make it a stand alone app.
 * Move the app code to a new directory at the root of the repo. This directory name can match the app name.
 * Do a global search for APPNAME and replace it with the stand alone app name.
 * Confirm project changes:
@@ -38,6 +28,7 @@ Overview Steps:
 * Confirm the project works, recognizing the app from the installed packages.
 * Create a repo for the standalone Django app. Move all app code and expected typical support files.
 * Update `setup.cfg` with the new repo for url, and any other changes needed.
+* Confirm all tests and functionality as expected and documented.
 * Publish to PyPI (see section below).
 
 Expected typical support files:
@@ -47,11 +38,21 @@ Expected typical support files:
 * setup.py - shim to execute the setup.cfg file.
 * pyproject.toml - See [Brett Cannon's article](https://snarky.ca/what-the-heck-is-pyproject-toml/)
 * tox.ini - defines which combinations of environments to test.
-* [app directory] - holding the actual Django app code.
+* [app directory] - holding the actual Django app code as well as tests.
 
 See the sample docs in this repository.
 
-## Testing various versions with tox
+### Utility Files
+
+The following files may need additional modifications for a given stand alone Django app we are making or testing.
+
+* boot_django.py - sets up & configure Django settings as needed for the stand alone Django app.
+* djangoshell.py - start a shell that is aware of our configured Django project including the stand alone app.
+* makemigrations.py - creates the migration files needed for the stand alone Django app models.
+* migrate.py - performs table migrations so the database is setup as needed.
+* load_tests.py - can run all or some tests.Used by package manager to get its test suite, and by tox to run its tests.
+
+### Testing various versions with tox
 
 The `tox` tool can help us see if our package works on a variety of environments, such as different Python versions.
 For example, to test Python 3.6 & 3.7, combined with testing Django 2.2 & 3.0 (four environments total) use:
@@ -68,7 +69,7 @@ commands=
     python setup.py test
 ```
 
-## Publishing as a package hosted on PyPI
+### Publishing as a package hosted on PyPI
 
 PyPI expects an egg, wheel, or source distribution.
 
