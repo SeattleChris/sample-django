@@ -16,3 +16,4 @@ Static resources and Templates:
   * These link to the static resources mentioned.
   * There is an example of using `placeholder.it` images for mock-ups.
 * If using the `django-registration` package, the templates in `web/templates/django_registration` are useful starts.
+* The templates in `web/templates/registration` are likely helpful for a variety of login and logout functionality.
