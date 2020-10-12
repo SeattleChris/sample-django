@@ -4,6 +4,11 @@ These are a variety of code snippets, utilities, content for mock-up and/or init
 
 This is primarily structured to point towards the key aspects included in this collection. Much of these are likely short or fairly easy to explore. They generally are collected here when developing other projects, but considered useful to easily reference later. So it can be expected this is not a complete documentation of all components or aspects of those components.
 
+## Management Commands
+
+* `createsu` - Creates a superuser based on the `.env` values for superuser and possibly admin.
+* `urllist` - List all available urls for the project, along with some details about them.
+
 ## Boilerplate Content
 
 Static resources and Templates:
