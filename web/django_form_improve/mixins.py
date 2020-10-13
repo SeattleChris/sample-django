@@ -335,6 +335,43 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
             raise ImproperlyConfigured(_("The fields for email, username, and constructor must be set in fields. "))
         return True
 
+    def name_for_user_validators(self, fields, **kwargs):
+        field_name = self.name_for_user
+        opts = kwargs.get('name_for_user', {})
+        strict_username = opts.get('strict', getattr(self, 'strict_username', None))
+        reserved_names = kwargs.get('reserved_name', [])
+        username_validators = [
+            validators.ReservedNameValidator(reserved_names),
+            validators.validate_confusables,
+        ]
+        if strict_username:
+            username_validators.append(
+                validators.CaseInsensitiveUnique(
+                    self.user_model, self.user_model.USERNAME_FIELD, validators.DUPLICATE_USERNAME
+                )
+            )
+        fields[field_name].validators.extend(username_validators)
+        return True
+
+    def name_for_email_validators(self, fields, **kwargs):
+        field_name = self.name_for_email
+        opts = kwargs.get('name_for_email', {})
+        strict_email = opts.get('strict', getattr(self, 'strict_email', None))
+        email_validators = [
+            validators.HTML5EmailValidator(),
+            validators.validate_confusables_email
+        ]
+        if strict_email:
+            email_validators.append(
+                validators.CaseInsensitiveUnique(
+                    self.user_model, self.user_model.get_email_field_name(), validators.DUPLICATE_EMAIL
+                )
+            )
+        field = fields[field_name]
+        field.validators.extend(email_validators)
+        field.required = True
+        return True
+
     def username_from_email_or_names(self, username_field_name=None, email_field_name=None):
         """Initial username field value. Must be evaluated after dependent fields populate cleaned_data. """
         email_field_name = email_field_name or self.name_for_email
@@ -383,7 +420,6 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         self.fields[name_for_user] = username_field
         if hasattr(self, 'assign_focus_field'):
             self.named_focus = self.assign_focus_field(name=name_for_email, fields=self.fields)
-        # self.attach_critical_validators()
 
         login_link = self.get_login_message(link_text='login to existing account', link_only=True)
         text = "Use a non-shared email, or {}. ".format(login_link)
