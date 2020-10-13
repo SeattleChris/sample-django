@@ -85,24 +85,25 @@ class FocusMixIn:
         return '<' + tag + attr_string + '>' + contents + '</' + tag + '>'
 
 
-class ComputedFieldsMixIn:
-    """A computed field is initially removed, but if failing desired validation conditions, included for user input. """
-    # computed_fields = {}
+class CriticalFieldMixIn:
+    """CriticalFields may have a backup MixIn version, or have special validators or other processing for them. """
     critical_fields = {}
     reserved_names_replace = False
     # reserved_names = []
 
     def __init__(self, *args, **kwargs):
-        print("======================= ComputedFieldsMixIn.__init__ =================================")
-        critical_fields = self.fields_for_critical(kwargs.pop('critical_fields', {}))
-        self.attach_critical_validators(**critical_fields)
-        self.critical_fields = critical_fields
-        computed_field_names = kwargs.pop('computed_fields', [])
-        computed_field_names = self.setup_computed_fields(computed_field_names, self.base_fields)
+        # TODO: ? Should this be done through a Meta process?
+        if not issubclass(self, ComputedFieldsMixIn):
+            kwargs = self.setup_critical_fields(**kwargs)
         super().__init__(*args, **kwargs)
-        computed_field_names.extend(kwargs.pop('computed_fields', []))
-        self.computed_fields = self.get_computed_fields(computed_field_names)
-        print("--------------------- FINISH ComputedFieldsMixIn.__init --------------------")
+
+    def setup_critical_fields(self, **kwargs):
+        critical_fields = kwargs.pop('critical_fields', {})
+        critical_fields = self.fields_for_critical(critical_fields)
+        add_config = {'reserved_names': kwargs.pop('reserved_names')} if 'reserved_names' in kwargs else {}
+        self.attach_critical_validators(**critical_fields, **add_config)
+        self.critical_fields = critical_fields
+        return kwargs
 
     def fields_for_critical(self, critical_fields):
         """Set model properties for 'critical_fields' in kwargs, 'user_model', and expected name_for_<variable>s. """
@@ -140,12 +141,12 @@ class ComputedFieldsMixIn:
         return alt_name, field  # could not find a matching existing field, use the backup field.
 
     def attach_critical_validators(self, **kwargs):
-        """Before other field modifications, assign validators to critical fields (i.e. username and email). """
-        fields = getattr(self, 'fields', None)
+        """Before other field modifications, run all _validators methods defined for any fields or critical fields. """
+        fields = getattr(self, 'fields', None)  # TODO: Determine if we should always work with base_fields.
         if not isinstance(fields, dict):
             fields = getattr(self, 'base_fields', None)
         if not fields:
-            raise ImproperlyConfigured(_("Any ComputedFieldsMixIn depends on access to base_fields or fields. "))
+            raise ImproperlyConfigured(_("Any CriticalFieldsMixIn depends on access to base_fields or fields. "))
         reserved_names = kwargs.get('reserved_names', getattr(self, 'reserved_names', []))
         if not kwargs.get('reserved_names_replace', getattr(self, 'reserved_names_replace', False)):
             reserved_names += validators.DEFAULT_RESERVED_NAMES
@@ -158,42 +159,43 @@ class ComputedFieldsMixIn:
             func(fields, **kwargs)
         return True
 
-    def name_for_user_validators(self, fields, **kwargs):
-        field_name = self.name_for_user
-        opts = kwargs.get('name_for_user', {})
-        strict_username = opts.get('strict', getattr(self, 'strict_username', None))
-        reserved_names = kwargs.get('reserved_name', [])
-        username_validators = [
-            validators.ReservedNameValidator(reserved_names),
-            validators.validate_confusables,
-        ]
-        if strict_username:
-            username_validators.append(
-                validators.CaseInsensitiveUnique(
-                    self.user_model, self.user_model.USERNAME_FIELD, validators.DUPLICATE_USERNAME
-                )
-            )
-        fields[field_name].validators.extend(username_validators)
-        return True
 
-    def name_for_email_validators(self, fields, **kwargs):
-        field_name = self.name_for_email
-        opts = kwargs.get('name_for_email', {})
-        strict_email = opts.get('strict', getattr(self, 'strict_email', None))
-        email_validators = [
-            validators.HTML5EmailValidator(),
-            validators.validate_confusables_email
-        ]
-        if strict_email:
-            email_validators.append(
-                validators.CaseInsensitiveUnique(
-                    self.user_model, self.user_model.get_email_field_name(), validators.DUPLICATE_EMAIL
-                )
-            )
-        field = fields[field_name]
-        field.validators.extend(email_validators)
-        field.required = True
-        return True
+class ComputedFieldsMixIn(CriticalFieldMixIn):
+    """A computed field is initially removed, but if failing desired validation conditions, included for user input. """
+    # computed_fields = {}
+
+    def __init__(self, *args, **kwargs):
+        print("======================= ComputedFieldsMixIn.__init__ =================================")
+        kwargs = self.setup_critical_fields(kwargs)
+        computed_field_names = kwargs.pop('computed_fields', [])
+        # computed_field_names = self.get_computed_field_names(computed_field_names, self.base_fields)
+        super().__init__(*args, **kwargs)
+        computed_field_names.extend(kwargs.pop('computed_fields', []))  # TODO: ? Is this even possible?
+        self.computed_fields = self.get_computed_fields(computed_field_names)
+        print("--------------------- FINISH ComputedFieldsMixIn.__init --------------------")
+
+    def get_computed_field_names(self, field_names, fields):
+        """Modify fields by adding expected fields. Return an updated computed_field_names list. """
+        computed_fields = getattr(self, 'computed_fields', [])
+        if isinstance(computed_fields, (list, tuple)):
+            field_names.extend(computed_fields)
+        elif isinstance(computed_fields, dict):
+            field_names.extend(computed_fields.keys())
+        else:
+            raise ImproperlyConfigured(_("The Form's computed_fields property is corrupted. "))
+        field_names.extend(getattr(self, name) for name, opts in self.critical_fields.items() if opts.get('computed'))
+        field_names = set(field_names)  # Unique field names only.
+        computed_field_names = [name for name in field_names if name in fields]
+        # TODO: Decide if this method should be able to create missing fields if needed.
+        return computed_field_names
+
+    def get_computed_fields(self, computed_field_names):
+        """Must be called after self.fields constructed. Removes desired fields from self.fields. """
+        computed_field_names = self.get_computed_field_names(computed_field_names, self.fields)
+        if hasattr(self, 'data'):
+            computed_field_names = set(computed_field_names) - set(self.data.keys())
+        computed_fields = {key: self.fields.pop(key, None) for key in computed_field_names}
+        return computed_fields
 
     def construct_value_from_values(self, field_names=None, joiner='_', normalize=None):
         """Must be evaluated after cleaned_data has the named field values populated. """
