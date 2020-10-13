@@ -87,6 +87,12 @@ class FocusMixIn:
 
 class CriticalFieldMixIn:
     """CriticalFields may have a backup MixIn version, or have special validators or other processing for them. """
+    tos_field = forms.BooleanField(
+        widget=forms.CheckboxInput,
+        label=_("I have read and agree to the Terms of Service"),
+        error_messages={"required": validators.TOS_REQUIRED}, )
+    tos_required = False
+    name_for_tos = None
     critical_fields = {}
     reserved_names_replace = False
     # reserved_names = []
@@ -99,6 +105,10 @@ class CriticalFieldMixIn:
 
     def setup_critical_fields(self, **kwargs):
         critical_fields = kwargs.pop('critical_fields', {})
+        if self.tos_required:
+            name = getattr(self, 'name_for_tos', None) or ''
+            tos_opts = {'names': (name, ), 'alt_field': 'tos_field', 'computed': False}
+            critical_fields.update(name_for_tos=tos_opts)
         critical_fields = self.fields_for_critical(critical_fields)
         add_config = {'reserved_names': kwargs.pop('reserved_names')} if 'reserved_names' in kwargs else {}
         self.attach_critical_validators(**critical_fields, **add_config)
