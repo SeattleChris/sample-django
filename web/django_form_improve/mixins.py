@@ -12,7 +12,6 @@ from django.utils.html import conditional_escape, format_html
 from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django_registration import validators
-# from . import validators
 from pprint import pprint
 
 
@@ -110,7 +109,7 @@ class ComputedFieldsMixIn:
         missing_fields = {}
         for label, opts in critical_fields.items():
             names = opts.get('names', label)
-            name, field = self.make_computed_field(names, opts.get('alt_field', None))
+            name, field = self.get_critical_field(names, opts.get('alt_field', None))
             opts.update({'name': name, 'field': field})
             if name is None or field is None:
                 missing_fields.update({label: opts})
@@ -121,31 +120,8 @@ class ComputedFieldsMixIn:
             raise ImproperlyConfigured(_("Could not assign for critical fields: {} ".format(missing_fields)))
         return critical_fields
 
-    def setup_computed_fields(self, field_names, fields):
-        """Modify fields by adding expected fields. Return an updated computed_field_names list. """
-        computed_fields = getattr(self, 'computed_fields', [])
-        if isinstance(computed_fields, (list, tuple)):
-            field_names.extend(computed_fields)
-        elif isinstance(computed_fields, dict):
-            field_names.extend(computed_fields.keys())
-        else:
-            raise ImproperlyConfigured(_("The Form's computed_fields property is corrupted. "))
-        field_names.extend(getattr(self, name) for name, opts in self.critical_fields.items() if opts.get('computed'))
-        field_names = set(field_names)  # Unique field names only.
-        computed_field_names = [name for name in field_names if name in fields]
-        # TODO: Decide if this method should be able to create missing fields if needed.
-        return computed_field_names
-
-    def get_computed_fields(self, computed_field_names):
-        """Must be called after self.fields constructed. Removes desired fields from self.fields. """
-        computed_field_names = self.setup_computed_fields(computed_field_names, self.fields)
-        if hasattr(self, 'data'):
-            computed_field_names = set(computed_field_names) - set(self.data.keys())
-        computed_fields = {key: self.fields.pop(key, None) for key in computed_field_names}
-        return computed_fields
-
-    def make_computed_field(self, names, alt_name=''):
-        """Returns a form field already created (possibly in a MixIn). Future: may create based on a model. """
+    def get_critical_field(self, names, alt_name=''):
+        """Returns the first existing field matching possible names, if present, or the MixIn defined field. """
         names = names if isinstance(names, tuple) else tuple(names)
         field = None
         for name in names:
@@ -329,7 +305,8 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
 
     def confirm_required_fields(self):
         """The form must have the email field and any fields that may be used to construct the username. """
-        required_fields = [*self.constructor_fields, self.name_for_email, self.name_for_user, self.USERNAME_FLAG_FIELD]
+        constructor_fields = getattr(self, 'constructor_fields', [])
+        required_fields = [*constructor_fields, self.name_for_email, self.name_for_user, self.USERNAME_FLAG_FIELD]
         missing_fields = [name for name in required_fields if name not in self.base_fields]
         if missing_fields or not self.constructor_fields:
             raise ImproperlyConfigured(_("The fields for email, username, and constructor must be set in fields. "))
@@ -734,8 +711,8 @@ class OverrideCountryMixIn(FormOverrideMixIn):
             has_computed = issubclass(self.__class__, ComputedFieldsMixIn)
             for name in needed_names:
                 if has_computed:
-                    name, field = self.make_computed_field(name, name)
-                else:
+                    name, field = self.get_critical_field(name, name)
+                else:  # Already know it is not in base_fields, use the MixIn defined alternative.
                     field = getattr(self, name, None)
                 if field:
                     self.base_fields[name] = field
@@ -884,7 +861,7 @@ class FormFieldsetMixIn:
         """Updates the dictionaries of each fieldset with 'rows' of field dicts, and a flattend 'field_names' list. """
         print("======================= FormFieldsetMixIn.make_fieldsets =================================")
         if hasattr(self, 'prep_fields'):
-            self.prep_fields()
+            self.fields = self.prep_fields()
         if hasattr(self, 'assign_focus_field'):
             self.named_focus = self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
         remaining_fields = self.fields.copy()
