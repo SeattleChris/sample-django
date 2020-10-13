@@ -3,19 +3,34 @@ from django.views import generic
 from django.views.decorators.csrf import csrf_protect
 from django.utils.decorators import method_decorator
 from django.contrib.auth import get_user_model
-from django_registration.backends.one_step.views import RegistrationView
+from django_registration.backends.one_step.views import RegistrationView as RegistrationViewOneStep
+from django_registration.backends.activation.views import RegistrationView as RegistrationViewTwoStep
 from .forms import CustomRegistrationForm, CustomUserCreationForm, CustomUserChangeForm
 from pprint import pprint  # TODO: Remove after debug
 
 # Create your views here.
 
+
 @method_decorator(csrf_protect, name='dispatch')
-class CustomRegistrationView(RegistrationView):
+class RegisterSimpleFlowView(RegistrationViewOneStep):
     form_class = CustomRegistrationForm
     success_url = reverse_lazy('profile_page')
 
     def register(self, form):
-        print("===================== CustomRegistrationView.register ============================")
+        print("===================== RegisterSimpleFlowView.register ============================")
+        pprint(form)
+        print("----------------------------------------------------------------------------------")
+        pprint(self)
+        return super().register(form)
+
+
+@method_decorator(csrf_protect, name='dispatch')
+class RegisterActivateFlowView(RegistrationViewTwoStep):
+    form_class = CustomRegistrationForm
+    success_url = reverse_lazy('profile_page')
+
+    def register(self, form):
+        print("===================== RegisterActivateFlowView.register ============================")
         pprint(form)
         print("----------------------------------------------------------------------------------")
         pprint(self)
@@ -27,7 +42,7 @@ class CustomRegistrationView(RegistrationView):
 
 
 @method_decorator(csrf_protect, name='dispatch')
-class Modify(generic.UpdateView):
+class ModifyUser(generic.UpdateView):
     model = get_user_model()
     form_class = CustomUserChangeForm
     success_url = reverse_lazy('profile_page')
