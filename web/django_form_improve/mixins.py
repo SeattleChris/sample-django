@@ -123,16 +123,21 @@ class ComputedFieldsMixIn:
     def get_critical_field(self, names, alt_name=''):
         """Returns the first existing field matching possible names, if present, or the MixIn defined field. """
         names = names if isinstance(names, tuple) else tuple(names)
-        field = None
-        for name in names:
+        fields_made = isinstance(getattr(self, 'fields', None), dict)
+        for name in names:  # Find the first valid existing field (amongst fields & base_fields) matching a name.
             if callable(name):
                 name = name()
-            field = self.base_fields.get(name, None)  # TODO: work out some systematic formfield name it might be.
+            # TODO: ?work out some systematic formfield name it might be?
+            field = None
+            if fields_made and name in self.fields:
+                field = self.fields[name]  # TODO: Determine if we should always work with base_fields.
+            elif name in self.base_fields:
+                field = self.base_fields[name].copy()
             if isinstance(field, Field):
                 return name, field
         field = getattr(self, alt_name, None)
         field = field if isinstance(field, Field) else None
-        return alt_name, field  # could not find a matching field, use the backup field.
+        return alt_name, field  # could not find a matching existing field, use the backup field.
 
     def attach_critical_validators(self, **kwargs):
         """Before other field modifications, assign validators to critical fields (i.e. username and email). """
