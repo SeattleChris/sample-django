@@ -126,8 +126,8 @@ class RegisterUserForm(AddressUsernameMixIn, UserCreationForm):
         extra_names = []  # User model fields that should have a form input AFTER email, username, password.
         address_names = None  # Assumes defaults or the provided list of model fields. Set to [] for no address.
         address_on_profile_name = None  # set to related name for a profile model if it stores the address fields.
-        fields = make_names(model, constructor_names, early_names, username_flag_name,
-                            extra_names, address_names, address_on_profile_name)
+        fields, _ignored, missing = make_names(constructor_names, early_names, username_flag_name, extra_names,
+                                               address_names, model, None, address_on_profile_name)
         help_texts = {
             model.get_email_field_name(): _("Used for confirmation and typically for login"),
             model.USERNAME_FIELD: _("Without a unique email, a username is needed. Use suggested or create one. "),
