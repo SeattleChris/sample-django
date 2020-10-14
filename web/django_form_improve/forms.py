@@ -90,22 +90,6 @@ class RegisterUserForm(AddressUsernameMixIn, UserCreationForm):
     # computed_fields = []  # The computed fields needed for username and address will be added.
 
 
-class CustomRegistrationForm(UserRegisterForm):
-
-    constructor_fields = ('first_name', 'last_name', )
-    USERNAME_FLAG_FIELD = 'username_not_email'
-
-    class Meta(UserRegisterForm.Meta):
-        fields = UserRegisterForm.Meta.fields
-        fields.extend(('first_name', 'last_name', 'username_not_email'))
-
-    def __init__(self, *args, **kwargs):
-        print("================================== CustomRegistrationForm.__init__ =====================")
-        super().__init__(*args, **kwargs)
-        # TODO: If using RegistrationForm init, then much, but not all, of attach_critical_validators is duplicate code.
-        print("--------------------- FINISH CustomRegistrationForm.__init__ --------------------")
-
-
 class RegisterChangeForm(AddressMixIn, UserChangeForm):
 
     class Meta(UserChangeForm.Meta):
