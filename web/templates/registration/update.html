@@ -1,18 +1,19 @@
 {% extends 'generic/base.html' %}
 
 {% block head %}
-<title>Login to Your Account</title>
+<title>Update User Account</title>
 {% endblock head %}
+
 
 {% block content %}
 <section>
-  <article class="login-form container">
+  <article>
+    <h2>Update Your Account Information</h2>
     <form method="post">
       {% csrf_token %}
       {{ form.as_p }}
-      <input type="submit" value="Submit" />
+      <button type="submit">Update</button>
     </form>
   </article>
 </section>
-
-{% endblock %}
+  {% endblock content %}

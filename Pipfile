@@ -8,6 +8,7 @@ verify_ssl = true
 [packages]
 django = "*"
 sample-django = {editable = true, path = "."}
+django-registration = "*"
 
 [requires]
 python_version = "3.7"
