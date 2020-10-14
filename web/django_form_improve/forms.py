@@ -97,12 +97,12 @@ class RegisterModelForm(AddressUsernameMixIn, forms.ModelForm):
     class Meta(forms.ModelForm.Meta):
         model = None
         user_model = get_user_model()
-        constructor_names = None  # set to a list of model field names, otherwise assumes ['first_name', 'last_name']
+        constructor_names = None  # Set to a list of model field names, otherwise assumes ['first_name', 'last_name']
         early_names = []  # User model fields that should have a form input BEFORE email, username, password.
-        username_flag_name = 'username_not_email'  # set to None if the User model does not have this field type.
+        username_flag_name = 'username_not_email'  # Set to None if the User model does not have this field type.
         extra_names = []  # User model fields that should have a form input AFTER email, username, password.
         address_names = None  # Assumes defaults or the provided list of model fields. Set to [] for no address.
-        address_on_profile_name = None  # set to related name for a profile model if it stores the address fields.
+        address_on_profile_name = None  # Set to the model used as profile if it stores the address fields.
         fields, user_fields, missing = make_names(constructor_names, early_names, username_flag_name, extra_names,
                                                   address_names, model, user_model, address_on_profile_name)
         help_texts = {
@@ -120,12 +120,12 @@ class RegisterUserForm(AddressUsernameMixIn, UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = get_user_model()
-        constructor_names = None  # set to a list of model field names, otherwise assumes ['first_name', 'last_name']
+        constructor_names = None  # Set to a list of model field names, otherwise assumes ['first_name', 'last_name']
         early_names = []  # User model fields that should have a form input BEFORE email, username, password.
-        username_flag_name = 'username_not_email'  # set to None if the User model does not have this field type.
+        username_flag_name = 'username_not_email'  # Set to None if the User model does not have this field type.
         extra_names = []  # User model fields that should have a form input AFTER email, username, password.
         address_names = None  # Assumes defaults or the provided list of model fields. Set to [] for no address.
-        address_on_profile_name = None  # set to related name for a profile model if it stores the address fields.
+        address_on_profile_name = None  # Set to the model used as profile if it stores the address fields.
         fields, _ignored, missing = make_names(constructor_names, early_names, username_flag_name, extra_names,
                                                address_names, model, None, address_on_profile_name)
         help_texts = {
