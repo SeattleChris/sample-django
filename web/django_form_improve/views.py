@@ -2,7 +2,7 @@ from django.urls import reverse_lazy
 from django.views import generic
 from django.views.decorators.csrf import csrf_protect
 from django.utils.decorators import method_decorator
-from django.contrib.auth import get_user_model
+# from django.contrib.auth import get_user_model
 from django_registration.backends.one_step.views import RegistrationView as RegistrationViewOneStep
 from django_registration.backends.activation.views import RegistrationView as RegistrationViewTwoStep
 from .forms import RegisterUserForm, RegisterModelForm, RegisterChangeForm
@@ -38,9 +38,6 @@ class RegisterActivateFlowView(RegistrationViewTwoStep):
         pprint(self)
         return super().register(form)
 
-
-# TODO: Make a custom view building off of the django_registration.backends.activation.RegistrationView
-# TODO: Update the view names for the views built off of one_step and validation
 
 @method_decorator(csrf_protect, name='dispatch')
 class RegisterModelSimpleFlowView(RegistrationViewOneStep):
