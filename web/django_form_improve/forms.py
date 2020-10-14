@@ -18,7 +18,14 @@ def default_names():
 
 
 def _get_available_names(model, initial_list):
-    return [name for name in initial_list if hasattr(model, name)]
+    found, rejected = [], []
+    for name in initial_list:
+        if hasattr(model, name):
+            found.append(name)
+        else:
+            rejected.append(name)
+    # return [name for name in initial_list if hasattr(model, name)]
+    return found, rejected
 
 
 def make_names(model, constructors, early, setting, extras, address, profile=None):
@@ -58,8 +65,8 @@ class RegisterModelForm(AddressUsernameMixIn, forms.ModelForm):
         fields = make_names(model, constructor_names, early_names, username_flag_name,
                             extra_names, address_names, address_on_profile_name)
         help_texts = {
-            model.get_email_field_name(): _("Used for confirmation and typically for login"),
-            model.USERNAME_FIELD: _("Without a unique email, a username is needed. Use suggested or create one. "),
+            'name_for_email': _("Used for confirmation and typically for login"),
+            'name_for_user': _("Without a unique email, a username is needed. Use suggested or create one. "),
         }
 
     error_css_class = "error"
