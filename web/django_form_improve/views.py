@@ -15,6 +15,7 @@ from pprint import pprint  # TODO: Remove after debug
 class RegisterSimpleFlowView(RegistrationViewOneStep):
     form_class = RegisterUserForm
     success_url = reverse_lazy('profile_page')
+    template_name = 'signup.html'
 
     def register(self, form):
         print("===================== RegisterSimpleFlowView.register ============================")
@@ -28,6 +29,7 @@ class RegisterSimpleFlowView(RegistrationViewOneStep):
 class RegisterActivateFlowView(RegistrationViewTwoStep):
     form_class = RegisterUserForm
     success_url = reverse_lazy('profile_page')
+    template_name = 'signup.html'
 
     def register(self, form):
         print("===================== RegisterActivateFlowView.register ============================")
@@ -42,26 +44,23 @@ class RegisterActivateFlowView(RegistrationViewTwoStep):
 
 @method_decorator(csrf_protect, name='dispatch')
 class RegisterModelSimpleFlowView(RegistrationViewOneStep):
+    model = None
     form_class = RegisterModelForm
-
+    template_name = None
 
 @method_decorator(csrf_protect, name='dispatch')
 class RegisterModelActivateFlowView(RegistrationViewTwoStep):
+    model = None
     form_class = RegisterModelForm
+    template_name = None
 
 
 @method_decorator(csrf_protect, name='dispatch')
 class ModifyUser(generic.UpdateView):
-    model = get_user_model()
+    # model = get_user_model()
     form_class = RegisterChangeForm
     success_url = reverse_lazy('profile_page')
     template_name = 'update.html'
 
     def get_object(self, queryset=None):
         return self.request.user
-
-
-# class SignUp(generic.CreateView):
-#     form_class = CustomUserCreationForm
-#     success_url = reverse_lazy('profile_page')
-#     template_name = 'signup.html'
