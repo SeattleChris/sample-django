@@ -43,6 +43,30 @@ def make_names(model, constructors, early, setting, extras, address, profile=Non
         address = _get_available_names(model, address)
     return [*initial, model.get_email_field_name(), model.USERNAME_FIELD, *settings, *address]
 
+
+class RegisterModelForm(AddressUsernameMixIn, forms.ModelForm):
+    """User creation form with configurable computed username. Includes foreign vs local country address feature.  """
+
+    class Meta(forms.ModelForm.Meta):
+        model = None
+        constructor_names = None  # set to a list of model field names, otherwise assumes ['first_name', 'last_name']
+        early_names = []  # User model fields that should have a form input BEFORE email, username, password.
+        username_flag_name = 'username_not_email'  # set to None if the User model does not have this field type.
+        extra_names = []  # User model fields that should have a form input AFTER email, username, password.
+        address_names = None  # Assumes defaults or the provided list of model fields. Set to [] for no address.
+        address_on_profile_name = None  # set to related name for a profile model if it stores the address fields.
+        fields = make_names(model, constructor_names, early_names, username_flag_name,
+                            extra_names, address_names, address_on_profile_name)
+        help_texts = {
+            model.get_email_field_name(): _("Used for confirmation and typically for login"),
+            model.USERNAME_FIELD: _("Without a unique email, a username is needed. Use suggested or create one. "),
+        }
+
+    error_css_class = "error"
+    required_css_class = "required"
+    # computed_fields = []  # The computed fields needed for username and address will be added.
+
+
 class RegisterUserForm(AddressUsernameMixIn, UserCreationForm):
     """User creation form with configurable computed username. Includes foreign vs local country address feature.  """
 
