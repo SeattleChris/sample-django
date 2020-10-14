@@ -40,10 +40,12 @@ class RegisterActivateFlowView(RegistrationViewTwoStep):
 # TODO: Make a custom view building off of the django_registration.backends.activation.RegistrationView
 # TODO: Update the view names for the views built off of one_step and validation
 
+@method_decorator(csrf_protect, name='dispatch')
 class RegisterModelSimpleFlowView(RegistrationViewOneStep):
     form_class = RegisterModelForm
 
 
+@method_decorator(csrf_protect, name='dispatch')
 class RegisterModelActivateFlowView(RegistrationViewTwoStep):
     form_class = RegisterModelForm
 
