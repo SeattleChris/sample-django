@@ -89,15 +89,15 @@ class Command(BaseCommand):
         parser.add_argument('--only', nargs='*', help='Show only listed column names. ', metavar='col')
         parser.add_argument('--not', nargs='*', default=[], help='Show all columns except those listed.', metavar='col')
         parser.add_argument('--sort', nargs='*', default=['namespace', 'name'],  metavar='col',
-                            help='Show all columns except those listed.',)
+                            help='Override sort order. Can define multiple columns to sort by.',)
         # Optional Named Arguments: String substitutions for tighter view and readability.
         parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
         parser.add_argument('--sub-cols', nargs='*', action='store', default=['namespace', 'name', 'lookup_str'],
                             help='Columns for default substitutions. ', metavar='col', )
         parser.add_argument('--add', '-a', nargs=2, default=[], action='append', metavar=('regex', 'value', ),
                             help='Add a substitution rule: regex, value.', )
-        parser.add_argument('--cols', '-c', nargs='*', help='Columns used for added substitutions.', metavar='col')
-    # end def add_arguments
+        parser.add_argument('--cols', '-c', nargs='*', metavar='col',
+                            help='Columns used for added substitutions. If none given, use sub-cols as default.', )
 
     def handle(self, *args, **kwargs):
         self.stdout.write(str(args) + "\n")
@@ -106,7 +106,6 @@ class Command(BaseCommand):
         ignore = kwargs['ignore']
         self.stdout.write(str(mods) + "\n")
         self.stdout.write(str(ignore) + "\n")
-
         col_names = kwargs['only'] or ['namespace', 'name', 'pattern', 'lookup_str', 'args']
         col_names = [ea for ea in col_names if ea not in kwargs['not']]
         sc = kwargs.get('sub_cols', [])
