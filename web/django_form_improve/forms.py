@@ -1,10 +1,10 @@
-from django import forms
+from django.forms import ModelForm, BaseModelForm  # , ModelFormMetaclass
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 # from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
-
+from pprint import pprint
 from .mixins import AddressMixIn, AddressUsernameMixIn
 
 
@@ -18,7 +18,7 @@ def default_names():
     return constructor_names, address_names
 
 
-def _get_available_names(model, initial_list):
+def _get_available_names(initial_list, model):
     found, rejected = [], []
     for name in initial_list:
         if hasattr(model, name):
@@ -38,6 +38,8 @@ def _assign_available_names(initial_list, form_model, user=None):
             alt.append(name)
         else:
             rejected.append(name)
+    # if not user:
+    #     return target, rejected
     return target, alt, rejected
 
 
@@ -64,7 +66,7 @@ def make_names(constructors, early, setting, extras, address, model, user_model=
     initial, alt, rejected = _assign_available_names(initial, model, user_model)
     alt_names.extend(alt)
     not_found.extend(rejected)
-    settings = [setting] if setting and isinstance((setting, str)) else setting
+    settings = [setting] if setting and isinstance(setting, str) else setting
     if isinstance(settings, (tuple, list)):
         settings, alt, rejected = _assign_available_names(settings, model, user_model)
         alt_names.extend(alt)
@@ -91,24 +93,40 @@ def make_names(constructors, early, setting, extras, address, model, user_model=
     return names, alt_names, not_found
 
 
-class RegisterModelForm(AddressUsernameMixIn, forms.ModelForm):
+# class RegisterModelFormMetaclass(ModelFormMetaclass):
+#     def __new__(mcs, name, bases, attrs):
+#         print("====================== RegisterModelFormMetaclass.__new__ =======================")
+#         pprint(mcs)
+#         pprint(name)
+#         pprint(bases)
+#         pprint(attrs)
+#         new_class = super().__new__(mcs, name, bases, attrs)
+#         pprint(new_class)
+#         return new_class
+
+
+# class BaseRegisterModelForm(AddressUsernameMixIn, BaseModelForm, metaclass=RegisterModelFormMetaclass):
+#     pass
+
+
+class RegisterModelForm(AddressUsernameMixIn, ModelForm):
     """Model Form with configurable computed username. Includes foreign vs local country address feature.  """
 
-    class Meta(forms.ModelForm.Meta):
-        model = None
-        user_model = get_user_model()
-        constructor_names = None  # Set to a list of model field names, otherwise assumes ['first_name', 'last_name']
-        early_names = []  # User model fields that should have a form input BEFORE email, username, password.
-        username_flag_name = 'username_not_email'  # Set to None if the User model does not have this field type.
-        extra_names = []  # User model fields that should have a form input AFTER email, username, password.
-        address_names = None  # Assumes defaults or the provided list of model fields. Set to [] for no address.
-        address_on_profile_name = None  # Set to the model used as profile if it stores the address fields.
-        fields, user_fields, missing = make_names(constructor_names, early_names, username_flag_name, extra_names,
-                                                  address_names, model, user_model, address_on_profile_name)
-        help_texts = {
-            'name_for_email': _("Used for confirmation and typically for login"),
-            'name_for_user': _("Without a unique email, a username is needed. Use suggested or create one. "),
-        }
+    # class Meta(ModelForm.Meta):
+    #     model = None
+    #     user_model = get_user_model()
+    #     constructor_names = None  # Set to a list of model field names, otherwise assumes ['first_name', 'last_name']
+    #     early_names = []  # User model fields that should have a form input BEFORE email, username, password.
+    #     username_flag_name = 'username_not_email'  # Set to None if the User model does not have this field type.
+    #     extra_names = []  # User model fields that should have a form input AFTER email, username, password.
+    #     address_names = None  # Assumes defaults or the provided list of model fields. Set to [] for no address.
+    #     address_on_profile_name = None  # Set to the model used as profile if it stores the address fields.
+    #     fields, user_fields, missing = make_names(constructor_names, early_names, username_flag_name, extra_names,
+    #                                               address_names, model, user_model, address_on_profile_name)
+    #     help_texts = {
+    #         'name_for_email': _("Used for confirmation and typically for login"),
+    #         'name_for_user': _("Without a unique email, a username is needed. Use suggested or create one. "),
+    #     }
 
     error_css_class = "error"
     required_css_class = "required"
@@ -144,3 +162,4 @@ class RegisterChangeForm(AddressMixIn, UserChangeForm):
         model = get_user_model()
         address_names = default_names()[1]
         fields = ['first_name', 'last_name', 'email', *address_names]
+        fields, missing = _get_available_names(fields, model)

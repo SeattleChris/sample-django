@@ -14,6 +14,8 @@ from django.urls import reverse
 from django_registration import validators
 from pprint import pprint
 
+DEFAULT_COUNTRY = getattr(settings, 'DEFAULT_COUNTRY', 'US')
+
 
 class FocusMixIn:
     """Autofocus given to a field not hidden or disabled. Can limit to a fields subset, and prioritize a named one. """
@@ -690,7 +692,7 @@ class OverrideCountryMixIn(FormOverrideMixIn):
 
     country_display = forms.CharField(widget=forms.HiddenInput(), initial='local', )
     country_flag = forms.BooleanField(
-        label=_("Not a {} address. ".format(settings.DEFAULT_COUNTRY)),
+        label=_("Not a {} address. ".format(DEFAULT_COUNTRY)),
         required=False, )
     country_field_name = 'billing_country_code'
     country_optional = True
