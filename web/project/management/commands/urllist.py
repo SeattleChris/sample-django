@@ -47,7 +47,8 @@ def show_urls(cols=None, sort=None, sub_rules=None, sub_cols=None):
     max_lengths = {}
     for i, u in enumerate(all_urls):
         for col in ['name', 'args']:
-            u[col] = str(u[col])
+            val = u[col]
+            u[col] = '' if val is None else str(val)
         # If it is known to be unimportant and too long, prepare it to be removed and don't compute column width.
         if (u['namespace'], u['name']) == ('admin', 'view_on_site'):
             remove_idx.append(i)
