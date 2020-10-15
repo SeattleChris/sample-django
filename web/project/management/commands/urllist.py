@@ -71,15 +71,16 @@ class Command(BaseCommand):
         parser.add_argument('modules', nargs='*', type=str, default='all',
                             help='Only show these listed modules. Default: show all.')
         # Named (optional) arguments
-        parser.add_argument('--ignore', nargs='*', action='store', help='List of modules to ignore.', )
-        parser.add_argument('--only', nargs='*', action='store', help='Show only listed column names. ', )
-        parser.add_argument('--not', nargs='*', action='store', help='Show all columns except those listed.', )
+        parser.add_argument('--ignore', nargs='*', help='List of modules to ignore.', metavar='module')
+        parser.add_argument('--only', nargs='*', help='Show only listed column names. ', metavar='col')
+        parser.add_argument('--not', nargs='*', help='Show all columns except those listed.', metavar='col')
 
         parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
         parser.add_argument('--sub-cols', nargs='*', action='store', default=['namespace', 'name', 'lookup_str'],
-                            help='Columns for default substitutions. ', )
-        parser.add_argument('--add', '-a', nargs=2, action='append', help='Add a substitution rule: regex, value.', )
-        parser.add_argument('--cols', '-c', nargs='*', action='store', help='Columns used for added substitutions.', )
+                            help='Columns for default substitutions. ', metavar='col', )
+        parser.add_argument('--add', '-a', nargs=2, action='append', metavar=('regex', 'value', ),
+                            help='Add a substitution rule: regex, value.', )
+        parser.add_argument('--cols', '-c', nargs='*', help='Columns used for added substitutions.', metavar='col')
 
     # end def add_arguments
 
