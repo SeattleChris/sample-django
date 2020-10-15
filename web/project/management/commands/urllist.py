@@ -34,12 +34,13 @@ def collect_urls(urls=None, namespace=None, prefix=None):
         raise ValueError(repr(urls))
 
 
-def show_urls(cols=None, sub_rules=None, sub_cols=None):
+def show_urls(cols=None, sort=None, sub_rules=None, sub_cols=None):
     all_urls = collect_urls()
     if not all_urls:
         # sys.stdout.write("************* NO URLS FOUND *************")
         return ["************* NO URLS FOUND *************"]
-    all_urls = sorted(all_urls, key=lambda x: (x['namespace'], str(x['name'])))
+    if sort:
+        all_urls = sorted(all_urls, key=lambda x: [str(x[key] or '') for key in sort])
     title = {key: key for key in all_urls[0].keys()}
     all_urls.append(title)
     remove_idx = []
@@ -85,6 +86,8 @@ class Command(BaseCommand):
         parser.add_argument('--ignore', nargs='*', help='List of modules to ignore.', metavar='module')
         parser.add_argument('--only', nargs='*', help='Show only listed column names. ', metavar='col')
         parser.add_argument('--not', nargs='*', default=[], help='Show all columns except those listed.', metavar='col')
+        parser.add_argument('--sort', nargs='*', default=['namespace', 'name'],  metavar='col',
+                            help='Show all columns except those listed.',)
         # Optional Named Arguments: String substitutions for tighter view and readability.
         parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
         parser.add_argument('--sub-cols', nargs='*', action='store', default=['namespace', 'name', 'lookup_str'],
@@ -104,6 +107,6 @@ class Command(BaseCommand):
         if kwargs['long']:
             sub_rules = None
 
-        result = show_urls(cols=col_names, sub_rules=sub_rules, sub_cols=sub_cols)
+        result = show_urls(cols=col_names, sort=kwargs['sort'], sub_rules=sub_rules, sub_cols=sub_cols)
         for row in result:
             self.stdout.write(row)
