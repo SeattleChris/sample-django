@@ -34,7 +34,7 @@ def collect_urls(urls=None, namespace=None, prefix=None):
         raise ValueError(repr(urls))
 
 
-def show_urls(cols=None, sort=None, sub_rules=None):
+def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
     all_urls = collect_urls()
     if not all_urls:
         # sys.stdout.write("************* NO URLS FOUND *************")
@@ -49,8 +49,8 @@ def show_urls(cols=None, sort=None, sub_rules=None):
         for col in ['name', 'args']:
             val = u[col]
             u[col] = '' if val is None else str(val)
-        # If it is known to be unimportant and too long, prepare it to be removed and don't compute column width.
-        if (u['namespace'], u['name']) == ('admin', 'view_on_site'):
+        # Prep removal, and don't compute width, for ignored modules or the known combo(s) that are long and unneeded.
+        if u['namespace'] in ignore or (u['namespace'], u['name']) == ('admin', 'view_on_site'):
             remove_idx.append(i)
             continue
         if sub_rules:
@@ -82,7 +82,7 @@ class Command(BaseCommand):
         parser.add_argument('modules', nargs='*', type=str, default='all',
                             help='Only show these listed modules. Default: show all.')
         # Optional Named Arguments: Rows (modules) and Columns (info about the url setting).
-        parser.add_argument('--ignore', nargs='*', help='List of modules to ignore.', metavar='module')
+        parser.add_argument('--ignore', nargs='*', default=[], help='List of modules to ignore.', metavar='module')
         parser.add_argument('--only', nargs='*', help='Show only listed column names. ', metavar='col')
         parser.add_argument('--not', nargs='*', default=[], help='Show all columns except those listed.', metavar='col')
         parser.add_argument('--sort', nargs='*', default=['namespace', 'name'],  metavar='col',
@@ -99,17 +99,21 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write(str(args) + "\n")
         self.stdout.write(str(kwargs) + "\n\n")
+        mods = kwargs['modules']
+        ignore = kwargs['ignore']
+        self.stdout.write(str(mods) + "\n")
+        self.stdout.write(str(ignore) + "\n")
+
         col_names = kwargs['only'] or ['namespace', 'name', 'pattern', 'lookup_str', 'args']
         col_names = [ea for ea in col_names if ea not in kwargs['not']]
         sc = kwargs.get('sub_cols', [])
         sub_rules = [('^django.contrib', 'cb ', sc), ('^django_registration', 'd_reg ', sc), ('^django', '', sc)]
         if kwargs['long']:
             sub_rules = []
-        cols = kwargs['cols'] or sc
-        add_rules = [(*rule, cols) for rule in kwargs['add']]
+        # cols = kwargs['cols'] or sc
+        add_rules = [(*rule, kwargs['cols'] or sc) for rule in kwargs['add']]
         sub_rules.extend(add_rules)
-        self.stdout.write(str(sub_rules))
 
-        result = show_urls(cols=col_names, sort=kwargs['sort'], sub_rules=sub_rules)
+        result = show_urls(mods=mods, ignore=ignore, cols=col_names, sort=kwargs['sort'], sub_rules=sub_rules)
         for row in result:
             self.stdout.write(row)
