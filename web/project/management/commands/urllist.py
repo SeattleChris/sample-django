@@ -65,7 +65,28 @@ def show_urls(sub_rules=None, sub_cols=None):
 
 
 class Command(BaseCommand):
+
+    def add_arguments(self, parser):
+        # Positional arguments
+        parser.add_argument('modules', nargs='*', type=str, default='all',
+                            help='Only show these listed modules. Default: show all.')
+        # Named (optional) arguments
+        parser.add_argument('--ignore', nargs='*', action='store', help='List of modules to ignore.', )
+        parser.add_argument('--only', nargs='*', action='store', help='Show only listed column names. ', )
+        parser.add_argument('--not', nargs='*', action='store', help='Show all columns except those listed.', )
+
+        parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
+        parser.add_argument('--sub-cols', nargs='*', action='store', default=['namespace', 'name', 'lookup_str'],
+                            help='Columns for default substitutions. ', )
+        parser.add_argument('--add', '-a', nargs=2, action='append', help='Add a substitution rule: regex, value.', )
+        parser.add_argument('--cols', '-c', nargs='*', action='store', help='Columns used for added substitutions.', )
+
+    # end def add_arguments
+
     def handle(self, *args, **kwargs):
+        sys.stdout.write(str(args) + "\n")
+        sys.stdout.write(str(kwargs) + "\n\n")
         sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
-        sub_cols = ['namespace', 'name', 'lookup_str']
+        # sub_cols = ['namespace', 'name', 'lookup_str']
+        sub_cols = kwargs.get('sub-cols', [])
         show_urls(sub_rules=sub_rules, sub_cols=sub_cols)
