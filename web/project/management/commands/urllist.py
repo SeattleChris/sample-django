@@ -34,7 +34,7 @@ def collect_urls(urls=None, namespace=None, prefix=None):
         raise ValueError(repr(urls))
 
 
-def show_urls(sub_rules=None, sub_cols=None):
+def show_urls(cols=None, sub_rules=None, sub_cols=None):
     all_urls = collect_urls()
     if not all_urls:
         # sys.stdout.write("************* NO URLS FOUND *************")
@@ -69,7 +69,8 @@ def show_urls(sub_rules=None, sub_cols=None):
     for u in all_urls:
         result.append(' | '.join(
             ('{:%d}' % max_lengths.get(k, len(v))).format(v)
-            for k, v in u.items()) + '\n')
+            for k, v in u.items() if k in cols
+            ) + '\n')
     return result
 
 
@@ -82,7 +83,7 @@ class Command(BaseCommand):
         # Optional Named Arguments: Rows (modules) and Columns (info about the url setting).
         parser.add_argument('--ignore', nargs='*', help='List of modules to ignore.', metavar='module')
         parser.add_argument('--only', nargs='*', help='Show only listed column names. ', metavar='col')
-        parser.add_argument('--not', nargs='*', help='Show all columns except those listed.', metavar='col')
+        parser.add_argument('--not', nargs='*', default=[], help='Show all columns except those listed.', metavar='col')
         # Optional Named Arguments: String substitutions for tighter view and readability.
         parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
         parser.add_argument('--sub-cols', nargs='*', action='store', default=['namespace', 'name', 'lookup_str'],
@@ -95,10 +96,13 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write(str(args) + "\n")
         self.stdout.write(str(kwargs) + "\n\n")
+        col_names = kwargs['only'] or ['namespace', 'name', 'pattern', 'lookup_str', 'args']
+        col_names = [ea for ea in col_names if ea not in kwargs['not']]
         sub_cols = kwargs.get('sub_cols', [])
         sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
         if kwargs['long']:
             sub_rules = None
-        result = show_urls(sub_rules=sub_rules, sub_cols=sub_cols)
+
+        result = show_urls(cols=col_names, sub_rules=sub_rules, sub_cols=sub_cols)
         for row in result:
             self.stdout.write(row)
