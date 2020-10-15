@@ -41,8 +41,9 @@ def show_urls(sub_rules=None, sub_cols=None):
         return
     title = {key: key for key in all_urls[0].keys()}
     all_urls.append(title)
+    remove_idx = []
     max_lengths = {}
-    for u in all_urls:
+    for i, u in enumerate(all_urls):
         for col in ['name', 'args']:
             u[col] = str(u[col])
         if sub_rules and sub_cols:
@@ -54,13 +55,16 @@ def show_urls(sub_rules=None, sub_cols=None):
         for k, v in list(u.items())[:-1]:  # no ending border, so last column width not needed.
             u[k] = v = v or ''
             # If it is known to be unimportant and too long, prepare it to be removed and don't compute column width.
-            # if (u['namespace'], u['name']) == ('admin', 'view_on_site'):
-            #     remove.append(u)
-            #     continue
+            if (u['namespace'], u['name']) == ('admin', 'view_on_site'):
+                remove_idx.append(i)
+                continue
             max_lengths[k] = max(len(v), max_lengths.get(k, 0))
-
-    bar = {key: '*' * max_lengths.get(key, 4) for key in title}
-    all_urls = all_urls[-1:] + [bar] + sorted(all_urls[:-1], key=lambda x: (x['namespace'], x['name']))
+    for row in reversed(remove_idx):
+        all_urls.pop(row)
+    title = all_urls.pop()
+    bar = {key: '*' * max_lengths.get(key, 3) for key in title}
+    title = [title, bar]
+    all_urls = title + sorted(all_urls, key=lambda x: (x['namespace'], x['name']))
     for u in all_urls:
         sys.stdout.write(' | '.join(
             ('{:%d}' % max_lengths.get(k, len(v))).format(v)
