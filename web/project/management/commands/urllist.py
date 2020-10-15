@@ -39,6 +39,7 @@ def show_urls(sub_rules=None, sub_cols=None):
     if not all_urls:
         sys.stdout.write("************* NO URLS FOUND *************")
         return
+    all_urls = sorted(all_urls, key=lambda x: (x['namespace'], str(x['name'])))
     title = {key: key for key in all_urls[0].keys()}
     all_urls.append(title)
     remove_idx = []
@@ -62,9 +63,8 @@ def show_urls(sub_rules=None, sub_cols=None):
     for row in reversed(remove_idx):
         all_urls.pop(row)
     title = all_urls.pop()
-    bar = {key: '*' * max_lengths.get(key, 3) for key in title}
-    title = [title, bar]
-    all_urls = title + sorted(all_urls, key=lambda x: (x['namespace'], x['name']))
+    bar = {key: '*' * max_lengths.get(key, 4) for key in title}
+    all_urls = [title, bar] + all_urls
     for u in all_urls:
         sys.stdout.write(' | '.join(
             ('{:%d}' % max_lengths.get(k, len(v))).format(v)
