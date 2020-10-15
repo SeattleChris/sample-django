@@ -42,7 +42,7 @@ INSTALLED_APPS = [
 
     'django_registration',
     'django_form_improve',
-    'receipts',
+    # 'APPNAME',
 ]
 
 MIDDLEWARE = [
