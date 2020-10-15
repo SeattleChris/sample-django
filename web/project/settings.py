@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'project',
     'django_registration',
     'django_form_improve',
     # 'APPNAME',
