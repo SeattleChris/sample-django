@@ -47,6 +47,10 @@ def show_urls(cols=None, sub_rules=None, sub_cols=None):
     for i, u in enumerate(all_urls):
         for col in ['name', 'args']:
             u[col] = str(u[col])
+        # If it is known to be unimportant and too long, prepare it to be removed and don't compute column width.
+        if (u['namespace'], u['name']) == ('admin', 'view_on_site'):
+            remove_idx.append(i)
+            continue
         if sub_rules and sub_cols:
             for col in sub_cols:
                 val = u[col]
@@ -55,13 +59,9 @@ def show_urls(cols=None, sub_rules=None, sub_cols=None):
                 u[col] = val
         for k, v in list(u.items())[:-1]:  # no ending border, so last column width not needed.
             u[k] = v = v or ''
-            # If it is known to be unimportant and too long, prepare it to be removed and don't compute column width.
-            if (u['namespace'], u['name']) == ('admin', 'view_on_site'):
-                remove_idx.append(i)
-                continue
             max_lengths[k] = max(len(v), max_lengths.get(k, 0))
-    for row in reversed(remove_idx):
-        all_urls.pop(row)
+    for idx in reversed(remove_idx):
+        all_urls.pop(idx)
     title = all_urls.pop()
     if len(cols) > 1:
         bar = {key: '*' * max_lengths.get(key, 4) for key in title}
