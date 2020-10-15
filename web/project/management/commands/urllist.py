@@ -34,7 +34,7 @@ def collect_urls(urls=None, namespace=None, prefix=None):
         raise ValueError(repr(urls))
 
 
-def show_urls(cols=None, sort=None, sub_rules=None, sub_cols=None):
+def show_urls(cols=None, sort=None, sub_rules=None):
     all_urls = collect_urls()
     if not all_urls:
         # sys.stdout.write("************* NO URLS FOUND *************")
@@ -53,12 +53,10 @@ def show_urls(cols=None, sort=None, sub_rules=None, sub_cols=None):
         if (u['namespace'], u['name']) == ('admin', 'view_on_site'):
             remove_idx.append(i)
             continue
-        if sub_rules and sub_cols:
-            for col in sub_cols:
-                val = u[col]
-                for regex, new_str in sub_rules:
-                    val = re.sub(regex, new_str, val)
-                u[col] = val
+        if sub_rules:
+            for regex, new_str, sub_cols in sub_rules:
+                for col in sub_cols:
+                    u[col] = re.sub(regex, new_str, u[col])
         for k, v in list(u.items())[:-1]:  # no ending border, so last column width not needed.
             u[k] = v = v or ''
             max_lengths[k] = max(len(v), max_lengths.get(k, 0))
@@ -93,7 +91,7 @@ class Command(BaseCommand):
         parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
         parser.add_argument('--sub-cols', nargs='*', action='store', default=['namespace', 'name', 'lookup_str'],
                             help='Columns for default substitutions. ', metavar='col', )
-        parser.add_argument('--add', '-a', nargs=2, action='append', metavar=('regex', 'value', ),
+        parser.add_argument('--add', '-a', nargs=2, default=[], action='append', metavar=('regex', 'value', ),
                             help='Add a substitution rule: regex, value.', )
         parser.add_argument('--cols', '-c', nargs='*', help='Columns used for added substitutions.', metavar='col')
     # end def add_arguments
@@ -103,11 +101,15 @@ class Command(BaseCommand):
         self.stdout.write(str(kwargs) + "\n\n")
         col_names = kwargs['only'] or ['namespace', 'name', 'pattern', 'lookup_str', 'args']
         col_names = [ea for ea in col_names if ea not in kwargs['not']]
-        sub_cols = kwargs.get('sub_cols', [])
-        sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
+        sc = kwargs.get('sub_cols', [])
+        sub_rules = [('^django.contrib', 'cb ', sc), ('^django_registration', 'd_reg ', sc), ('^django', '', sc)]
         if kwargs['long']:
-            sub_rules = None
+            sub_rules = []
+        cols = kwargs['cols'] or sc
+        add_rules = [(*rule, cols) for rule in kwargs['add']]
+        sub_rules.extend(add_rules)
+        self.stdout.write(str(sub_rules))
 
-        result = show_urls(cols=col_names, sort=kwargs['sort'], sub_rules=sub_rules, sub_cols=sub_cols)
+        result = show_urls(cols=col_names, sort=kwargs['sort'], sub_rules=sub_rules)
         for row in result:
             self.stdout.write(row)
