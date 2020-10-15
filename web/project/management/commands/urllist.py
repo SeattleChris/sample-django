@@ -1,4 +1,5 @@
 import sys
+import re
 from django.core.management import BaseCommand
 from django.urls import resolvers
 
@@ -24,10 +25,6 @@ def collect_urls(urls=None, namespace=None, prefix=None):
         pattern = prefix + [str(urls.pattern)]
         pattern = ''.join([ea for ea in pattern if ea])[1:]
         # sys.stdout.write("*************************** URLPattern ************************** \n")
-        # sys.stdout.write("namespace: " + str(namespace) + "\n")
-        # sys.stdout.write("")
-        # sys.stdout.write(str(pattern))
-        # sys.stdout.write("\n ----------------------- \n")
         return [{'namespace': namespace,
                  'name': urls.name,
                  'pattern': pattern,
@@ -37,7 +34,7 @@ def collect_urls(urls=None, namespace=None, prefix=None):
         raise ValueError(repr(urls))
 
 
-def show_urls():
+def show_urls(sub_rules=None, sub_cols=None):
     all_urls = collect_urls()
     if not all_urls:
         sys.stdout.write("************* NO URLS FOUND *************")
@@ -46,18 +43,21 @@ def show_urls():
     all_urls.append(title)
     max_lengths = {}
     for u in all_urls:
-        for k in ['args']:
+        for k in ['name', 'args']:
             u[k] = str(u[k])
-        for k in ['lookup_str']:
-            u[k] = u[k]
+        for k in sub_cols:
+            v = u[k]
+            for a, b in sub_rules:
+                v = re.sub(a, b, v)
+            u[k] = v
         for k, v in list(u.items())[:-1]:  # no ending border, so last column width not needed.
             u[k] = v = v or ''
             # Skip app_list due to length (contains all app names)
-            if (u['namespace'], u['name'], k) == ('admin', 'app_list', 'pattern'):
-                continue
+            # if (u['namespace'], u['name'], k) == ('admin', 'app_list', 'pattern'):
+            #     continue
             max_lengths[k] = max(len(v), max_lengths.get(k, 0))
-    heading_line = {key: '*'*max_lengths.get(key, 4) for key in title}
-    all_urls = all_urls[-1:] + sorted(all_urls[:-1], key=lambda x: (x['namespace'], x['name']))
+    bar = {key: '*' * max_lengths.get(key, 4) for key in title}
+    all_urls = all_urls[-1:] + [bar] + sorted(all_urls[:-1], key=lambda x: (x['namespace'], x['name']))
     for u in all_urls:
         sys.stdout.write(' | '.join(
             ('{:%d}' % max_lengths.get(k, len(v))).format(v)
@@ -66,4 +66,6 @@ def show_urls():
 
 class Command(BaseCommand):
     def handle(self, *args, **kwargs):
-        show_urls()
+        sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
+        sub_cols = ['namespace', 'name', 'lookup_str']
+        show_urls(sub_rules=sub_rules, sub_cols=sub_cols)
