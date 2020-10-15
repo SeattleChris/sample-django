@@ -88,6 +88,5 @@ class Command(BaseCommand):
         sys.stdout.write(str(args) + "\n")
         sys.stdout.write(str(kwargs) + "\n\n")
         sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
-        # sub_cols = ['namespace', 'name', 'lookup_str']
-        sub_cols = kwargs.get('sub-cols', [])
+        sub_cols = kwargs.get('sub_cols', [])
         show_urls(sub_rules=sub_rules, sub_cols=sub_cols)
