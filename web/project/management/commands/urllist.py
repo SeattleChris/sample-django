@@ -32,8 +32,8 @@ def collect_urls(urls=None, namespace=None, prefix=None):
 
 
 def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
-    all_urls = collect_urls()
     empty_value = "************* NO URLS FOUND *************"
+    all_urls = collect_urls()
     if not all_urls:
         return empty_value
     if sort:
@@ -42,13 +42,12 @@ def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
     if mods:
         mods.append('namespace')
     all_urls.append(title)
-    remove_idx = []
-    max_lengths = {}
+    remove_idx, max_lengths = [], {}
     for i, u in enumerate(all_urls):
         for col in ['name', 'args']:
             val = u[col]
             u[col] = '' if val is None else str(val)
-        # Prep removal, and don't compute width, for ignored modules or the known combo(s) that are long and unneeded.
+        # Prep removal, and don't compute length, for ignored modules or the known combo(s) that are long and unneeded.
         is_rejected = (u['namespace'], u['name']) == ('admin', 'view_on_site')
         if u['namespace'] in ignore or is_rejected or (mods and u['namespace'] not in mods):
             remove_idx.append(i)
@@ -57,7 +56,7 @@ def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
             for regex, new_str, sub_cols in sub_rules:
                 for col in sub_cols:
                     u[col] = re.sub(regex, new_str, u[col])
-        for k, v in list(u.items()):  # could skip last column width since there is no ending border.
+        for k, v in list(u.items()):  # could skip last column length since there is no ending border.
             u[k] = v = v or ''
             max_lengths[k] = max(len(v), max_lengths.get(k, 0))
     for idx in reversed(remove_idx):
@@ -75,35 +74,44 @@ def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
     return '\n'.join(result)
 
 
+def get_sub_rules(kwargs):
+    sc = kwargs.get('sub_cols', [])
+    sub_rules = [('^django.contrib', 'cb ', sc), ('^django_registration', 'd_reg ', sc), ('^django', '', sc)]
+    if kwargs['long']:
+        sub_rules = []
+    add_rules = [(*rule, kwargs['cols'] or sc) for rule in kwargs['add']]
+    sub_rules.extend(add_rules)
+    return sub_rules
+
+
+def get_col_names(kwargs):
+    col_names = kwargs['only'] or ['namespace', 'name', 'pattern', 'lookup_str', 'args']
+    return [ea for ea in col_names if ea not in kwargs['not']]
+
+
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
         # Positional arguments
-        parser.add_argument('modules', nargs='*', type=str, default=[], metavar='module',
-                            help='Only show url info from the listed namespace or module source. Default: show all.')
+        parser.add_argument('sources', nargs='*', type=str, default=[], metavar='source',
+                            help='Only show url info from the namespace or module source(s) listed. Default: show all.')
         # Optional Named Arguments: Rows (modules) and Columns (info about the url setting).
-        parser.add_argument('--ignore', nargs='*', default=[], help='List of modules to ignore.', metavar='module')
-        parser.add_argument('--only', nargs='*', help='Show only listed column names. ', metavar='col')
-        parser.add_argument('--not', nargs='*', default=[], help='Show all columns except those listed.', metavar='col')
+        parser.add_argument('--ignore', nargs='*', default=[], help='List of sources to ignore.', metavar='source')
+        parser.add_argument('--only', nargs='*', help='Only show the following columns. ', metavar='col')
+        parser.add_argument('--not', nargs='*', default=[], help='Do NOT show the following columns.', metavar='col')
         parser.add_argument('--sort', nargs='*', default=['namespace', 'name'],  metavar='col',
-                            help='Override sort order. Can define multiple columns to sort by.',)
+                            help='Sort by, in order of priority, column(s) value. Default: namespace name. ',)
         # Optional Named Arguments: String substitutions for tighter view and readability.
         parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
         parser.add_argument('--sub-cols', nargs='*', action='store', default=['namespace', 'name', 'lookup_str'],
-                            help='Columns for default substitutions. ', metavar='col', )
+                            help='Columns to apply the default substitutions. ', metavar='col', )
         parser.add_argument('--add', '-a', nargs=2, default=[], action='append', metavar=('regex', 'value', ),
                             help='Add a substitution rule: regex, value.', )
         parser.add_argument('--cols', '-c', nargs='*', metavar='col',
-                            help='Columns used for added substitutions. If none given, use sub-cols as default.', )
+                            help='Columns to apply added substitutions. If none given, defaults to sub-cols. ', )
 
     def handle(self, *args, **kwargs):
-        col_names = kwargs['only'] or ['namespace', 'name', 'pattern', 'lookup_str', 'args']
-        col_names = [ea for ea in col_names if ea not in kwargs['not']]
-        sc = kwargs.get('sub_cols', [])
-        sub_rules = [('^django.contrib', 'cb ', sc), ('^django_registration', 'd_reg ', sc), ('^django', '', sc)]
-        if kwargs['long']:
-            sub_rules = []
-        add_rules = [(*rule, kwargs['cols'] or sc) for rule in kwargs['add']]
-        sub_rules.extend(add_rules)
-        result = show_urls(kwargs['modules'], kwargs['ignore'], col_names, sort=kwargs['sort'], sub_rules=sub_rules)
+        col_names = get_col_names(kwargs)
+        sub_rules = get_sub_rules(kwargs)
+        result = show_urls(kwargs['sources'], kwargs['ignore'], col_names, sort=kwargs['sort'], sub_rules=sub_rules)
         self.stdout.write(result)
