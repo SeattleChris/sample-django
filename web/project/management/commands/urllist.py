@@ -37,8 +37,8 @@ def collect_urls(urls=None, namespace=None, prefix=None):
 def show_urls(sub_rules=None, sub_cols=None):
     all_urls = collect_urls()
     if not all_urls:
-        sys.stdout.write("************* NO URLS FOUND *************")
-        return
+        # sys.stdout.write("************* NO URLS FOUND *************")
+        return ["************* NO URLS FOUND *************"]
     all_urls = sorted(all_urls, key=lambda x: (x['namespace'], str(x['name'])))
     title = {key: key for key in all_urls[0].keys()}
     all_urls.append(title)
@@ -65,10 +65,12 @@ def show_urls(sub_rules=None, sub_cols=None):
     title = all_urls.pop()
     bar = {key: '*' * max_lengths.get(key, 4) for key in title}
     all_urls = [title, bar] + all_urls
+    result = []
     for u in all_urls:
-        sys.stdout.write(' | '.join(
+        result.append(' | '.join(
             ('{:%d}' % max_lengths.get(k, len(v))).format(v)
             for k, v in u.items()) + '\n')
+    return result
 
 
 class Command(BaseCommand):
@@ -77,25 +79,26 @@ class Command(BaseCommand):
         # Positional arguments
         parser.add_argument('modules', nargs='*', type=str, default='all',
                             help='Only show these listed modules. Default: show all.')
-        # Named (optional) arguments
+        # Optional Named Arguments: Rows (modules) and Columns (info about the url setting).
         parser.add_argument('--ignore', nargs='*', help='List of modules to ignore.', metavar='module')
         parser.add_argument('--only', nargs='*', help='Show only listed column names. ', metavar='col')
         parser.add_argument('--not', nargs='*', help='Show all columns except those listed.', metavar='col')
-
+        # Optional Named Arguments: String substitutions for tighter view and readability.
         parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
         parser.add_argument('--sub-cols', nargs='*', action='store', default=['namespace', 'name', 'lookup_str'],
                             help='Columns for default substitutions. ', metavar='col', )
         parser.add_argument('--add', '-a', nargs=2, action='append', metavar=('regex', 'value', ),
                             help='Add a substitution rule: regex, value.', )
         parser.add_argument('--cols', '-c', nargs='*', help='Columns used for added substitutions.', metavar='col')
-
     # end def add_arguments
 
     def handle(self, *args, **kwargs):
-        sys.stdout.write(str(args) + "\n")
-        sys.stdout.write(str(kwargs) + "\n\n")
+        self.stdout.write(str(args) + "\n")
+        self.stdout.write(str(kwargs) + "\n\n")
         sub_cols = kwargs.get('sub_cols', [])
         sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
         if kwargs['long']:
             sub_rules = None
-        show_urls(sub_rules=sub_rules, sub_cols=sub_cols)
+        result = show_urls(sub_rules=sub_rules, sub_cols=sub_cols)
+        for row in result:
+            self.stdout.write(row)
