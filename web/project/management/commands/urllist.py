@@ -42,6 +42,8 @@ def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
     if sort:
         all_urls = sorted(all_urls, key=lambda x: [str(x[key] or '') for key in sort])
     title = {key: key for key in all_urls[0].keys()}
+    if mods:
+        mods.append('namespace')
     all_urls.append(title)
     remove_idx = []
     max_lengths = {}
@@ -51,6 +53,9 @@ def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
             u[col] = '' if val is None else str(val)
         # Prep removal, and don't compute width, for ignored modules or the known combo(s) that are long and unneeded.
         if u['namespace'] in ignore or (u['namespace'], u['name']) == ('admin', 'view_on_site'):
+            remove_idx.append(i)
+            continue
+        if mods and u['namespace'] not in mods:
             remove_idx.append(i)
             continue
         if sub_rules:
@@ -79,7 +84,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         # Positional arguments
-        parser.add_argument('modules', nargs='*', type=str, default='all',
+        parser.add_argument('modules', nargs='*', type=str, default=[],
                             help='Only show these listed modules. Default: show all.')
         # Optional Named Arguments: Rows (modules) and Columns (info about the url setting).
         parser.add_argument('--ignore', nargs='*', default=[], help='List of modules to ignore.', metavar='module')
