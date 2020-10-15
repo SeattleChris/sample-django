@@ -52,10 +52,8 @@ def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
             val = u[col]
             u[col] = '' if val is None else str(val)
         # Prep removal, and don't compute width, for ignored modules or the known combo(s) that are long and unneeded.
-        if u['namespace'] in ignore or (u['namespace'], u['name']) == ('admin', 'view_on_site'):
-            remove_idx.append(i)
-            continue
-        if mods and u['namespace'] not in mods:
+        is_rejected = (u['namespace'], u['name']) == ('admin', 'view_on_site')
+        if u['namespace'] in ignore or is_rejected or (mods and u['namespace'] not in mods):
             remove_idx.append(i)
             continue
         if sub_rules:
