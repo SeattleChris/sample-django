@@ -3,7 +3,7 @@ from django.core.management import BaseCommand
 from django.urls import resolvers
 
 
-def collect_urls(urls=None, namespace=None, prefix=None):
+def collect_urls(urls=None, source=None, prefix=None):
     if urls is None:
         urls = resolvers.get_resolver()
     prefix = prefix or []
@@ -13,16 +13,16 @@ def collect_urls(urls=None, namespace=None, prefix=None):
             name = ''
         elif not isinstance(name, str):
             name = name.__name__
-        namespace = urls.namespace or name.split('.')[0] or namespace
+        source = urls.namespace or name.split('.')[0] or source
         res = []
         for x in urls.url_patterns:
-            res += collect_urls(x, namespace=urls.namespace or namespace,
+            res += collect_urls(x, source=source,
                                 prefix=prefix + [str(urls.pattern)])
         return res
     elif isinstance(urls, resolvers.URLPattern):
         pattern = prefix + [str(urls.pattern)]
         pattern = ''.join([ea for ea in pattern if ea])[1:]
-        return [{'namespace': namespace,
+        return [{'source': source,
                  'name': urls.name,
                  'pattern': pattern,
                  'lookup_str': urls.lookup_str,
@@ -40,7 +40,7 @@ def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
         all_urls = sorted(all_urls, key=lambda x: [str(x[key] or '') for key in sort])
     title = {key: key for key in all_urls[0].keys()}
     if mods:
-        mods.append('namespace')
+        mods.append('source')
     all_urls.append(title)
     remove_idx, max_lengths = [], {}
     for i, u in enumerate(all_urls):
@@ -48,8 +48,8 @@ def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
             val = u[col]
             u[col] = '' if val is None else str(val)
         # Prep removal, and don't compute length, for ignored modules or the known combo(s) that are long and unneeded.
-        is_rejected = (u['namespace'], u['name']) == ('admin', 'view_on_site')
-        if u['namespace'] in ignore or is_rejected or (mods and u['namespace'] not in mods):
+        is_rejected = (u['source'], u['name']) == ('admin', 'view_on_site')
+        if u['source'] in ignore or is_rejected or (mods and u['source'] not in mods):
             remove_idx.append(i)
             continue
         if sub_rules:
@@ -85,7 +85,7 @@ def get_sub_rules(kwargs):
 
 
 def get_col_names(kwargs):
-    col_names = kwargs['only'] or ['namespace', 'name', 'pattern', 'lookup_str', 'args']
+    col_names = kwargs['only'] or ['source', 'name', 'pattern', 'lookup_str', 'args']
     return [ea for ea in col_names if ea not in kwargs['not']]
 
 
@@ -99,11 +99,11 @@ class Command(BaseCommand):
         parser.add_argument('--ignore', nargs='*', default=[], help='List of sources to ignore.', metavar='source')
         parser.add_argument('--only', nargs='*', help='Only show the following columns. ', metavar='col')
         parser.add_argument('--not', nargs='*', default=[], help='Do NOT show the following columns.', metavar='col')
-        parser.add_argument('--sort', nargs='*', default=['namespace', 'name'],  metavar='col',
-                            help='Sort by, in order of priority, column(s) value. Default: namespace name. ',)
+        parser.add_argument('--sort', nargs='*', default=['source', 'name'],  metavar='col',
+                            help='Sort by, in order of priority, column(s) value. Default: source name. ',)
         # Optional Named Arguments: String substitutions for tighter view and readability.
         parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
-        parser.add_argument('--sub-cols', nargs='*', action='store', default=['namespace', 'name', 'lookup_str'],
+        parser.add_argument('--sub-cols', nargs='*', action='store', default=['source', 'name', 'lookup_str'],
                             help='Columns to apply the default substitutions. ', metavar='col', )
         parser.add_argument('--add', '-a', nargs=2, default=[], action='append', metavar=('regex', 'value', ),
                             help='Add a substitution rule: regex, value.', )
