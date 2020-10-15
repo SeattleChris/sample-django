@@ -63,8 +63,9 @@ def show_urls(cols=None, sub_rules=None, sub_cols=None):
     for row in reversed(remove_idx):
         all_urls.pop(row)
     title = all_urls.pop()
-    bar = {key: '*' * max_lengths.get(key, 4) for key in title}
-    all_urls = [title, bar] + all_urls
+    if len(cols) > 1:
+        bar = {key: '*' * max_lengths.get(key, 4) for key in title}
+        all_urls = [title, bar] + all_urls
     result = []
     for u in all_urls:
         result.append(' | '.join(
