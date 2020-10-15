@@ -56,6 +56,7 @@ def show_urls():
             if (u['namespace'], u['name'], k) == ('admin', 'app_list', 'pattern'):
                 continue
             max_lengths[k] = max(len(v), max_lengths.get(k, 0))
+    heading_line = {key: '*'*max_lengths.get(key, 4) for key in title}
     all_urls = all_urls[-1:] + sorted(all_urls[:-1], key=lambda x: (x['namespace'], x['name']))
     for u in all_urls:
         sys.stdout.write(' | '.join(
