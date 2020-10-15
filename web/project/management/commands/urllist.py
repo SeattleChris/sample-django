@@ -43,19 +43,22 @@ def show_urls(sub_rules=None, sub_cols=None):
     all_urls.append(title)
     max_lengths = {}
     for u in all_urls:
-        for k in ['name', 'args']:
-            u[k] = str(u[k])
-        for k in sub_cols:
-            v = u[k]
-            for a, b in sub_rules:
-                v = re.sub(a, b, v)
-            u[k] = v
+        for col in ['name', 'args']:
+            u[col] = str(u[col])
+        if sub_rules and sub_cols:
+            for col in sub_cols:
+                val = u[col]
+                for regex, new_str in sub_rules:
+                    val = re.sub(regex, new_str, val)
+                u[col] = val
         for k, v in list(u.items())[:-1]:  # no ending border, so last column width not needed.
             u[k] = v = v or ''
-            # Skip app_list due to length (contains all app names)
-            # if (u['namespace'], u['name'], k) == ('admin', 'app_list', 'pattern'):
+            # If it is known to be unimportant and too long, prepare it to be removed and don't compute column width.
+            # if (u['namespace'], u['name']) == ('admin', 'view_on_site'):
+            #     remove.append(u)
             #     continue
             max_lengths[k] = max(len(v), max_lengths.get(k, 0))
+
     bar = {key: '*' * max_lengths.get(key, 4) for key in title}
     all_urls = all_urls[-1:] + [bar] + sorted(all_urls[:-1], key=lambda x: (x['namespace'], x['name']))
     for u in all_urls:
@@ -87,6 +90,8 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         sys.stdout.write(str(args) + "\n")
         sys.stdout.write(str(kwargs) + "\n\n")
-        sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
         sub_cols = kwargs.get('sub_cols', [])
+        sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
+        if kwargs['long']:
+            sub_rules = None
         show_urls(sub_rules=sub_rules, sub_cols=sub_cols)
