@@ -4,11 +4,6 @@ from django.core.management import BaseCommand
 from django.urls import resolvers
 
 
-def get_col_names(kwargs, all_columns):
-    col_names = kwargs['only'] or all_columns
-    return [ea for ea in col_names if ea not in kwargs['not']]
-
-
 class Command(BaseCommand):
 
     all_columns = ['source', 'name', 'pattern', 'lookup_str', 'args']
@@ -41,6 +36,10 @@ class Command(BaseCommand):
                             help='Columns to apply added substitutions. If none given, defaults to sub-cols. ', )
         # Optional Named Argument: Flag for returning results when called within code instead of command line.
         parser.add_argument('--data', '-d', action='store_true', help='Return results usable in application code.', )
+
+    def get_col_names(self, kwargs):
+        col_names = kwargs['only'] or self.all_columns
+        return [ea for ea in col_names if ea not in kwargs['not']]
 
     def get_sub_rules(self, kwargs):
         sc = kwargs.get('sub_cols', [])
@@ -129,7 +128,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         """Main interface, called to determine response. """
-        col_names = get_col_names(kwargs, self.all_columns)
+        col_names = self.get_col_names(kwargs)
         sub_rules = self.get_sub_rules(kwargs)
         result = self.get_url_data(kwargs['sources'], kwargs['ignore'], col_names, kwargs['sort'], sub_rules)
         if kwargs['data']:
