@@ -3,8 +3,6 @@ import json
 from django.core.management import BaseCommand
 from django.urls import resolvers
 
-EMPTY_VALUE = ["************* NO URLS FOUND *************"]
-
 
 def collect_urls(urls=None, source=None, prefix=None):
     if urls is None:
@@ -52,12 +50,19 @@ def get_sub_rules(kwargs):
     return sub_rules
 
 
-def get_col_names(kwargs):
-    col_names = kwargs['only'] or ['source', 'name', 'pattern', 'lookup_str', 'args']
+def get_col_names(kwargs, all_columns):
+    col_names = kwargs['only'] or all_columns
     return [ea for ea in col_names if ea not in kwargs['not']]
 
 
 class Command(BaseCommand):
+
+    rejected_data = [{'source': 'admin', 'name': 'view_on_site'}, ]
+    all_columns = ['source', 'name', 'pattern', 'lookup_str', 'args']
+    EMPTY_VALUE = "************* NO URLS FOUND *************"
+    MIN_WIDTH = 4
+    title = None
+    col_widths = None
 
     def add_arguments(self, parser):
         # Positional arguments
@@ -81,7 +86,7 @@ class Command(BaseCommand):
         parser.add_argument('--data', '-d', action='store_true', help='Return results usable in application code.', )
 
     def handle(self, *args, **kwargs):
-        col_names = get_col_names(kwargs)
+        col_names = get_col_names(kwargs, self.all_columns)
         sub_rules = get_sub_rules(kwargs)
         result = show_urls(kwargs['sources'], kwargs['ignore'], col_names, sort=kwargs['sort'], sub_rules=sub_rules)
         if kwargs['data']:
