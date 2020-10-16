@@ -6,7 +6,8 @@ import json
 
 def home_view(request):
     urls = call_command('urllist', ignore=['admin'], only=['name'], long=True, data=True)
-    context = {'all_urls': json.loads(urls)}
+    urls = [ea[0] for ea in json.loads(urls)]
+    context = {'all_urls': urls}
     return render(request, 'generic/home.html', context=context)
 
 

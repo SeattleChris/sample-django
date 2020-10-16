@@ -44,7 +44,6 @@ class Command(BaseCommand):
 
     def get_sub_rules(self, kwargs):
         sc = kwargs.get('sub_cols', [])
-        # sub_rules = [('^django.contrib', 'cb ', sc), ('^django_registration', 'd_reg ', sc), ('^django', '', sc)]
         if kwargs['long']:
             sub_rules = []
         else:
