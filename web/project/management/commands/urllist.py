@@ -95,17 +95,16 @@ class Command(BaseCommand):
         if sort:
             all_urls = sorted(all_urls, key=lambda x: [str(x[key] or '') for key in sort])
         title = {key: key for key in all_urls[0].keys()}
+        all_urls.append(title)
         if sources:
             sources.append('source')
-        all_urls.append(title)
-        remove_idx, max_lengths = [], {}
+        remove_idx, col_widths = [], {}
         for i, u in enumerate(all_urls):
             for col in ['name', 'args']:
                 val = u[col]
                 u[col] = '' if val is None else str(val)
             # Prep removal, and don't compute length, for ignored sources or known rejected_data combo(s)
             is_rejected = any(all(u[k] == v for k, v in condition.items()) for condition in self.rejected_data)
-            is_rejected = (u['source'], u['name']) == ('admin', 'view_on_site')
             if u['source'] in ignore or is_rejected or (sources and u['source'] not in sources):
                 remove_idx.append(i)
                 continue
@@ -115,16 +114,14 @@ class Command(BaseCommand):
                         u[col] = re.sub(regex, new_str, u[col])
             for k, v in list(u.items()):  # could skip last column length since there is no ending border.
                 u[k] = v = v or ''
-                max_lengths[k] = max(len(v), max_lengths.get(k, 0))
+                col_widths[k] = max(len(v), col_widths.get(k, 0))
         for idx in reversed(remove_idx):
             all_urls.pop(idx)
         if len(all_urls) == 1:
             return []
         result = [[v for k, v in u.items() if k in cols] for u in all_urls]
-        title = all_urls.pop()
-        title = list(title.keys())
-        self.title = title
-        self.col_widths = max_lengths
+        self.title = result.pop()
+        self.col_widths = col_widths
         return result
 
     def handle(self, *args, **kwargs):
