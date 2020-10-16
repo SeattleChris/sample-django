@@ -8,6 +8,7 @@ class Command(BaseCommand):
 
     all_columns = ['source', 'name', 'pattern', 'lookup_str', 'args']
     rejected_data = [{'source': 'admin', 'name': 'view_on_site'}, ]
+    initial_sort = ['source', 'name']
     initial_sub_cols = ['source', 'name', 'lookup_str']
     initial_sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
     EMPTY_VALUE = "************* NO URLS FOUND *************"
@@ -24,11 +25,11 @@ class Command(BaseCommand):
         parser.add_argument('--ignore', nargs='*', default=[], help='List of sources to ignore.', metavar='source')
         parser.add_argument('--only', nargs='*', help='Only show the following columns. ', metavar='col')
         parser.add_argument('--not', nargs='*', default=[], help='Do NOT show the following columns.', metavar='col')
-        parser.add_argument('--sort', nargs='*', default=['source', 'name'],  metavar='col',
+        parser.add_argument('--sort', nargs='*', default=self.initial_sort,  metavar='col',
                             help='Sort by, in order of priority, column(s) value. Default: source name. ',)
         # Optional Named Arguments: String substitutions for tighter view and readability.
         parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
-        parser.add_argument('--sub-cols', nargs='*', action='store', default=['source', 'name', 'lookup_str'],
+        parser.add_argument('--sub-cols', nargs='*', action='store', default=self.initial_sub_cols,
                             help='Columns to apply the default substitutions. ', metavar='col', )
         parser.add_argument('--add', '-a', nargs=2, default=[], action='append', metavar=('regex', 'value', ),
                             help='Add a substitution rule: regex, value.', )
