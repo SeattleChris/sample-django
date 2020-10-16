@@ -29,6 +29,7 @@ class Command(BaseCommand):
     col_widths = None
 
     def add_arguments(self, parser):
+        """Both positional and named arguments are defined. Help documentation generated from this content.  """
         # Positional arguments
         parser.add_argument('sources', nargs='*', type=str, default=[], metavar='source',
                             help='Only show url info from the namespace or module source(s) listed. Default: show all.')
@@ -50,6 +51,7 @@ class Command(BaseCommand):
         parser.add_argument('--data', '-d', action='store_true', help='Return results usable in application code.', )
 
     def collect_urls(self, urls=None, source=None, prefix=None):
+        """Called recursively for URLResolver until base case URLPattern. Ultimately returning a list of data dicts. """
         if urls is None:
             urls = resolvers.get_resolver()
         prefix = prefix or []
@@ -86,6 +88,7 @@ class Command(BaseCommand):
         return '\n'.join(result)
 
     def get_url_data(self, sources=None, ignore=None, cols=None, sort=None, sub_rules=None):
+        """Collects all urls, then filters down to the desired data. Sets title & col_widths, Returns a 2d data list."""
         all_urls = self.collect_urls()
         if not all_urls:
             return []
@@ -125,6 +128,7 @@ class Command(BaseCommand):
         return result
 
     def handle(self, *args, **kwargs):
+        """Main interface, called to determine response. """
         col_names = get_col_names(kwargs, self.all_columns)
         sub_rules = get_sub_rules(kwargs)
         result = self.get_url_data(kwargs['sources'], kwargs['ignore'], col_names, kwargs['sort'], sub_rules)
