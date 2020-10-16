@@ -1,6 +1,9 @@
 import re
+import json
 from django.core.management import BaseCommand
 from django.urls import resolvers
+
+EMPTY_VALUE = ["************* NO URLS FOUND *************"]
 
 
 def collect_urls(urls=None, source=None, prefix=None):
@@ -31,16 +34,15 @@ def collect_urls(urls=None, source=None, prefix=None):
         raise ValueError(repr(urls))
 
 
-def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
-    empty_value = "************* NO URLS FOUND *************"
+def show_urls(sources=None, ignore=None, cols=None, sort=None, sub_rules=None):
     all_urls = collect_urls()
     if not all_urls:
-        return empty_value
+        return EMPTY_VALUE
     if sort:
         all_urls = sorted(all_urls, key=lambda x: [str(x[key] or '') for key in sort])
     title = {key: key for key in all_urls[0].keys()}
-    if mods:
-        mods.append('source')
+    if sources:
+        sources.append('source')
     all_urls.append(title)
     remove_idx, max_lengths = [], {}
     for i, u in enumerate(all_urls):
@@ -49,7 +51,7 @@ def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
             u[col] = '' if val is None else str(val)
         # Prep removal, and don't compute length, for ignored modules or the known combo(s) that are long and unneeded.
         is_rejected = (u['source'], u['name']) == ('admin', 'view_on_site')
-        if u['source'] in ignore or is_rejected or (mods and u['source'] not in mods):
+        if u['source'] in ignore or is_rejected or (sources and u['source'] not in sources):
             remove_idx.append(i)
             continue
         if sub_rules:
@@ -62,7 +64,7 @@ def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
     for idx in reversed(remove_idx):
         all_urls.pop(idx)
     if len(all_urls) == 1:
-        return empty_value
+        return EMPTY_VALUE
     title = all_urls.pop()
     if len(cols) > 1:
         bar = {key: '*' * max_lengths.get(key, 4) for key in title}
@@ -71,7 +73,7 @@ def show_urls(mods=None, ignore=None, cols=None, sort=None, sub_rules=None):
     for u in all_urls:
         result.append(' | '.join(('{:%d}' % max_lengths.get(k, len(v))).format(v) for k, v in u.items() if k in cols))
     # result = [' | '.join(('{:%d}' % max_lengths[k]).format(v) for k, v in u.items() if k in cols) for u in all_urls]
-    return '\n'.join(result)
+    return result
 
 
 def get_sub_rules(kwargs):
@@ -109,9 +111,21 @@ class Command(BaseCommand):
                             help='Add a substitution rule: regex, value.', )
         parser.add_argument('--cols', '-c', nargs='*', metavar='col',
                             help='Columns to apply added substitutions. If none given, defaults to sub-cols. ', )
+        # Optional Named Argument: Flag for returning results when called within code instead of command line.
+        parser.add_argument('--data', '-d', action='store_true', help='Return results usable in application code.', )
 
     def handle(self, *args, **kwargs):
         col_names = get_col_names(kwargs)
         sub_rules = get_sub_rules(kwargs)
         result = show_urls(kwargs['sources'], kwargs['ignore'], col_names, sort=kwargs['sort'], sub_rules=sub_rules)
-        self.stdout.write(result)
+        if kwargs['data']:
+            if result == EMPTY_VALUE:
+                result = []
+            elif len(col_names) == 1:
+                result = [ea.strip() for ea in result]
+            else:
+                result = result[2:]
+            return json.dumps([ea.strip() for ea in result])
+        else:
+            self.stdout.write('\n'.join(result))
+            return 0
