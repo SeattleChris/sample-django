@@ -85,18 +85,65 @@ class Command(BaseCommand):
         # Optional Named Argument: Flag for returning results when called within code instead of command line.
         parser.add_argument('--data', '-d', action='store_true', help='Return results usable in application code.', )
 
+    def data_to_string(self, data):
+        """Takes a list of url data, with each row as a list of columns, and formats for a table looking layout. """
+        if not data:
+            return self.EMPTY_VALUE
+        if len(self.title) == 1:
+            result = [' | '.join(ea) for ea in data]
+        else:
+            widths = [self.col_widths.get(key, self.MIN_WIDTH) for key in self.title]
+            bar = ['*' * width for width in widths]
+            data = [self.title[:], bar] + data
+            result = [' | '.join(('{:%d}' % widths[i]).format(v) for i, v in enumerate(ea)) for ea in data]
+        return '\n'.join(result)
+
+    def get_url_data(self, sources=None, ignore=None, cols=None, sort=None, sub_rules=None):
+        all_urls = collect_urls()
+        if not all_urls:
+            return []
+        if sort:
+            all_urls = sorted(all_urls, key=lambda x: [str(x[key] or '') for key in sort])
+        title = {key: key for key in all_urls[0].keys()}
+        if sources:
+            sources.append('source')
+        all_urls.append(title)
+        remove_idx, max_lengths = [], {}
+        for i, u in enumerate(all_urls):
+            for col in ['name', 'args']:
+                val = u[col]
+                u[col] = '' if val is None else str(val)
+            # Prep removal, and don't compute length, for ignored sources or known rejected_data combo(s)
+            is_rejected = any(all(u[k] == v for k, v in condition.items()) for condition in self.rejected_data)
+            is_rejected = (u['source'], u['name']) == ('admin', 'view_on_site')
+            if u['source'] in ignore or is_rejected or (sources and u['source'] not in sources):
+                remove_idx.append(i)
+                continue
+            if sub_rules:
+                for regex, new_str, sub_cols in sub_rules:
+                    for col in sub_cols:
+                        u[col] = re.sub(regex, new_str, u[col])
+            for k, v in list(u.items()):  # could skip last column length since there is no ending border.
+                u[k] = v = v or ''
+                max_lengths[k] = max(len(v), max_lengths.get(k, 0))
+        for idx in reversed(remove_idx):
+            all_urls.pop(idx)
+        if len(all_urls) == 1:
+            return []
+        result = [[v for k, v in u.items() if k in cols] for u in all_urls]
+        title = all_urls.pop()
+        title = list(title.keys())
+        self.title = title
+        self.col_widths = max_lengths
+        return result
+
     def handle(self, *args, **kwargs):
         col_names = get_col_names(kwargs, self.all_columns)
         sub_rules = get_sub_rules(kwargs)
-        result = show_urls(kwargs['sources'], kwargs['ignore'], col_names, sort=kwargs['sort'], sub_rules=sub_rules)
+        result = self.get_url_data(kwargs['sources'], kwargs['ignore'], col_names, kwargs['sort'], sub_rules)
         if kwargs['data']:
-            if result == EMPTY_VALUE:
-                result = []
-            elif len(col_names) == 1:
-                result = [ea.strip() for ea in result]
-            else:
-                result = result[2:]
-            return json.dumps([ea.strip() for ea in result])
+            return json.dumps(result)
         else:
-            self.stdout.write('\n'.join(result))
+            result = self.data_to_string(result)
+            self.stdout.write(result)
             return 0
