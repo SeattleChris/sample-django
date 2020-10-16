@@ -5,8 +5,10 @@ import json
 
 
 def home_view(request):
-    urls = call_command('urllist', ignore=['admin'], only=['name'], long=True, data=True)
-    context = {'all_urls': json.loads(urls)}
+    urls = call_command('urllist', ignore=['admin'], only=['source', 'name'], long=True, data=True)
+    urls = [(ea[0] + '  - - ' + ea[1], ea[1], ) for ea in json.loads(urls)]
+    print(urls)
+    context = {'all_urls': urls}
     return render(request, 'generic/home.html', context=context)
 
 

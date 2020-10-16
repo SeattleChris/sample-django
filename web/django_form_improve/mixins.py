@@ -12,6 +12,7 @@ from django.utils.html import conditional_escape, format_html
 from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django_registration import validators
+from copy import deepcopy
 from pprint import pprint
 
 DEFAULT_COUNTRY = getattr(settings, 'DEFAULT_COUNTRY', 'US')
@@ -101,7 +102,7 @@ class CriticalFieldMixIn:
 
     def __init__(self, *args, **kwargs):
         # TODO: ? Should this be done through a Meta process?
-        if not issubclass(self, ComputedFieldsMixIn):
+        if not issubclass(self.__class__, ComputedFieldsMixIn):
             kwargs = self.setup_critical_fields(**kwargs)
         super().__init__(*args, **kwargs)
 
@@ -145,7 +146,7 @@ class CriticalFieldMixIn:
             if fields_made and name in self.fields:
                 field = self.fields[name]  # TODO: Determine if we should always work with base_fields.
             elif name in self.base_fields:
-                field = self.base_fields[name].copy()
+                field = deepcopy(self.base_fields[name])
             if isinstance(field, Field):
                 return name, field
         field = getattr(self, alt_name, None)
@@ -178,7 +179,7 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
 
     def __init__(self, *args, **kwargs):
         print("======================= ComputedFieldsMixIn.__init__ =================================")
-        kwargs = self.setup_critical_fields(kwargs)
+        kwargs = self.setup_critical_fields(**kwargs)
         computed_field_names = kwargs.pop('computed_fields', [])
         # computed_field_names = self.get_computed_field_names(computed_field_names, self.base_fields)
         super().__init__(*args, **kwargs)

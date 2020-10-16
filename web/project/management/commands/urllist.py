@@ -4,25 +4,13 @@ from django.core.management import BaseCommand
 from django.urls import resolvers
 
 
-def get_sub_rules(kwargs):
-    sc = kwargs.get('sub_cols', [])
-    sub_rules = [('^django.contrib', 'cb ', sc), ('^django_registration', 'd_reg ', sc), ('^django', '', sc)]
-    if kwargs['long']:
-        sub_rules = []
-    add_rules = [(*rule, kwargs['cols'] or sc) for rule in kwargs['add']]
-    sub_rules.extend(add_rules)
-    return sub_rules
-
-
-def get_col_names(kwargs, all_columns):
-    col_names = kwargs['only'] or all_columns
-    return [ea for ea in col_names if ea not in kwargs['not']]
-
-
 class Command(BaseCommand):
 
-    rejected_data = [{'source': 'admin', 'name': 'view_on_site'}, ]
     all_columns = ['source', 'name', 'pattern', 'lookup_str', 'args']
+    rejected_data = [{'source': 'admin', 'name': 'view_on_site'}, ]
+    initial_sort = ['source', 'name']
+    initial_sub_cols = ['source', 'name', 'lookup_str']
+    initial_sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
     EMPTY_VALUE = "************* NO URLS FOUND *************"
     MIN_WIDTH = 4
     title = None
@@ -37,11 +25,11 @@ class Command(BaseCommand):
         parser.add_argument('--ignore', nargs='*', default=[], help='List of sources to ignore.', metavar='source')
         parser.add_argument('--only', nargs='*', help='Only show the following columns. ', metavar='col')
         parser.add_argument('--not', nargs='*', default=[], help='Do NOT show the following columns.', metavar='col')
-        parser.add_argument('--sort', nargs='*', default=['source', 'name'],  metavar='col',
+        parser.add_argument('--sort', nargs='*', default=self.initial_sort,  metavar='col',
                             help='Sort by, in order of priority, column(s) value. Default: source name. ',)
         # Optional Named Arguments: String substitutions for tighter view and readability.
         parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
-        parser.add_argument('--sub-cols', nargs='*', action='store', default=['source', 'name', 'lookup_str'],
+        parser.add_argument('--sub-cols', nargs='*', action='store', default=self.initial_sub_cols,
                             help='Columns to apply the default substitutions. ', metavar='col', )
         parser.add_argument('--add', '-a', nargs=2, default=[], action='append', metavar=('regex', 'value', ),
                             help='Add a substitution rule: regex, value.', )
@@ -49,6 +37,20 @@ class Command(BaseCommand):
                             help='Columns to apply added substitutions. If none given, defaults to sub-cols. ', )
         # Optional Named Argument: Flag for returning results when called within code instead of command line.
         parser.add_argument('--data', '-d', action='store_true', help='Return results usable in application code.', )
+
+    def get_col_names(self, kwargs):
+        col_names = kwargs['only'] or self.all_columns
+        return [ea for ea in col_names if ea not in kwargs['not']]
+
+    def get_sub_rules(self, kwargs):
+        sc = kwargs.get('sub_cols', [])
+        if kwargs['long']:
+            sub_rules = []
+        else:
+            sub_rules = [(*rule, sc) for rule in self.initial_sub_rules]
+        add_rules = [(*rule, kwargs['cols'] or sc) for rule in kwargs['add']]
+        sub_rules.extend(add_rules)
+        return sub_rules
 
     def collect_urls(self, urls=None, source=None, prefix=None):
         """Called recursively for URLResolver until base case URLPattern. Ultimately returning a list of data dicts. """
@@ -95,17 +97,16 @@ class Command(BaseCommand):
         if sort:
             all_urls = sorted(all_urls, key=lambda x: [str(x[key] or '') for key in sort])
         title = {key: key for key in all_urls[0].keys()}
+        all_urls.append(title)
         if sources:
             sources.append('source')
-        all_urls.append(title)
-        remove_idx, max_lengths = [], {}
+        remove_idx, col_widths = [], {}
         for i, u in enumerate(all_urls):
             for col in ['name', 'args']:
                 val = u[col]
                 u[col] = '' if val is None else str(val)
             # Prep removal, and don't compute length, for ignored sources or known rejected_data combo(s)
             is_rejected = any(all(u[k] == v for k, v in condition.items()) for condition in self.rejected_data)
-            is_rejected = (u['source'], u['name']) == ('admin', 'view_on_site')
             if u['source'] in ignore or is_rejected or (sources and u['source'] not in sources):
                 remove_idx.append(i)
                 continue
@@ -115,22 +116,20 @@ class Command(BaseCommand):
                         u[col] = re.sub(regex, new_str, u[col])
             for k, v in list(u.items()):  # could skip last column length since there is no ending border.
                 u[k] = v = v or ''
-                max_lengths[k] = max(len(v), max_lengths.get(k, 0))
+                col_widths[k] = max(len(v), col_widths.get(k, 0))
         for idx in reversed(remove_idx):
             all_urls.pop(idx)
         if len(all_urls) == 1:
             return []
         result = [[v for k, v in u.items() if k in cols] for u in all_urls]
-        title = all_urls.pop()
-        title = list(title.keys())
-        self.title = title
-        self.col_widths = max_lengths
+        self.title = result.pop()
+        self.col_widths = col_widths
         return result
 
     def handle(self, *args, **kwargs):
         """Main interface, called to determine response. """
-        col_names = get_col_names(kwargs, self.all_columns)
-        sub_rules = get_sub_rules(kwargs)
+        col_names = self.get_col_names(kwargs)
+        sub_rules = self.get_sub_rules(kwargs)
         result = self.get_url_data(kwargs['sources'], kwargs['ignore'], col_names, kwargs['sort'], sub_rules)
         if kwargs['data']:
             return json.dumps(result)

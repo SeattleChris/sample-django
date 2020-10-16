@@ -15,7 +15,7 @@ from pprint import pprint  # TODO: Remove after debug
 class RegisterSimpleFlowView(RegistrationViewOneStep):
     form_class = RegisterUserForm
     success_url = reverse_lazy('profile_page')
-    template_name = 'signup.html'
+    template_name = 'registration/signup.html'
 
     def register(self, form):
         print("===================== RegisterSimpleFlowView.register ============================")
@@ -29,7 +29,7 @@ class RegisterSimpleFlowView(RegistrationViewOneStep):
 class RegisterActivateFlowView(RegistrationViewTwoStep):
     form_class = RegisterUserForm
     success_url = reverse_lazy('profile_page')
-    template_name = 'signup.html'
+    template_name = 'registration/signup.html'
 
     def register(self, form):
         print("===================== RegisterActivateFlowView.register ============================")
