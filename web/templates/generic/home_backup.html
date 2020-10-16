@@ -33,8 +33,8 @@
     <h2>Article in Other Section</h2>
     {% if all_urls %}
     <ul>
-      {% for u in all_urls %}
-      <li><a href="{% url u %}">{{ u }}</a></li>
+      {% for a, b in all_urls %}
+      <li><a href="{% url b %}">{{ a }}</a></li>
       {% endfor %}
     </ul>
     {% else %}
