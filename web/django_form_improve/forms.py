@@ -4,7 +4,7 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 # from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
-from pprint import pprint
+# from pprint import pprint
 from .mixins import AddressMixIn, AddressUsernameMixIn
 
 
@@ -25,7 +25,6 @@ def _get_available_names(initial_list, model):
             found.append(name)
         else:
             rejected.append(name)
-    # return [name for name in initial_list if hasattr(model, name)]
     return found, rejected
 
 
@@ -38,8 +37,6 @@ def _assign_available_names(initial_list, form_model, user=None):
             alt.append(name)
         else:
             rejected.append(name)
-    # if not user:
-    #     return target, rejected
     return target, alt, rejected
 
 
@@ -162,4 +159,4 @@ class RegisterChangeForm(AddressMixIn, UserChangeForm):
         model = get_user_model()
         address_names = default_names()[1]
         fields = ['first_name', 'last_name', 'email', *address_names]
-        fields, missing = _get_available_names(fields, model)
+        fields, _ignore, missing = _assign_available_names(fields, model)
