@@ -4,42 +4,6 @@ from django.core.management import BaseCommand
 from django.urls import resolvers
 
 
-def collect_urls(urls=None, source=None, prefix=None):
-    if urls is None:
-        urls = resolvers.get_resolver()
-    prefix = prefix or []
-    if isinstance(urls, resolvers.URLResolver):
-        name = urls.urlconf_name
-        if isinstance(name, (list, tuple)):
-            name = ''
-        elif not isinstance(name, str):
-            name = name.__name__
-        source = urls.namespace or name.split('.')[0] or source
-        res = []
-        for x in urls.url_patterns:
-            res += collect_urls(x, source=source,
-                                prefix=prefix + [str(urls.pattern)])
-        return res
-    elif isinstance(urls, resolvers.URLPattern):
-        pattern = prefix + [str(urls.pattern)]
-        pattern = ''.join([ea for ea in pattern if ea])[1:]
-        return [{'source': source,
-                 'name': urls.name,
-                 'pattern': pattern,
-                 'lookup_str': urls.lookup_str,
-                 'args': dict(urls.default_args)}]
-    else:
-        raise ValueError(repr(urls))
-
-
-def make_columns(url, cols, lengths={}):
-    if len(cols) == 1:
-        columns = [v for k, v in url.items() if k in cols]
-    else:
-        columns = [('{:%d}' % lengths.get(k, len(v))).format(v) for k, v in url.items() if k in cols]
-    return columns
-
-
 def get_sub_rules(kwargs):
     sc = kwargs.get('sub_cols', [])
     sub_rules = [('^django.contrib', 'cb ', sc), ('^django_registration', 'd_reg ', sc), ('^django', '', sc)]
@@ -85,6 +49,29 @@ class Command(BaseCommand):
         # Optional Named Argument: Flag for returning results when called within code instead of command line.
         parser.add_argument('--data', '-d', action='store_true', help='Return results usable in application code.', )
 
+    def collect_urls(self, urls=None, source=None, prefix=None):
+        if urls is None:
+            urls = resolvers.get_resolver()
+        prefix = prefix or []
+        if isinstance(urls, resolvers.URLResolver):
+            name = urls.urlconf_name
+            if isinstance(name, (list, tuple)):
+                name = ''
+            elif not isinstance(name, str):
+                name = name.__name__
+            source = urls.namespace or name.split('.')[0] or source
+            res = []
+            for x in urls.url_patterns:
+                res += self.collect_urls(x, source=source, prefix=prefix + [str(urls.pattern)])
+            return res
+        elif isinstance(urls, resolvers.URLPattern):
+            pattern = prefix + [str(urls.pattern)]
+            pattern = ''.join([ea for ea in pattern if ea])[1:]
+            data = [source, urls.name, pattern, urls.lookup_str, dict(urls.default_args)]
+            return [dict(zip(self.all_columns, data))]
+        else:
+            raise ValueError(repr(urls))
+
     def data_to_string(self, data):
         """Takes a list of url data, with each row as a list of columns, and formats for a table looking layout. """
         if not data:
@@ -99,7 +86,7 @@ class Command(BaseCommand):
         return '\n'.join(result)
 
     def get_url_data(self, sources=None, ignore=None, cols=None, sort=None, sub_rules=None):
-        all_urls = collect_urls()
+        all_urls = self.collect_urls()
         if not all_urls:
             return []
         if sort:
