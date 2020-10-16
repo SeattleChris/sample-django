@@ -34,46 +34,12 @@ def collect_urls(urls=None, source=None, prefix=None):
         raise ValueError(repr(urls))
 
 
-def show_urls(sources=None, ignore=None, cols=None, sort=None, sub_rules=None):
-    all_urls = collect_urls()
-    if not all_urls:
-        return EMPTY_VALUE
-    if sort:
-        all_urls = sorted(all_urls, key=lambda x: [str(x[key] or '') for key in sort])
-    title = {key: key for key in all_urls[0].keys()}
-    if sources:
-        sources.append('source')
-    all_urls.append(title)
-    remove_idx, max_lengths = [], {}
-    for i, u in enumerate(all_urls):
-        for col in ['name', 'args']:
-            val = u[col]
-            u[col] = '' if val is None else str(val)
-        # Prep removal, and don't compute length, for ignored modules or the known combo(s) that are long and unneeded.
-        is_rejected = (u['source'], u['name']) == ('admin', 'view_on_site')
-        if u['source'] in ignore or is_rejected or (sources and u['source'] not in sources):
-            remove_idx.append(i)
-            continue
-        if sub_rules:
-            for regex, new_str, sub_cols in sub_rules:
-                for col in sub_cols:
-                    u[col] = re.sub(regex, new_str, u[col])
-        for k, v in list(u.items()):  # could skip last column length since there is no ending border.
-            u[k] = v = v or ''
-            max_lengths[k] = max(len(v), max_lengths.get(k, 0))
-    for idx in reversed(remove_idx):
-        all_urls.pop(idx)
-    if len(all_urls) == 1:
-        return EMPTY_VALUE
-    title = all_urls.pop()
-    if len(cols) > 1:
-        bar = {key: '*' * max_lengths.get(key, 4) for key in title}
-        all_urls = [title, bar] + all_urls
-    result = []
-    for u in all_urls:
-        result.append(' | '.join(('{:%d}' % max_lengths.get(k, len(v))).format(v) for k, v in u.items() if k in cols))
-    # result = [' | '.join(('{:%d}' % max_lengths[k]).format(v) for k, v in u.items() if k in cols) for u in all_urls]
-    return result
+def make_columns(url, cols, lengths={}):
+    if len(cols) == 1:
+        columns = [v for k, v in url.items() if k in cols]
+    else:
+        columns = [('{:%d}' % lengths.get(k, len(v))).format(v) for k, v in url.items() if k in cols]
+    return columns
 
 
 def get_sub_rules(kwargs):
