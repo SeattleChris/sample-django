@@ -4,16 +4,6 @@ from django.core.management import BaseCommand
 from django.urls import resolvers
 
 
-def get_sub_rules(kwargs):
-    sc = kwargs.get('sub_cols', [])
-    sub_rules = [('^django.contrib', 'cb ', sc), ('^django_registration', 'd_reg ', sc), ('^django', '', sc)]
-    if kwargs['long']:
-        sub_rules = []
-    add_rules = [(*rule, kwargs['cols'] or sc) for rule in kwargs['add']]
-    sub_rules.extend(add_rules)
-    return sub_rules
-
-
 def get_col_names(kwargs, all_columns):
     col_names = kwargs['only'] or all_columns
     return [ea for ea in col_names if ea not in kwargs['not']]
@@ -21,8 +11,10 @@ def get_col_names(kwargs, all_columns):
 
 class Command(BaseCommand):
 
-    rejected_data = [{'source': 'admin', 'name': 'view_on_site'}, ]
     all_columns = ['source', 'name', 'pattern', 'lookup_str', 'args']
+    rejected_data = [{'source': 'admin', 'name': 'view_on_site'}, ]
+    initial_sub_cols = ['source', 'name', 'lookup_str']
+    initial_sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
     EMPTY_VALUE = "************* NO URLS FOUND *************"
     MIN_WIDTH = 4
     title = None
@@ -49,6 +41,17 @@ class Command(BaseCommand):
                             help='Columns to apply added substitutions. If none given, defaults to sub-cols. ', )
         # Optional Named Argument: Flag for returning results when called within code instead of command line.
         parser.add_argument('--data', '-d', action='store_true', help='Return results usable in application code.', )
+
+    def get_sub_rules(self, kwargs):
+        sc = kwargs.get('sub_cols', [])
+        # sub_rules = [('^django.contrib', 'cb ', sc), ('^django_registration', 'd_reg ', sc), ('^django', '', sc)]
+        if kwargs['long']:
+            sub_rules = []
+        else:
+            sub_rules = [(*rule, sc) for rule in self.initial_sub_rules]
+        add_rules = [(*rule, kwargs['cols'] or sc) for rule in kwargs['add']]
+        sub_rules.extend(add_rules)
+        return sub_rules
 
     def collect_urls(self, urls=None, source=None, prefix=None):
         """Called recursively for URLResolver until base case URLPattern. Ultimately returning a list of data dicts. """
@@ -127,7 +130,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         """Main interface, called to determine response. """
         col_names = get_col_names(kwargs, self.all_columns)
-        sub_rules = get_sub_rules(kwargs)
+        sub_rules = self.get_sub_rules(kwargs)
         result = self.get_url_data(kwargs['sources'], kwargs['ignore'], col_names, kwargs['sort'], sub_rules)
         if kwargs['data']:
             return json.dumps(result)
