@@ -4,17 +4,18 @@ from django.contrib.auth.views import PasswordChangeView
 from .views import RegisterSimpleFlowView, RegisterActivateFlowView, ModifyUser
 
 urlpatterns = [
-    path('signup', RegisterSimpleFlowView.as_view(), name='signup'),  # One-step, customized.
+    # path('signup', RegisterSimpleFlowView.as_view(), name='signup'),  # One-step, customized.
     path('initial', RegisterActivateFlowView.as_view(), name='initial_signup'),  # Two-step, customized.
     path('signup', RegisterSimpleFlowView.as_view(), name='django_registration_register'),  # One-step, customized.
-    # path('', include('django_registration.backends.one_step.urls')),  # One-step, defaults and/or remaining views.
-    path('', include('django_registration.backends.activation.urls')),  # Two-step, defaults and/or remaining views.
+    path('', include('django_registration.backends.one_step.urls')),  # One-step, defaults and/or remaining views.
+    # path('', include('django_registration.backends.activation.urls')),  # Two-step, defaults and/or remaining views.
     path('update/', ModifyUser.as_view(), name='user_update'),
     path('password/', PasswordChangeView.as_view(template_name='update.html'), name='password'),
 ]
 
 # TODO: Only use the django_registration urls we need. Possibly with shorter names.
 
+# The following is for .backends.activation.urls. Names with * are also in .backends.one_step.urls
 # source              | name                                    | pattern
 # ******************* | *************************************** | ****************************************
 # django_registration | django_registration_activate            | /improved/activate/<str:activation_key>/
