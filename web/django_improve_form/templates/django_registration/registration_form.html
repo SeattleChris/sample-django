@@ -1,17 +1,11 @@
-{% extends 'generic/base.html' %}
+{% extends 'improve_form/base_form.html' %}
 
-{% block content %}
-<section>
-  <article class="registration-form container">
+{% block improve_form %}
     <h2>Register today!</h2>
     <form method="post">
       {% csrf_token %}
       {{ form.as_p }}
       <input type="submit" value="Register"/>
     </form>
-  </article>
-</section>
-<section>
 
-</section>
 {% endblock %}
