@@ -8,7 +8,7 @@
 
 {% block content %}
 <section>
-  <article class="{{ improve_form_container_class }}">
+  <article class={{ improve_form_container_class|default:'form-container' }}>
     {% block improve_form %}
     {% endblock improve_form %}
   </article>
