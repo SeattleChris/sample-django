@@ -1,14 +1,27 @@
 from django.test import Client, RequestFactory  # , TestCase,  TransactionTestCase
 from django.urls import reverse
-# from unittest import skip  # @skip("Not Implemented")
-from django.conf import settings
+# from django.conf import settings
 from django.utils.module_loading import import_string
-from datetime import time, timedelta, datetime as dt  # date,
-# Resource = import_string('classwork.models.Resource')
-# UserModel = import_string('django.contrib.auth.models.User')
+# from unittest import skip  # @skip("Not Implemented")
+# from datetime import time, timedelta, datetime as dt  # date,
+# Resource = import_string('APPNAME.models.Resource')
+UserModel = import_string('django.contrib.auth.models.User')
 AnonymousUser = import_string('django.contrib.auth.models.AnonymousUser')
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
 OTHER_USER = {'email': 'other@fake.com', 'password': 'test1234', 'first_name': 'other_user', 'last_name': 'fake_y'}
+
+
+class MockRequest:
+    pass
+
+
+class MockSuperUser:
+    def has_perm(self, perm):
+        return True
+
+
+request = MockRequest()
+request.user = MockSuperUser()
 
 
 class TestFormLoginRequired:
@@ -91,23 +104,21 @@ class MimicAsView:
         method.init_kwargs = self.kwargs
         return method
 
-    def setup_three_sessions(self, sess_names=('old_sess', 'curr_sess', 'new_sess', )):
-        """Each Session of ClassOffer models are ordered by Subject.LEVEL_ORDER then BY Subject.LEVEL_CHOICES. """
-        levels = list(Subject.LEVEL_ORDER.keys())
-        levels += [lvl for lvl, display in Subject.LEVEL_CHOICES if lvl not in levels]
-        levels = [lvl for lvl, display in Subject.LEVEL_CHOICES]
-        ver = Subject.VERSION_CHOICES[0][0]
-        subjs = [Subject.objects.create(level=lvl, version=ver, name='_'.join((lvl, ver))) for lvl in levels]
-        dur = settings.DEFAULT_SESSION_WEEKS
-        now = dt.now().date()  # now = dt.utcnow().date()
-        class_day = now.weekday()
-        classoffers = {}
-        for num, name in enumerate(sess_names):
-            key_date = now + timedelta(days=7*dur*(num - 1))
-            sess = Session.objects.create(name=name, key_day_date=key_date)
-            co_kwargs = {'session': sess, 'start_time': time(19, 0), 'class_day': class_day}
-            classoffers[name] = [ClassOffer.objects.create(subject=subj, **co_kwargs) for subj in subjs]
-        return classoffers
+    def setup_three_datasets(self, data_names=('first', 'second', 'third', )):
+        """Three instances of model data that can, but is not required, to be related to a user. """
+        Model = None
+        # May need a category model that is Many-to-Many or otherwise connected with our data Model.
+        Category = None
+        # Setup the needed parameters.
+        cat_const = {}
+        cat_vars = []
+        consts = {}
+        variants = []
+        # Create the data
+        categories = [Category.objects.create(**cat_const, name=var) for var in cat_vars]
+        for var in variants:
+            data = [Model.objects.create(**consts, var_name=var, category=ea) for ea in categories]
+        return data
 
     def client_visit_view(self, good_text, bad_text=None, url_name=None):
         url_name = url_name or self.url_name
