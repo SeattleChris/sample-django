@@ -6,6 +6,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path('', home_view, name='home'),
     path('named', NamedView.as_view(), name='named_path'),
-    path("improved/", include("django_form_improve.urls")),
+    path("improved/", include("django_improve_form.urls")),
     # path("APPNAME/", include("APPNAME.urls")),
 ]

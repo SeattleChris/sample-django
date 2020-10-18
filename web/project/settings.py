@@ -42,7 +42,7 @@ INSTALLED_APPS = [
 
     'project',
     'django_registration',
-    'django_form_improve',
+    'django_improve_form',
     # 'APPNAME',
 ]
 
