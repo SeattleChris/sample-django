@@ -1,10 +1,9 @@
-from django.forms import ModelForm, BaseModelForm  # , ModelFormMetaclass
+from django.forms import ModelForm  # , BaseModelForm, ModelFormMetaclass
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 # from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
-# from pprint import pprint
 from .mixins import AddressMixIn, AddressUsernameMixIn
 
 
@@ -18,22 +17,12 @@ def default_names():
     return constructor_names, address_names
 
 
-def _get_available_names(initial_list, model):
-    found, rejected = [], []
-    for name in initial_list:
-        if hasattr(model, name):
-            found.append(name)
-        else:
-            rejected.append(name)
-    return found, rejected
-
-
-def _assign_available_names(initial_list, form_model, user=None):
+def _assign_available_names(initial_list, form_model, alt_model=None):
     target, alt, rejected = [], [], []
     for name in initial_list:
         if hasattr(form_model, name):
             target.append(name)
-        elif user and hasattr(user, name):
+        elif alt_model and hasattr(alt_model, name):
             alt.append(name)
         else:
             rejected.append(name)
