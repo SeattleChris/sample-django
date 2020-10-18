@@ -4,11 +4,11 @@ from django.contrib.auth.views import PasswordChangeView
 from .views import RegisterSimpleFlowView, RegisterActivateFlowView, ModifyUser
 
 urlpatterns = [
+    path('', include('django_registration.backends.one_step.urls')),  # One-step, defaults and/or remaining views.
+    # path('', include('django_registration.backends.activation.urls')),  # Two-step, defaults and/or remaining views.
     # path('signup', RegisterSimpleFlowView.as_view(), name='signup'),  # One-step, customized.
     path('initial', RegisterActivateFlowView.as_view(), name='initial_signup'),  # Two-step, customized.
     path('signup', RegisterSimpleFlowView.as_view(), name='django_registration_register'),  # One-step, customized.
-    path('', include('django_registration.backends.one_step.urls')),  # One-step, defaults and/or remaining views.
-    # path('', include('django_registration.backends.activation.urls')),  # Two-step, defaults and/or remaining views.
     path('update/', ModifyUser.as_view(), name='user_update'),
     path('password/', PasswordChangeView.as_view(template_name='update.html'), name='password'),
 ]

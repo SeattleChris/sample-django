@@ -15,7 +15,15 @@ from pprint import pprint  # TODO: Remove after debug
 class RegisterSimpleFlowView(RegistrationViewOneStep):
     form_class = RegisterUserForm
     success_url = reverse_lazy('profile_page')
-    template_name = 'improve_form/signup.html'
+    # template_name = 'improve_form/signup.html'
+    template_name = 'django_registration/registration_form.html'
+    extra_context = {
+        'improve_form_title': 'New User Sign Up',
+        'improve_form_container_class': 'registration-form-container',
+        'form_heading': 'Sign Up Now!',
+        'form_preamble': 'read this before the form starts',
+        'form_button_text': 'Sign Up',
+        }
 
     def register(self, form):
         print("===================== RegisterSimpleFlowView.register ============================")
@@ -29,7 +37,15 @@ class RegisterSimpleFlowView(RegistrationViewOneStep):
 class RegisterActivateFlowView(RegistrationViewTwoStep):
     form_class = RegisterUserForm
     success_url = reverse_lazy('profile_page')
-    template_name = 'improve_form/signup.html'
+    # template_name = 'improve_form/signup.html'
+    template_name = 'django_registration/registration_form.html'
+    extra_context = {
+        'improve_form_title': 'New User Sign Up',
+        'improve_form_container_class': 'registration-form-container',
+        'form_heading': 'Sign Up Now!',
+        'form_preamble': 'read this before the form starts',
+        'form_button_text': 'Sign Up',
+        }
 
     def register(self, form):
         print("===================== RegisterActivateFlowView.register ============================")
