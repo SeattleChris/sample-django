@@ -147,5 +147,5 @@ class RegisterChangeForm(AddressMixIn, UserChangeForm):
     class Meta(UserChangeForm.Meta):
         model = get_user_model()
         address_names = default_names()[1]
-        fields = ['first_name', 'last_name', 'email', *address_names]
+        fields = ['first_name', 'last_name', model.get_email_field_name(), *address_names]
         fields, _ignore, missing = _assign_available_names(fields, model)
