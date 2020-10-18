@@ -5,10 +5,12 @@ from django.urls import resolvers
 
 
 class Command(BaseCommand):
+    """Finds all defined url patterns, filters down to the requested data, and can return as 2d array or print. """
 
     all_columns = ['source', 'name', 'pattern', 'lookup_str', 'args']
+    column_priority = ['name', 'source', 'args', 'pattern', 'lookup_str', ]
     rejected_data = [{'source': 'admin', 'name': 'view_on_site'}, ]
-    initial_sort = ['source', 'name']
+    initial_sort = ['name', 'source', ]
     initial_sub_cols = ['source', 'name', 'lookup_str']
     initial_sub_rules = [('^django.contrib', 'cb '), ('^django_registration', 'd_reg '), ('^django', '')]
     EMPTY_VALUE = "************* NO URLS FOUND *************"
@@ -22,15 +24,16 @@ class Command(BaseCommand):
         parser.add_argument('sources', nargs='*', type=str, default=[], metavar='source',
                             help='Only show url info from the namespace or module source(s) listed. Default: show all.')
         # Optional Named Arguments: Rows (modules) and Columns (info about the url setting).
-        parser.add_argument('--ignore', nargs='*', default=[], help='List of sources to ignore.', metavar='source')
-        parser.add_argument('--only', nargs='*', help='Only show the following columns. ', metavar='col')
+        parser.add_argument('--ignore', nargs='*', default=[], metavar='source', help='List of sources to ignore.', )
+        parser.add_argument('--only', nargs='*', default=['5'], metavar=('integer | col', 'col', ),
+                            help='Only show columns: Up to given priority (if number) or the following column names. ',)
         parser.add_argument('--not', nargs='*', default=[], help='Do NOT show the following columns.', metavar='col')
         parser.add_argument('--sort', nargs='*', default=self.initial_sort,  metavar='col',
-                            help='Sort by, in order of priority, column(s) value. Default: source name. ',)
+                            help='Sort, in order of priority, by column(s) value. Default: name source. ',)
         # Optional Named Arguments: String substitutions for tighter view and readability.
         parser.add_argument('--long', '-l', action='store_true', help='Show full text: remove default substitutions.', )
-        parser.add_argument('--sub-cols', nargs='*', action='store', default=self.initial_sub_cols,
-                            help='Columns to apply the default substitutions. ', metavar='col', )
+        parser.add_argument('--sub-cols', nargs='*', action='store', default=self.initial_sub_cols, metavar='col',
+                            help='Columns to apply the default substitutions. ', )
         parser.add_argument('--add', '-a', nargs=2, default=[], action='append', metavar=('regex', 'value', ),
                             help='Add a substitution rule: regex, value.', )
         parser.add_argument('--cols', '-c', nargs='*', metavar='col',
@@ -39,10 +42,15 @@ class Command(BaseCommand):
         parser.add_argument('--data', '-d', action='store_true', help='Return results usable in application code.', )
 
     def get_col_names(self, kwargs):
-        col_names = kwargs['only'] or self.all_columns
-        return [ea for ea in col_names if ea not in kwargs['not']]
+        """Determines the output columns based on defaults, 'not', and 'only' (as an integer or list of names). """
+        only = kwargs['only']
+        if len(only) == 1 and str.isdigit(only[0]):
+            only = self.column_priority[:int(only[0])]
+        only = set(only) - set(kwargs['not'])
+        return [ea for ea in self.all_columns if ea in only]
 
     def get_sub_rules(self, kwargs):
+        """Determines the regex substitutions and columns based on defaults, 'long', 'sub_cols' 'add', and 'cols'. """
         sc = kwargs.get('sub_cols', [])
         if kwargs['long']:
             sub_rules = []
@@ -77,7 +85,7 @@ class Command(BaseCommand):
             raise ValueError(repr(urls))
 
     def data_to_string(self, data):
-        """Takes a list of url data, with each row as a list of columns, and formats for a table looking layout. """
+        """Takes a 2d list of url data and returns a string formatted as a table, with title if multiple columns. """
         if not data:
             return self.EMPTY_VALUE
         if len(self.title) == 1:
