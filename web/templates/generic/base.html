@@ -43,24 +43,48 @@
 {% block super_content %}
 <main>
 {% block content %}
-<section>
+<section class="column_1">
+{% block column_1 %}
+
+  <h1><a href="{% url 'home' %}" title="Home Site">Home Topic</a></h1>
   <article>
-    <h2>No Content on this view yet.</h2>
+    <h2>First Article in First Section</h2>
     <p>
-      This page does not yet have content.
+      {% lorem %}
       <img src="https://placehold.it/120x60/000000/FFFFFF" alt="Placeholder image" />
     </p>
   </article>
-</section>
-<section>
+  <article>
+    <h2>
+      Secondary Content
+    </h2>
+    {% lorem 2 p %}
+  </article>
 
+{% endblock column_1 %}
 </section>
+<section class="column_2">
+{% block column_2 %}
 
+  <h2>Other Section h2</h2>
+  <article>
+    <h2>Article in Other Section</h2>
+    {% lorem 2 p %}
+  </article>
+  <article>
+    <h2>Another article in Other Section</h2>
+    <p>
+      {% lorem %}
+    </p>
+  </article>
+
+{% endblock column_2 %}
+</section>
 {% endblock content %}
 </main>
 {% endblock super_content %}
-
 <footer>
+{% block footer %}
   <a href="{% url 'home' %}" title="Home Page">
     <img src="{% static 'assets/logo.svg' %}" alt="Company Name Logo" />
   </a>
@@ -68,7 +92,8 @@
     <li><a href="{% url 'home' %}" title="Home Site">Home</a></li>
     <li><a href="{% url 'named_path' %}" title="SEO and User helpful title">Named Path</a></li>
   </ul>
-  <p>2020 &copy; Company Name</p>
+  <p>2020 &copy; {{ company_name|default:"Company Name"}}</p>
+{% endblock footer %}
 </footer>
 {% block super_end %}
 <!-- <script src="script.js"></script> -->
