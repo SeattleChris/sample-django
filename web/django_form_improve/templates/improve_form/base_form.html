@@ -1,0 +1,17 @@
+{% extends 'generic/base.html' %}
+
+{% block head %}
+<title>{{ improve_form_title }}</title>
+{% endblock head %}
+
+{% block content %}
+<section>
+  <article class="{{ improve_form_container_class }}">
+    {% block improve_form %}
+    {% endblock improve_form %}
+  </article>
+</section>
+<section>
+
+</section>
+{% endblock content %}
