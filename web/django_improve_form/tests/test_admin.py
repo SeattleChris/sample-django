@@ -54,54 +54,6 @@ class AdminSetupTests(TestCase):
         pass
 
 
-class AdminModelTests(TestCase):
-    Model = None
-    Parent_Model_a = None
-    Parent_Model_b = None
-    AdminClass = None
-    FormClass = None
-
-    Model = None
-    AdminClass = None
-
-    def test_assignment_column(self):
-        ClassOffer = self.Model
-        Session = self.Parent_Model_a
-        Subject = self.Parent_Model_b
-
-        key_day, name = date.today(), 'first'
-        publish = key_day - timedelta(days=7*3+1)
-        sess1 = Session.objects.create(name=name, key_day_date=key_day, num_weeks=5, publish_date=publish)
-        sess2 = Session.objects.create(name='second')
-        subj1 = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
-        subj2 = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="subj2")
-        first = ClassOffer.objects.create(subject=subj1, session=sess1, start_time=time(19, 0))
-        second = ClassOffer.objects.create(subject=subj1, session=sess2, start_time=time(19, 0))
-        third = ClassOffer.objects.create(subject=subj2, session=sess2, start_time=time(19, 0))
-        res_subj_1 = self.Model.objects.create(content_type='text', name="Res for test_subj")
-        subj1.resources.add(res_subj_1)
-        res_is_two = self.Model.objects.create(content_type='text', name="Res in subj2 and second classoffer")
-        res_subj_2 = self.Model.objects.create(content_type='text', name="Res for subj2")
-        subj2.resources.add(res_subj_2, res_is_two)
-        second.resources.add(res_is_two)
-        res_first = self.Model.objects.create(content_type='text', name="Res for First ClassOffer")
-        first.resources.add(res_first)
-        res_co_in_sess2 = self.Model.objects.create(content_type='text', name="Res for Second ClassOffer")
-        res_co_in_sess2.classoffers.add(second, third)
-        current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
-
-        self.assertEqual([str(subj1)], current_admin.assignment(res_subj_1))
-        self.assertEqual([str(subj2)], current_admin.assignment(res_subj_2))
-        self.assertEqual([str(subj2), str(second)], current_admin.assignment(res_is_two))
-        self.assertEqual([str(first)], current_admin.assignment(res_first))
-        self.assertEqual([str(second), str(third)], current_admin.assignment(res_co_in_sess2))
-
-    def test_not_implemented_get_version_matrix(self):
-        current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
-        with self.assertRaises(NotImplementedError):
-            current_admin.get_version_matrix()
-
-
 class AdminModelManagement(TestCase):
     """Tests for Model create or modify in the Admin site. """
     Model = None
@@ -130,7 +82,7 @@ class AdminModelManagement(TestCase):
             'var_name': None,  # if a string, then for 'ea' in variations will be replaced with {var_name: ea}.
             'related_name': '',  # As an associated model, this is the parameter name for main Model.
         },
-    ]
+        ]
 
     def make_model_data(self, data, mod_opts=None):
         opts = []
@@ -243,29 +195,10 @@ class AdminModelManagement(TestCase):
         for expected, actual in zip(expected_values, (get_col(ea) for ea in data_models)):
             self.assertEqual(expected, actual)
 
-        val_1 = current_admin.time(first)
-        val_2 = current_admin.time(second)
-        val_3 = current_admin.time(third)
-        expected_val_1 = '7pm - 8pm'
-        expected_val_2 = '7:30pm - 8:30pm'
-        expected_val_3 = '7:00pm - 8:30pm'
-
-        self.assertEqual(expected_val_1, val_1)
-        self.assertEqual(expected_val_2, val_2)
-        self.assertEqual(expected_val_3, val_3)
-
-    def test_computed_value_default_value(self):
-
-        key_day, name = date.today(), 'first'
-        publish = key_day - timedelta(days=7*3+1)
-        sess1 = self.Parent_Model_a.objects.create(name=name, key_day_date=key_day, num_weeks=5, publish_date=publish)
-        subj = self.Parent_Model_b.objects.create(version=self.Parent_Model_b.VERSION_CHOICES[0][0], num_minutes=0, name="test_subj")
-        first = self.Model.objects.create(subject=subj, session=sess1, start_time=time(19, 0))
+    def test_not_implemented_get_version_matrix(self):
         current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
-
-        time_1 = current_admin.time(first)
-        expected_time = 'Not Set'
-        self.assertEqual(expected_time, time_1)
+        with self.assertRaises(NotImplementedError):
+            current_admin.get_version_matrix()
 
 
 class AdminClassDayListFilterTests(TestCase):
