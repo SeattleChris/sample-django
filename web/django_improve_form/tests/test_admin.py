@@ -2,7 +2,7 @@ from django.test import TestCase, Client
 from unittest import skip
 from django.apps import apps
 from django.conf import settings
-from os import environ
+from django.urls import reverse
 from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth.models import Permission
@@ -11,16 +11,21 @@ from django.contrib.sessions.models import Session as Session_contrib
 from django.contrib.contenttypes.models import ContentType
 # from django.forms import ValidationError
 from datetime import date, time, timedelta  # , datetime as dt
+from os import environ
 from copy import deepcopy
 from types import GeneratorType
 from django.utils.module_loading import import_string
+from .helper_views import MockRequest, MockUser, MockSuperUser  # , AnonymousUser, MockUser, MockStaffUser,
 # from .helper_views import MockRequest, MockUser, MockStaffUser, MockSuperUser
 # Resource = import_string('APPNAME.models.Resource')
 # ResourceAdmin = import_string('APPNAME.admin.ResourceAdmin')
-main_admin = import_string('APPNAME.admin.admin')
+main_admin = import_string('project.admin.admin')
 
-# request = MockRequest()
-# request.user = MockSuperUser()
+APP_NAME = ''
+request = MockRequest()
+request.user = MockSuperUser()
+fail_req = MockRequest()
+fail_req.user = MockUser()
 
 
 class AdminSetupTests(TestCase):
@@ -116,8 +121,8 @@ class AdminModelManagement(TestCase):
         form = getattr(current_admin, 'form', None)
         self.assertEqual(form, self.FormClass)
 
-    def test_admin_has_all_model_fields(self):
-        """The admin AdminClass should use all the expected fields of the Model. """
+    def test_admin_has_model_fields(self):
+        """The AdminClass should use all the expected fields of the Model. """
         current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
         admin_fields = []
         if current_admin.fields:
@@ -128,9 +133,9 @@ class AdminModelManagement(TestCase):
         if current_admin.fieldsets:
             for ea in current_admin.fieldsets:
                 admin_fields.extend(ea[1].get('fields', []))
+        admin_fields = tuple(admin_fields)
         model_fields = [field.name for field in self.Model._meta.get_fields(include_parents=False)]
         model_fields = [ea for ea in model_fields if ea not in self.model_fields_not_in_admin]
-        admin_fields = tuple(admin_fields)
         model_fields = tuple(model_fields)
         self.assertTupleEqual(admin_fields, model_fields)
 
@@ -138,103 +143,34 @@ class AdminModelManagement(TestCase):
         """If we need an admin login, this will be the needed dictionary to pass as kwargs. """
         password = environ.get('SUPERUSER_PASS', '')
         admin_user_email = environ.get('SUPERUSER_EMAIL', settings.ADMINS[0][1])
-        User.objects.create_superuser(admin_user_email, admin_user_email, password)
+        # User.objects.create_superuser(admin_user_email, admin_user_email, password)
         return {'username': admin_user_email, 'password': password}
 
     def response_after_login(self, url, client):
         """If the url requires a login, perform a login and follow the redirect. """
         get_response = client.get(url)
-        if 'url' in get_response:
+        if 'url' in get_response:  # Login, then try the url again.
             login_kwargs = self.get_login_kwargs()
             client.post(get_response.url, login_kwargs)
             get_response = client.get(url)
         return get_response
 
-    def test_admin_can_create_first_session(self):
-        """The first Model can be made, even though later Models get defaults from existing ones. """
-        c = Client()
-        add_url = '/admin/classwork/session/add/'
-        login_kwargs = self.get_login_kwargs()
-        login_try = c.login(**login_kwargs)
-        key_day, name = date.today(), 'test_create'
-        kwargs = {'key_day_date': key_day, 'name': name}
-        kwargs['max_day_shift'] = 2
-        kwargs['num_weeks'] = 5
-        kwargs['skip_weeks'] = 0
-        kwargs['break_weeks'] = 0
-        kwargs['publish_date'] = key_day - timedelta(days=7*3+1)
-        kwargs['expire_date'] = key_day + timedelta(days=7+1)
+    def test_admin_can_create_first_model(self):
+        """The first Model can be made in empty database (even if later models compute values from existing).  """
+        c = Client(user=MockSuperUser())
+        add_url = ' '.join((APP_NAME, self.Model.__name__, 'add'))
+        add_url = reverse(add_url)
+        # login_kwargs = self.get_login_kwargs()
+        # login_try = c.login(**login_kwargs)
+        kwargs = {'name': 'test_create'}
+        # Update kwargs with info requested for the admin form to create a model.
         post_response = c.post(add_url, kwargs, follow=True)
-        sess = self.Model.objects.filter(name=name).first()
+        sess = self.Model.objects.filter(name=kwargs['name']).first()
 
-        self.assertTrue(login_try)
+        # self.assertTrue(login_try)
         self.assertEqual(post_response.status_code, 200)
         self.assertIsNotNone(sess)
         self.assertIsInstance(sess, self.Model)
-
-    def test_auto_correct_on_date_conflict(self):
-        """Expect a ValidationError when Models have overlapping dates. """
-        key_day, name = date.today(), 'first'
-        publish = key_day - timedelta(days=7*3+1)
-        first_sess = self.Model.objects.create(name=name, key_day_date=key_day, num_weeks=5, publish_date=publish)
-        sess = self.Model.objects.filter(name=name).first()
-
-        c = Client()
-        add_url = '/admin/classwork/session/add/'
-        login_kwargs = self.get_login_kwargs()
-        login_try = c.login(**login_kwargs)
-        key_day += timedelta(days=7)
-        kwargs = {'key_day_date': key_day, 'name': 'test_create'}
-        kwargs['max_day_shift'] = 2
-        kwargs['num_weeks'] = 5
-        kwargs['skip_weeks'] = 0
-        kwargs['break_weeks'] = 0
-        kwargs['publish_date'] = key_day - timedelta(days=7*3+1)
-        kwargs['expire_date'] = key_day + timedelta(days=7+1)
-        post_response = c.post(add_url, kwargs, follow=True)
-        template_target = 'admin/classwork/session/change_form.html'
-        second_sess = self.Model.objects.filter(name=name).first()
-
-        self.assertIsNotNone(sess)
-        self.assertIsInstance(sess, self.Model)
-        self.assertEqual(first_sess, sess)
-        self.assertTrue(login_try)
-        self.assertIn(template_target, post_response.template_name)
-        self.assertEqual(post_response.status_code, 200)
-        self.assertGreater(first_sess.end_date, second_sess.start_date)
-
-    def test_form_clean_validation_error_message(self):
-        key_day, name = date.today(), 'first'
-        publish = key_day - timedelta(days=7*3+1)
-        sess = self.Model.objects.create(name=name, key_day_date=key_day, num_weeks=5, publish_date=publish)
-
-        c = Client()
-        add_url = '/admin/classwork/session/add/'
-        login_kwargs = self.get_login_kwargs()
-        login_try = c.login(**login_kwargs)
-        key_day += timedelta(days=7)
-        kwargs = {'key_day_date': key_day, 'name': 'test_create'}
-        kwargs['max_day_shift'] = -2
-        kwargs['skip_weeks'] = 0
-        kwargs['flip_last_day'] = True
-        post_response = c.post(add_url, kwargs)
-        errors = post_response.context_data.get('errors', [[]])
-        string = "Overlapping class dates with those settings. "
-        string += "You could move the other class days to happen after the main day, "
-        # string += "You could "
-        string += "add a break week on the previous session, or otherwise change when this session starts. "
-
-        self.assertTrue(login_try)
-        self.assertIsNotNone(sess)
-        self.assertIsInstance(sess, self.Model)
-        self.assertEqual(string, errors[-1][0])
-        # with self.assertRaises(ValidationError):
-        #     c.post(add_url, kwargs)
-
-    @skip("Not Implemented")
-    def test_auto_correct_on_flip_but_no_skip(self):
-        # TODO: write test for when flip_last_day is True, but skip_weeks == 0.
-        pass
 
 
 class AdminClassOfferTests(TestCase):
@@ -248,27 +184,49 @@ class AdminClassOfferTests(TestCase):
         self.Parent_Model_b = self.Parent_Model_b
         self.Model = self.Model
         self.AdminClass = self.AdminClass
-        key_day, name = date.today(), 'first'
-        publish = key_day - timedelta(days=7*3+1)
-        sess1 = self.Parent_Model_a.objects.create(name=name, key_day_date=key_day, num_weeks=5, publish_date=publish)
-        sess2 = self.Parent_Model_a.objects.create(name='second')
-        subj = self.Parent_Model_b.objects.create(version=self.Parent_Model_b.VERSION_CHOICES[0][0], num_minutes=60, name="test_subj")
-        subj2 = self.Parent_Model_b.objects.create(version=self.Parent_Model_b.VERSION_CHOICES[0][0], num_minutes=90, name="subj2")
-        first = self.Model.objects.create(subject=subj, session=sess1, start_time=time(19, 0))
-        second = self.Model.objects.create(subject=subj, session=sess2, start_time=time(19, 30))
-        third = self.Model.objects.create(subject=subj2, session=sess2, start_time=time(19, 0))
+
+        # setup main model parameters
+        mod_consts = {}
+        mod_vars = []
+        var_name = 'name'
+        opts = [{var_name: var, **mod_consts} for var in mod_vars]
+        # Setup parent model parameters
+        parent_opts = {}
+        pa_models = []
+        if self.Parent_Model_a:
+            a_consts = {}
+            a_vars = []
+            a_name = ''
+            a_opts = [{a_name: var, **a_consts} for var in a_vars]
+            pa_models = [self.Parent_Model_a.objects.create(**opts) for opts in a_opts]
+        pb_models = []
+        if self.Parent_Model_a:
+            b_consts = {}
+            b_vars = []
+            b_name = ''
+            b_opts = [{b_name: var, **b_consts} for var in b_vars]
+            pb_models = [self.Parent_Model_b.objects.create(**opts) for opts in b_opts]
+
+
+        objs = [self.Model.objects.create(parent_a=pa_1, parent_b=pb_1, var=mod_vars[m], **mod_consts) for m in mod_vars]
+        first = self.Model.objects.create(parent_a=pa_1, parent_b=pb_1, var=mod_vars[i], **mod_consts)
+        second = self.Model.objects.create(parent_a=pa_2, parent_b=pb_1, var=mod_vars[i], **mod_consts)
+        third = self.Model.objects.create(parent_a=pa_2, parent_b=pb_2, var=mod_vars[i], **mod_consts)
+
         current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
+        col_name = ''
+        get_col = getattr(current_admin, col_name)
 
-        time_1 = current_admin.time(first)
-        time_2 = current_admin.time(second)
-        time_3 = current_admin.time(third)
-        expected_time_1 = '7pm - 8pm'
-        expected_time_2 = '7:30pm - 8:30pm'
-        expected_time_3 = '7:00pm - 8:30pm'
+        val_1 = current_admin.time(first)
+        val_2 = current_admin.time(second)
+        val_3 = current_admin.time(third)
+        expected_val_1 = '7pm - 8pm'
+        expected_val_2 = '7:30pm - 8:30pm'
+        expected_val_3 = '7:00pm - 8:30pm'
 
-        self.assertEqual(expected_time_1, time_1)
-        self.assertEqual(expected_time_2, time_2)
-        self.assertEqual(expected_time_3, time_3)
+        self.assertEqual(expected_val_1, val_1)
+        self.assertEqual(expected_val_2, val_2)
+        self.assertEqual(expected_val_3, val_3)
 
     def test_computed_value_default_value(self):
 
