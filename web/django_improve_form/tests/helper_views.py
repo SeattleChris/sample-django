@@ -15,7 +15,23 @@ class MockRequest:
     pass
 
 
-class MockSuperUser:
+class MockUser:
+    is_active = True
+    is_authenticated = True
+    is_anonymous = False
+    is_staff = False
+    is_superuser = False
+
+
+class MockStaffUser(MockUser):
+    is_staff = True
+    is_superuser = False
+
+
+class MockSuperUser(MockUser):
+    is_staff = True
+    is_superuser = True
+
     def has_perm(self, perm):
         return True
 
