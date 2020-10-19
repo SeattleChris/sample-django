@@ -172,50 +172,24 @@ class AdminModelManagement(TestCase):
         self.assertIsNotNone(sess)
         self.assertIsInstance(sess, self.Model)
 
-
-class AdminClassOfferTests(TestCase):
-    Model = None
-    Parent_Model_a = None
-    Parent_Model_b = None
-    AdminClass = None
-
-    def test_computed_column_values(self):
-        self.Parent_Model_a = self.Parent_Model_a
-        self.Parent_Model_b = self.Parent_Model_b
-        self.Model = self.Model
-        self.AdminClass = self.AdminClass
-
-        # setup main model parameters
-        mod_consts = {}
-        mod_vars = []
-        var_name = 'name'
-        opts = [{var_name: var, **mod_consts} for var in mod_vars]
-        # Setup parent model parameters
-        parent_opts = {}
-        pa_models = []
-        if self.Parent_Model_a:
-            a_consts = {}
-            a_vars = []
-            a_name = ''
-            a_opts = [{a_name: var, **a_consts} for var in a_vars]
-            pa_models = [self.Parent_Model_a.objects.create(**opts) for opts in a_opts]
-        pb_models = []
-        if self.Parent_Model_a:
-            b_consts = {}
-            b_vars = []
-            b_name = ''
-            b_opts = [{b_name: var, **b_consts} for var in b_vars]
-            pb_models = [self.Parent_Model_b.objects.create(**opts) for opts in b_opts]
-
-
-        objs = [self.Model.objects.create(parent_a=pa_1, parent_b=pb_1, var=mod_vars[m], **mod_consts) for m in mod_vars]
-        first = self.Model.objects.create(parent_a=pa_1, parent_b=pb_1, var=mod_vars[i], **mod_consts)
-        second = self.Model.objects.create(parent_a=pa_2, parent_b=pb_1, var=mod_vars[i], **mod_consts)
-        third = self.Model.objects.create(parent_a=pa_2, parent_b=pb_2, var=mod_vars[i], **mod_consts)
-
+    def test_computed_column_values(self, expected_values=[], col_name='', associated=None):
+        """Confirm results if the Admin displays certain columns with a computed or modified output. """
+        associated = associated or self.associated
+        data_models = self.make_model_data(self.associated)
         current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
-        col_name = ''
         get_col = getattr(current_admin, col_name)
+        for expected, actual in zip(expected_values, (get_col(ea) for ea in data_models)):
+            self.assertEqual(expected, actual)
+
+    def test_computed_value_default_value(self, expected_values=[], col_name=''):
+        """If certain conditions result in a default for a computed value, then check this functionality here. """
+        # setup parameters that trigger a default value condition.
+        associated = []
+        data_models = self.make_model_data(associated)
+        current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
+        get_col = getattr(current_admin, col_name)
+        for expected, actual in zip(expected_values, (get_col(ea) for ea in data_models)):
+            self.assertEqual(expected, actual)
 
         val_1 = current_admin.time(first)
         val_2 = current_admin.time(second)
