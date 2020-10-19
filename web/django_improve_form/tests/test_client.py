@@ -1,4 +1,4 @@
-from django.test import TestCase, Client, override_settings  # , modify_settings, RequestFactory
+from django.test import TestCase, Client, override_settings  # , modify_settings, TransactionTestCase, RequestFactory
 from django.urls import reverse
 from django.core.management import call_command
 from django.conf import settings
@@ -6,17 +6,18 @@ from unittest import skip
 from os import environ
 from .helper_views import AnonymousUser, MockUser, MockStaffUser, MockSuperUser
 
+# from django.core.exceptions import ObjectDoesNotExist
+# # from django.forms import ValidationError
+# from django.db.models import Q, Max, Subquery
+# from datetime import date, time, timedelta, datetime as dt
+
 # from django.apps import apps
-# from django.conf import settings
-# from os import environ
 # from django.contrib.admin.sites import AdminSite
 # from django.contrib.admin.models import LogEntry
 # from django.contrib.auth.models import Permission
 # from django.contrib.sessions.models import Session as Session_contrib
 # from django.contrib.contenttypes.models import ContentType
-# # from django.forms import ValidationError
 # # from django.contrib import admin as default_admin
-# # from datetime import date, timedelta
 
 
 class RouteTests(TestCase):
@@ -64,6 +65,10 @@ class RouteTests(TestCase):
     def visit_urls(self, urls, user=None):
         """Check a given user gets an affirmative response (status:200) from given url path name routes. """
         c = self.my_client
+        # c.logout()
+        # if user and not isinstance(user, AnonymousUser):
+        #     c.force_login(user)
+        c.defaults.update({'user': user})
         responses = []
         for name in urls:
             url = reverse(name)
@@ -71,7 +76,7 @@ class RouteTests(TestCase):
         return responses
 
     def test_open_urls(self):
-        """Check all non-restrictred routes give an affirmative response (status:200). """
+        """Check all non-restrictred routes give an affirmative response (status:200), even for an AnonymousUser. """
         urls = self.staff_urls
         user = AnonymousUser()
         response = self.visit_urls(urls, user)
