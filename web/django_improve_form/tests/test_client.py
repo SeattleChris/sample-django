@@ -6,27 +6,12 @@ from unittest import skip
 from os import environ
 from .helper_views import AnonymousUser, MockUser, MockStaffUser, MockSuperUser
 
-# from django.core.exceptions import ObjectDoesNotExist
-# # from django.forms import ValidationError
-# from django.db.models import Q, Max, Subquery
-# from datetime import date, time, timedelta, datetime as dt
-
-# from django.apps import apps
-# from django.contrib.admin.sites import AdminSite
-# from django.contrib.admin.models import LogEntry
-# from django.contrib.auth.models import Permission
-# from django.contrib.sessions.models import Session as Session_contrib
-# from django.contrib.contenttypes.models import ContentType
-# # from django.contrib import admin as default_admin
-
 
 class RouteTests(TestCase):
     """Routes to be checked. """
 
     @classmethod
     def setUpClass(cls):
-        # cls.factory = RequestFactory()  # if used on a view instead of a url path or url name?
-        # c = Client()
         cls.my_client = Client()
         all_urls = cls.get_url_names()
         # filter to open routes and restricted routes.
