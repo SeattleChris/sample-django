@@ -108,6 +108,58 @@ class AdminModelManagement(TestCase):
     AdminClass = None
     FormClass = None
     model_fields_not_in_admin = ['id', 'date_added', 'date_modified', 'classoffer', ]
+    associated = [
+        {
+            'model': Model,
+            'consts': {},
+            'variations': [],  # either a list of stings to combine with 'var_name', or a list of dicts.
+            'var_name': None,  # if a string, then for 'ea' in variations will be replaced with {var_name: ea}.
+            'mod': '',  # As this is the main model, if defined, this field will hold a unique string of m_<num>.
+        },
+        {
+            'model': None,
+            'consts': {},
+            'variations': [],  # either a list of stings to combine with 'var_name', or a list of dicts.
+            'var_name': None,  # if a string, then for 'ea' in variations will be replaced with {var_name: ea}.
+            'related_name': '',  # As an associated model, this is the parameter name for main Model.
+        },
+        {
+            'model': None,
+            'consts': {},
+            'variations': [],  # either a list of stings to combine with 'var_name', or a list of dicts.
+            'var_name': None,  # if a string, then for 'ea' in variations will be replaced with {var_name: ea}.
+            'related_name': '',  # As an associated model, this is the parameter name for main Model.
+        },
+    ]
+
+    def make_model_data(self, data, mod_opts=None):
+        opts = []
+        if isinstance(data, dict):
+            if not data.get('model', None):
+                return mod_opts
+            cur_vars = data.get('mod_vars', [])
+            if data.get('var_name', None):
+                cur_vars = [{data['var_name']: v} for v in cur_vars]
+            consts = data.get('consts', {})
+            cur_opts = [consts] if not cur_vars else [dict(**v, **consts) for v in cur_vars]
+            related_name = data.get('related_name', None)
+            if not related_name:
+                return cur_opts
+            for r in cur_opts:
+                obj = data['model'].objects.create(**r)
+                opts += [dict(**{related_name: obj}, **m) for m in mod_opts]
+        elif data and isinstance(data, list):
+            if not mod_opts:
+                mod_opts = []  # Current list of main model options, Eventually it will have all possible combos.
+            for ea in data:
+                mod_opts = self.make_modelset(ea, mod_opts=mod_opts)
+            model = data[0]['model']
+            mod = data[0].get('mod', None)  # used if a unique name or other string is needed for each model.
+            for i, opt in enumerate(mod_opts):
+                if mod:
+                    opt.update({mod: f"m_{i}"})
+                opts.append(model.objects.create(**opt))
+        return opts
 
     def test_admin_uses_correct_admin(self):
         """The admin site should use the expected AdminClass for the Model. """
