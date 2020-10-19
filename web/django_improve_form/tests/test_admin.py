@@ -19,9 +19,9 @@ from .helper_views import MockRequest, MockUser, MockSuperUser  # , AnonymousUse
 # from .helper_views import MockRequest, MockUser, MockStaffUser, MockSuperUser
 # Resource = import_string('APPNAME.models.Resource')
 # ResourceAdmin = import_string('APPNAME.admin.ResourceAdmin')
-main_admin = import_string('project.admin.admin')
+main_admin = import_string('django_improve_form.admin.admin')
 
-APP_NAME = ''
+APP_NAME = 'django_improve_form'
 request = MockRequest()
 request.user = MockSuperUser()
 fail_req = MockRequest()
@@ -54,6 +54,7 @@ class AdminSetupTests(TestCase):
         pass
 
 
+@skip("Not Implemented")
 class AdminModelManagement(TestCase):
     """Tests for Model create or modify in the Admin site. """
     Model = None
@@ -221,216 +222,216 @@ class AdminModelManagement(TestCase):
             current_admin.get_version_matrix()
 
 
-class AdminClassDayListFilterTests(TestCase):
-    # related_models = (ClassOfferAdmin, RegistrationAdmin)
-    student_profile_attribute = 'student'  # 'profile' if only one profile model.
-    staff_profile_attribute = 'staff'  # 'profile' if only one profile model.
+# class AdminClassDayListFilterTests(TestCase):
+#     # related_models = (ClassOfferAdmin, RegistrationAdmin)
+#     student_profile_attribute = 'student'  # 'profile' if only one profile model.
+#     staff_profile_attribute = 'staff'  # 'profile' if only one profile model.
 
-    def test_admin_classoffer_lookup(self):
-        Registration = self.Model
-        RegistrationAdmin = self.AdminModel
-        ClassOffer = self.Related_Model
-        ClassOfferAdmin = self.AdminRelated
-        Session = self.Parent_Model_a
-        Subject = self.Parent_Model_b
-        ClassDayListFilter = self.Admin_ListFilter
+#     def test_admin_classoffer_lookup(self):
+#         Registration = self.Model
+#         RegistrationAdmin = self.AdminModel
+#         ClassOffer = self.Related_Model
+#         ClassOfferAdmin = self.AdminRelated
+#         Session = self.Parent_Model_a
+#         Subject = self.Parent_Model_b
+#         ClassDayListFilter = self.Admin_ListFilter
 
-        key_day, name = date.today(), 'sess1'
-        publish = key_day - timedelta(days=7*3+1)
-        sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
-        subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
-        kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
-        classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
-        expected_lookup = ((k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2)
+#         key_day, name = date.today(), 'sess1'
+#         publish = key_day - timedelta(days=7*3+1)
+#         sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
+#         subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
+#         kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
+#         classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
+#         expected_lookup = ((k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2)
 
-        current_admin = ClassOfferAdmin(model=ClassOffer, admin_site=AdminSite())
-        day_filter = ClassDayListFilter(request, {}, ClassOffer, current_admin)
-        lookup = day_filter.lookups(request, current_admin)
+#         current_admin = ClassOfferAdmin(model=ClassOffer, admin_site=AdminSite())
+#         day_filter = ClassDayListFilter(request, {}, ClassOffer, current_admin)
+#         lookup = day_filter.lookups(request, current_admin)
 
-        self.assertEqual(len(classoffers), 3)
-        self.assertEqual(ClassOffer.objects.count(), 3)
-        self.assertIsInstance(lookup, GeneratorType)
-        self.assertEqual(list(expected_lookup), list(lookup))
+#         self.assertEqual(len(classoffers), 3)
+#         self.assertEqual(ClassOffer.objects.count(), 3)
+#         self.assertIsInstance(lookup, GeneratorType)
+#         self.assertEqual(list(expected_lookup), list(lookup))
 
-    def test_admin_classoffer_queryset(self):
-        Registration = self.Model
-        RegistrationAdmin = self.AdminModel
-        ClassOffer = self.Related_Model
-        ClassOfferAdmin = self.AdminRelated
-        Session = self.Parent_Model_a
-        Subject = self.Parent_Model_b
-        ClassDayListFilter = self.Admin_ListFilter
+#     def test_admin_classoffer_queryset(self):
+#         Registration = self.Model
+#         RegistrationAdmin = self.AdminModel
+#         ClassOffer = self.Related_Model
+#         ClassOfferAdmin = self.AdminRelated
+#         Session = self.Parent_Model_a
+#         Subject = self.Parent_Model_b
+#         ClassDayListFilter = self.Admin_ListFilter
 
-        key_day, name = date.today(), 'sess1'
-        publish = key_day - timedelta(days=7*3+1)
-        sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
-        subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
-        kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
-        classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
-        expected_lookup_list = [(k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2]
+#         key_day, name = date.today(), 'sess1'
+#         publish = key_day - timedelta(days=7*3+1)
+#         sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
+#         subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
+#         kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
+#         classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
+#         expected_lookup_list = [(k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2]
 
-        current_admin = ClassOfferAdmin(model=ClassOffer, admin_site=AdminSite())
-        day_filter = ClassDayListFilter(request, {}, ClassOffer, current_admin)
-        model_qs = current_admin.get_queryset(request)
-        expected_qs = model_qs.filter(class_day__in=(k for k, v in expected_lookup_list))
-        qs = day_filter.queryset(request, model_qs)
+#         current_admin = ClassOfferAdmin(model=ClassOffer, admin_site=AdminSite())
+#         day_filter = ClassDayListFilter(request, {}, ClassOffer, current_admin)
+#         model_qs = current_admin.get_queryset(request)
+#         expected_qs = model_qs.filter(class_day__in=(k for k, v in expected_lookup_list))
+#         qs = day_filter.queryset(request, model_qs)
 
-        self.assertEqual(len(classoffers), 3)
-        self.assertSetEqual(set(expected_qs), set(qs))
+#         self.assertEqual(len(classoffers), 3)
+#         self.assertSetEqual(set(expected_qs), set(qs))
 
-    def test_admin_registration_lookup(self):
-        Registration = self.Model
-        RegistrationAdmin = self.AdminModel
-        ClassOffer = self.Related_Model
-        ClassOfferAdmin = self.AdminRelated
-        Session = self.Parent_Model_a
-        Subject = self.Parent_Model_b
-        ClassDayListFilter = self.Admin_ListFilter
+#     def test_admin_registration_lookup(self):
+#         Registration = self.Model
+#         RegistrationAdmin = self.AdminModel
+#         ClassOffer = self.Related_Model
+#         ClassOfferAdmin = self.AdminRelated
+#         Session = self.Parent_Model_a
+#         Subject = self.Parent_Model_b
+#         ClassDayListFilter = self.Admin_ListFilter
 
-        key_day, name = date.today(), 'sess1'
-        publish = key_day - timedelta(days=7*3+1)
-        sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
-        subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
-        kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
-        classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
-        expected_lookup = ((k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2)
+#         key_day, name = date.today(), 'sess1'
+#         publish = key_day - timedelta(days=7*3+1)
+#         sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
+#         subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
+#         kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
+#         classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
+#         expected_lookup = ((k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2)
 
-        password = environ.get('SUPERUSER_PASS', '')
-        admin_user_email = environ.get('SUPERUSER_EMAIL', settings.ADMINS[0][1])
-        user = User.objects.create_superuser(admin_user_email, admin_user_email, password)
-        user.first_name = "test_super"
-        user.last_name = "test_user"
-        user.save()
-        student = getattr(user, self.student_profile_attribute, None)
-        registrations = [Registration.objects.create(student=student, classoffer=ea) for ea in classoffers]
+#         password = environ.get('SUPERUSER_PASS', '')
+#         admin_user_email = environ.get('SUPERUSER_EMAIL', settings.ADMINS[0][1])
+#         user = User.objects.create_superuser(admin_user_email, admin_user_email, password)
+#         user.first_name = "test_super"
+#         user.last_name = "test_user"
+#         user.save()
+#         student = getattr(user, self.student_profile_attribute, None)
+#         registrations = [Registration.objects.create(student=student, classoffer=ea) for ea in classoffers]
 
-        current_admin = RegistrationAdmin(model=Registration, admin_site=AdminSite())
-        day_filter = ClassDayListFilter(request, {}, Registration, current_admin)
-        lookup = day_filter.lookups(request, current_admin)
+#         current_admin = RegistrationAdmin(model=Registration, admin_site=AdminSite())
+#         day_filter = ClassDayListFilter(request, {}, Registration, current_admin)
+#         lookup = day_filter.lookups(request, current_admin)
 
-        self.assertEqual(len(registrations), 3)
-        self.assertEqual(Registration.objects.count(), 3)
-        self.assertIsInstance(lookup, GeneratorType)
-        self.assertEqual(list(expected_lookup), list(lookup))
+#         self.assertEqual(len(registrations), 3)
+#         self.assertEqual(Registration.objects.count(), 3)
+#         self.assertIsInstance(lookup, GeneratorType)
+#         self.assertEqual(list(expected_lookup), list(lookup))
 
-    def test_admin_registration_queryset(self):
-        Registration = self.Model
-        RegistrationAdmin = self.AdminModel
-        ClassOffer = self.Related_Model
-        ClassOfferAdmin = self.AdminRelated
-        Session = self.Parent_Model_a
-        Subject = self.Parent_Model_b
-        ClassDayListFilter = self.Admin_ListFilter
+#     def test_admin_registration_queryset(self):
+#         Registration = self.Model
+#         RegistrationAdmin = self.AdminModel
+#         ClassOffer = self.Related_Model
+#         ClassOfferAdmin = self.AdminRelated
+#         Session = self.Parent_Model_a
+#         Subject = self.Parent_Model_b
+#         ClassDayListFilter = self.Admin_ListFilter
 
-        key_day, name = date.today(), 'sess1'
-        publish = key_day - timedelta(days=7*3+1)
-        sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
-        subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
-        kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
-        classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
-        expected_lookup = ((k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2)
+#         key_day, name = date.today(), 'sess1'
+#         publish = key_day - timedelta(days=7*3+1)
+#         sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
+#         subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
+#         kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
+#         classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
+#         expected_lookup = ((k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2)
 
-        password = environ.get('SUPERUSER_PASS', '')
-        admin_user_email = environ.get('SUPERUSER_EMAIL', settings.ADMINS[0][1])
-        user = User.objects.create_superuser(admin_user_email, admin_user_email, password)
-        student = getattr(user, self.student_profile_attribute, None)
-        registrations = [Registration.objects.create(student=student, classoffer=ea) for ea in classoffers]
+#         password = environ.get('SUPERUSER_PASS', '')
+#         admin_user_email = environ.get('SUPERUSER_EMAIL', settings.ADMINS[0][1])
+#         user = User.objects.create_superuser(admin_user_email, admin_user_email, password)
+#         student = getattr(user, self.student_profile_attribute, None)
+#         registrations = [Registration.objects.create(student=student, classoffer=ea) for ea in classoffers]
 
-        current_admin = RegistrationAdmin(model=Registration, admin_site=AdminSite())
-        day_filter = ClassDayListFilter(request, {}, Registration, current_admin)
-        model_qs = current_admin.get_queryset(request)
-        expected_qs = model_qs.filter(classoffer__class_day__in=(k for k, v in expected_lookup))
-        qs = day_filter.queryset(request, model_qs)
+#         current_admin = RegistrationAdmin(model=Registration, admin_site=AdminSite())
+#         day_filter = ClassDayListFilter(request, {}, Registration, current_admin)
+#         model_qs = current_admin.get_queryset(request)
+#         expected_qs = model_qs.filter(classoffer__class_day__in=(k for k, v in expected_lookup))
+#         qs = day_filter.queryset(request, model_qs)
 
-        self.assertEqual(len(registrations), 3)
-        self.assertEqual(model_qs.model, Registration)
-        self.assertSetEqual(set(expected_qs), set(qs))
-
-
-class AdminUserHCTests:
-    """Testing mix-in for proxy models of UserHC. Expect updates for: Model, AdminClass, Model_queryset. """
-    Model = None
-    AdminClass = None
-    FormClass = None  # UserChangeForm
-    Model_queryset = None  # If left as None, will use the settings from model_specific_setups for given Model.
-    Model_ChangeForm = None  # If left as None, will use the default Admin UserChangeForm
-    user_setup = {'email': 'fake@site.com', 'password': '1234', 'first_name': 'fa', 'last_name': 'fake', }
-    model_specific_setups = {StaffUser: {'is_teacher': True, }, StudentUser: {'is_student': True, }, }
-
-    def make_test_users(self):
-        m_setup = self.model_specific_setups
-        users_per_model = min(4, 26 // len(m_setup))
-        alpha = (chr(ord('a') + i) for i in range(0, 26))
-        users = []
-        for model in m_setup:
-            chars = ''.join(next(alpha) for _ in range(users_per_model))
-            kwargs_many = [{k: x + v for k, v in self.user_setup.items()} for x in chars]
-            users += [User.objects.create_user(**kwargs, **m_setup[model]) for kwargs in kwargs_many]
-        return users, users_per_model
-
-    # def test_admin_uses_correct_admin(self):
-    #     """The admin site should use what was set for AdminClass for the model set in Model. """
-    #     registered_admins_dict = main_admin.site._registry
-    #     model_admin = registered_admins_dict.get(self.Model, None)
-    #     self.assertIsInstance(model_admin, self.AdminClass)
-
-    # def test_admin_uses_expected_form(self):
-    #     """The admin set for AdminClass utilizes the correct form. """
-    #     current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
-    #     form = getattr(current_admin, 'form', None)
-    #     self.assertEqual(form, self.FormClass)
-
-    def test_get_queryset(self):
-        """Proxy models tend to be a subset of all models. This tests the queryset is as expected. """
-        current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
-        users, users_per_model = self.make_test_users()
-        expected_qs = getattr(self, 'Model_queryset', None)
-        if not expected_qs:
-            expected_qs = self.Model.objects.filter(**self.model_specific_setups[self.Model])
-        actual_qs = current_admin.get_queryset(request)
-
-        self.assertEqual(len(users), users_per_model * len(self.model_specific_setups))
-        self.assertEqual(users_per_model, expected_qs.count())
-        self.assertEqual(users_per_model, actual_qs.count())
-        self.assertSetEqual(set(expected_qs), set(actual_qs))
-
-    def test_get_form_uses_custom_formfield_attrs_overrides(self):
-        current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
-        form = current_admin.get_form(request)
-        fields = form.base_fields
-        expected_values = deepcopy(current_admin.formfield_attrs_overrides)
-        expected_values = {key: value for key, value in expected_values.items() if key in fields}
-        actual_values = {}
-        for name, field_attrs in expected_values.items():
-            if 'size' in field_attrs and 'no_size_override' not in field_attrs:
-                input_size = float(fields[name].widget.attrs.get('maxlength', float("inf")))
-                field_attrs['size'] = str(int(min(int(field_attrs['size']), input_size)))  # Modify expected_values
-            actual_values[name] = {key: fields[name].widget.attrs.get(key) for key in field_attrs}
-
-        self.assertDictEqual(expected_values, actual_values)
-
-    def test_get_form_modifies_input_size_for_small_maxlength_fields(self):
-        current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
-        form = current_admin.get_form(request)
-        expected_values, actual_values = {}, {}
-        for name, field in form.base_fields.items():
-            if not current_admin.formfield_attrs_overrides.get(name, {}).get('no_size_override', False):
-                display_size = float(field.widget.attrs.get('size', float('inf')))
-                input_size = int(field.widget.attrs.get('maxlength', 0))
-                if input_size:
-                    expected_values[name] = str(int(min(display_size, input_size)))
-                    actual_values[name] = field.widget.attrs.get('size', '')
-
-        self.assertDictEqual(expected_values, actual_values)
+#         self.assertEqual(len(registrations), 3)
+#         self.assertEqual(model_qs.model, Registration)
+#         self.assertSetEqual(set(expected_qs), set(qs))
 
 
-class AdminStaffUserTests(AdminUserHCTests, TestCase):
-    Model = StaffUser
-    AdminClass = StaffUserAdmin
-    Model_queryset = User.objects.filter(is_staff=True)
+# class AdminUserHCTests:
+#     """Testing mix-in for proxy models of UserHC. Expect updates for: Model, AdminClass, Model_queryset. """
+#     Model = None
+#     AdminClass = None
+#     FormClass = None  # UserChangeForm
+#     Model_queryset = None  # If left as None, will use the settings from model_specific_setups for given Model.
+#     Model_ChangeForm = None  # If left as None, will use the default Admin UserChangeForm
+#     user_setup = {'email': 'fake@site.com', 'password': '1234', 'first_name': 'fa', 'last_name': 'fake', }
+#     model_specific_setups = {StaffUser: {'is_teacher': True, }, StudentUser: {'is_student': True, }, }
+
+#     def make_test_users(self):
+#         m_setup = self.model_specific_setups
+#         users_per_model = min(4, 26 // len(m_setup))
+#         alpha = (chr(ord('a') + i) for i in range(0, 26))
+#         users = []
+#         for model in m_setup:
+#             chars = ''.join(next(alpha) for _ in range(users_per_model))
+#             kwargs_many = [{k: x + v for k, v in self.user_setup.items()} for x in chars]
+#             users += [User.objects.create_user(**kwargs, **m_setup[model]) for kwargs in kwargs_many]
+#         return users, users_per_model
+
+#     # def test_admin_uses_correct_admin(self):
+#     #     """The admin site should use what was set for AdminClass for the model set in Model. """
+#     #     registered_admins_dict = main_admin.site._registry
+#     #     model_admin = registered_admins_dict.get(self.Model, None)
+#     #     self.assertIsInstance(model_admin, self.AdminClass)
+
+#     # def test_admin_uses_expected_form(self):
+#     #     """The admin set for AdminClass utilizes the correct form. """
+#     #     current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
+#     #     form = getattr(current_admin, 'form', None)
+#     #     self.assertEqual(form, self.FormClass)
+
+#     def test_get_queryset(self):
+#         """Proxy models tend to be a subset of all models. This tests the queryset is as expected. """
+#         current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
+#         users, users_per_model = self.make_test_users()
+#         expected_qs = getattr(self, 'Model_queryset', None)
+#         if not expected_qs:
+#             expected_qs = self.Model.objects.filter(**self.model_specific_setups[self.Model])
+#         actual_qs = current_admin.get_queryset(request)
+
+#         self.assertEqual(len(users), users_per_model * len(self.model_specific_setups))
+#         self.assertEqual(users_per_model, expected_qs.count())
+#         self.assertEqual(users_per_model, actual_qs.count())
+#         self.assertSetEqual(set(expected_qs), set(actual_qs))
+
+#     def test_get_form_uses_custom_formfield_attrs_overrides(self):
+#         current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
+#         form = current_admin.get_form(request)
+#         fields = form.base_fields
+#         expected_values = deepcopy(current_admin.formfield_attrs_overrides)
+#         expected_values = {key: value for key, value in expected_values.items() if key in fields}
+#         actual_values = {}
+#         for name, field_attrs in expected_values.items():
+#             if 'size' in field_attrs and 'no_size_override' not in field_attrs:
+#                 input_size = float(fields[name].widget.attrs.get('maxlength', float("inf")))
+#                 field_attrs['size'] = str(int(min(int(field_attrs['size']), input_size)))  # Modify expected_values
+#             actual_values[name] = {key: fields[name].widget.attrs.get(key) for key in field_attrs}
+
+#         self.assertDictEqual(expected_values, actual_values)
+
+#     def test_get_form_modifies_input_size_for_small_maxlength_fields(self):
+#         current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
+#         form = current_admin.get_form(request)
+#         expected_values, actual_values = {}, {}
+#         for name, field in form.base_fields.items():
+#             if not current_admin.formfield_attrs_overrides.get(name, {}).get('no_size_override', False):
+#                 display_size = float(field.widget.attrs.get('size', float('inf')))
+#                 input_size = int(field.widget.attrs.get('maxlength', 0))
+#                 if input_size:
+#                     expected_values[name] = str(int(min(display_size, input_size)))
+#                     actual_values[name] = field.widget.attrs.get('size', '')
+
+#         self.assertDictEqual(expected_values, actual_values)
 
 
-class AdminStudentUserTests(AdminUserHCTests, TestCase):
-    Model = StudentUser
-    AdminClass = StudentUserAdmin
-    Model_queryset = User.objects.filter(is_student=True)
+# class AdminStaffUserTests(AdminUserHCTests, TestCase):
+#     Model = StaffUser
+#     AdminClass = StaffUserAdmin
+#     Model_queryset = User.objects.filter(is_staff=True)
+
+
+# class AdminStudentUserTests(AdminUserHCTests, TestCase):
+#     Model = StudentUser
+#     AdminClass = StudentUserAdmin
+#     Model_queryset = User.objects.filter(is_student=True)
