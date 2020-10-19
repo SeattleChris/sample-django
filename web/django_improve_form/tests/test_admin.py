@@ -144,14 +144,14 @@ class AdminModelManagement(TestCase):
         self.assertTupleEqual(admin_fields, model_fields)
 
     def get_login_kwargs(self):
-        """If we need an admin login, this will be the needed dictionary to pass as kwargs. """
+        """Deprecated? If we need an admin login, this will be the needed dictionary to pass as kwargs. """
         password = environ.get('SUPERUSER_PASS', '')
         admin_user_email = environ.get('SUPERUSER_EMAIL', settings.ADMINS[0][1])
         # User.objects.create_superuser(admin_user_email, admin_user_email, password)
         return {'username': admin_user_email, 'password': password}
 
     def response_after_login(self, url, client):
-        """If the url requires a login, perform a login and follow the redirect. """
+        """Deprecated? If the url requires a login, perform a login and follow the redirect. """
         get_response = client.get(url)
         if 'url' in get_response:  # Login, then try the url again.
             login_kwargs = self.get_login_kwargs()
@@ -169,30 +169,50 @@ class AdminModelManagement(TestCase):
         kwargs = {'name': 'test_create'}
         # Update kwargs with info requested for the admin form to create a model.
         post_response = c.post(add_url, kwargs, follow=True)
-        sess = self.Model.objects.filter(name=kwargs['name']).first()
-
+        found = self.Model.objects.filter(name=kwargs['name']).first()
         # self.assertTrue(login_try)
         self.assertEqual(post_response.status_code, 200)
-        self.assertIsNotNone(sess)
-        self.assertIsInstance(sess, self.Model)
+        self.assertIsNotNone(found)
+        self.assertIsInstance(found, self.Model)
 
-    def test_computed_column_values(self, expected_values=[], col_name='', associated=None):
-        """Confirm results if the Admin displays certain columns with a computed or modified output. """
-        associated = associated or self.associated
-        data_models = self.make_model_data(self.associated)
-        current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
-        get_col = getattr(current_admin, col_name)
-        for expected, actual in zip(expected_values, (get_col(ea) for ea in data_models)):
-            self.assertEqual(expected, actual)
+    def get_expected_column_values(self, *args, **kwargs):
+        """Method for determining what the expected values for computed column display in an Admin view. """
+        expected = []
+        associated = kwargs.get('associated', getattr(self, 'associated', [{}]))
+        # TODO: Magic goes here.
+        value_lookup = kwargs.get('value_lookup', [])
+        for collect in value_lookup:
+            result = '_'.join((associated[i][prop][j] for i, prop, j in collect))
+            expected.append(result)
+        return expected
 
-    def test_computed_value_default_value(self, expected_values=[], col_name=''):
-        """If certain conditions result in a default for a computed value, then check this functionality here. """
-        # setup parameters that trigger a default value condition.
-        associated = []
+    def get_computed_column_info(self, expected_values=[], associated=None, col_name=''):
+        """Returns an iterable of expected, actual pairs, given the expected and data creating information. """
         data_models = self.make_model_data(associated)
         current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
         get_col = getattr(current_admin, col_name)
-        for expected, actual in zip(expected_values, (get_col(ea) for ea in data_models)):
+        return zip(expected_values, (get_col(ea) for ea in data_models))
+
+    def test_computed_column_values(self, *args, **kwargs):
+        """Confirm results if the Admin displays certain columns with a computed or modified output. """
+        # determine parameters to generate expected_values.
+        expected_values = getattr(self, 'expected_values', None)
+        expected_values = expected_values or self.get_expected_column_values(*args, **kwargs)
+        associated = kwargs.get('associated', getattr(self, 'associated', {}))
+        col_name = kwargs.get('col_name', getattr(self, 'col_name', ''))
+        test_pairs = self.get_computed_column_info(expected_values, associated, col_name)
+        for expected, actual in test_pairs:
+            self.assertEqual(expected, actual)
+
+    def test_computed_value_default_value(self, *args, **kwargs):
+        """If certain conditions result in a default for a computed value, then check this functionality here. """
+        # setup parameters that trigger a default value condition.
+        expected_values = getattr(self, 'expected_default_values', None)
+        expected_values = expected_values or self.get_expected_column_values(*args, **kwargs)
+        associated = kwargs.get('associated', getattr(self, 'associated_for_default', {}))
+        col_name = kwargs.get('col_name', getattr(self, 'col_name', ''))
+        test_pairs = self.get_computed_column_info(expected_values, associated, col_name)
+        for expected, actual in test_pairs:
             self.assertEqual(expected, actual)
 
     def test_not_implemented_get_version_matrix(self):
