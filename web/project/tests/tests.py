@@ -1,5 +1,6 @@
 from django.test import TestCase  # , TransactionTestCase, Client, RequestFactory,
 from .helper_admin import AdminSetupTests  # , AdminModelManagement
+# from .helper_general import UserModel, AnonymousUser, MockRequest, MockUser, MockStaffUser, MockSuperUser
 # from unittest import skip
 # from django.conf import settings
 # from django.core.exceptions import ObjectDoesNotExist

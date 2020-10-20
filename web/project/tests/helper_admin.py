@@ -15,7 +15,7 @@ from os import environ
 # from copy import deepcopy
 # from types import GeneratorType
 from django.utils.module_loading import import_string
-from .helper_general import MockRequest, MockUser, MockSuperUser  # , AnonymousUser, MockUser, MockStaffUser,
+from .helper_general import MockRequest, MockUser, MockSuperUser  # UserModel, AnonymousUser,  MockStaffUser,
 # Resource = import_string('APPNAME.models.Resource')
 # ResourceAdmin = import_string('APPNAME.admin.ResourceAdmin')
 
