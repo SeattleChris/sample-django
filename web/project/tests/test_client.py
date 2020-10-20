@@ -1,18 +1,10 @@
-from django.test import TestCase, Client, override_settings  # , modify_settings
-from unittest import skip
+from django.test import TestCase, Client, override_settings  # , modify_settings, TransactionTestCase, RequestFactory
+from django.urls import reverse
+from django.core.management import call_command
 from django.conf import settings
+from unittest import skip
 from os import environ
-# from django.apps import apps
-# from django.conf import settings
-# from os import environ
-# from django.contrib.admin.sites import AdminSite
-# from django.contrib.admin.models import LogEntry
-# from django.contrib.auth.models import Permission
-# from django.contrib.sessions.models import Session as Session_contrib
-# from django.contrib.contenttypes.models import ContentType
-# # from django.forms import ValidationError
-# # from django.contrib import admin as default_admin
-# # from datetime import date, timedelta
+from .helper_general import AnonymousUser, MockUser, MockStaffUser, MockSuperUser
 
 
 class RouteTests(TestCase):
@@ -20,8 +12,21 @@ class RouteTests(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        c = Client()
-        cls.my_client = c
+        cls.my_client = Client()
+        all_urls = cls.get_url_names()
+        # filter to open routes and restricted routes.
+        open_urls, staff_urls, login_urls, restricted_urls = [], [], [], []
+        for u in all_urls:
+            # if u ... what? staff
+            # if u ... what? login
+            # if u ... what? restricted
+            # else:
+            open_urls.append(u)
+        cls.open_urls = open_urls
+        cls.staff_urls = staff_urls
+        cls.login_urls = login_urls
+        cls.restricted_urls = restricted_urls
+        cls.all_urls = all_urls
         return super().setUpClass()
 
     def test_visit_homepage(self):
@@ -34,6 +39,70 @@ class RouteTests(TestCase):
     def test_static_on_debug(self):
         homepage = self.my_client.get('/')
         self.assertEqual(homepage.status_code, 200)
+
+    @classmethod
+    def get_url_names(cls):
+        """Get the named urls defined by all except for admin and the boilerplate project routes. """
+        all_urls = call_command('urllist', ignore=['admin', 'project'], only=['name'], long=True, data=True)
+        all_urls = list(set(all_urls))  # unique only, because sometimes we override a url name of imported package.
+        return all_urls
+
+    def visit_urls(self, urls, user=None):
+        """Check a given user gets an affirmative response (status:200) from given url path name routes. """
+        c = self.my_client
+        # c.logout()
+        # if user and not isinstance(user, AnonymousUser):
+        #     c.force_login(user)
+        c.defaults.update({'user': user})
+        responses = []
+        for name in urls:
+            url = reverse(name)
+            responses.append(c.get(url))
+        return responses
+
+    def test_open_urls(self):
+        """Check all non-restrictred routes give an affirmative response (status:200), even for an AnonymousUser. """
+        urls = self.staff_urls
+        user = AnonymousUser()
+        response = self.visit_urls(urls, user)
+        for res in response:
+            self.assertAlmostEqual(res.status_code, 200)
+
+    def test_login_urls(self):
+        """Check all login required routes work (response status:200) for users, but not for anonymous users. """
+        urls = self.login_urls
+        user = MockUser()
+        wrong_user = AnonymousUser()
+        response = self.visit_urls(urls, user)
+        expected_fails = self.visit_urls(urls, wrong_user)
+        for res in response:
+            self.assertAlmostEqual(res.status_code, 200)
+        for bad in expected_fails:
+            self.assertNotAlmostEqual(bad.stats_code, 200)
+
+    def test_staff_urls(self):
+        """Check all staff required routes work (response status:200) for staff, but not for normal users. """
+        urls = self.staff_urls
+        user = MockStaffUser()
+        wrong_user = MockUser()
+        response = self.visit_urls(urls, user)
+        expected_fails = self.visit_urls(urls, wrong_user)
+        for res in response:
+            self.assertAlmostEqual(res.status_code, 200)
+        for bad in expected_fails:
+            self.assertNotAlmostEqual(bad.stats_code, 200)
+
+    def test_restricted_urls(self):
+        """Check all restricted required routes work (response status:200) for superusers, but not for other staff. """
+        urls = self.restricted_urls
+        user = MockSuperUser()
+        wrong_user = MockStaffUser()
+        response = self.visit_urls(urls, user)
+        expected_fails = self.visit_urls(urls, wrong_user)
+        for res in response:
+            self.assertAlmostEqual(res.status_code, 200)
+        for bad in expected_fails:
+            self.assertNotAlmostEqual(bad.stats_code, 200)
 
 
 class SettingsTests(TestCase):
