@@ -1,9 +1,11 @@
 from django.db.models.fields import NOT_PROVIDED
 from django.db.models import CharField, TextField, URLField, DateField, TimeField
 from django.db.models import PositiveSmallIntegerField, SmallIntegerField, base as db_models_base
-from django.contrib.auth.models import User  # , AnonymousUser, AbstractUser, UserManager, Group
+# from django.db.models import Q, Max, Subquery
+# from django.contrib.auth.models import User  # , AnonymousUser, AbstractUser, UserManager, Group
 from django.urls import reverse
 from datetime import date, time  # , timedelta
+from .helper_general import UserModel as User  # , AnonymousUser, MockRequest, MockUser, MockStaffUser, MockSuperUser
 # from django.utils.module_loading import import_string
 
 
