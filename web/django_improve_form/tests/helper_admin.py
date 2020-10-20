@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+from django.test import Client  # , TestCase
 from unittest import skip
 from django.apps import apps
 from django.conf import settings
@@ -6,29 +6,28 @@ from django.urls import reverse
 from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth.models import Permission
-from django.contrib.auth.forms import UserChangeForm  # , UserCreationForm
+# from django.contrib.auth.forms import UserChangeForm  # , UserCreationForm
 from django.contrib.sessions.models import Session as Session_contrib
 from django.contrib.contenttypes.models import ContentType
 # from django.forms import ValidationError
-from datetime import date, time, timedelta  # , datetime as dt
+# from datetime import date, time, timedelta  # , datetime as dt
 from os import environ
-from copy import deepcopy
-from types import GeneratorType
+# from copy import deepcopy
+# from types import GeneratorType
 from django.utils.module_loading import import_string
-from .helper_views import MockRequest, MockUser, MockSuperUser  # , AnonymousUser, MockUser, MockStaffUser,
-# from .helper_views import MockRequest, MockUser, MockStaffUser, MockSuperUser
+from .helper_general import MockRequest, MockUser, MockSuperUser  # , AnonymousUser, MockUser, MockStaffUser,
 # Resource = import_string('APPNAME.models.Resource')
 # ResourceAdmin = import_string('APPNAME.admin.ResourceAdmin')
-main_admin = import_string('django_improve_form.admin.admin')
 
-APP_NAME = 'django_improve_form'
+APP_NAME = __package__.split('.')[0]
+main_admin = import_string(APP_NAME + '.admin.admin')
 request = MockRequest()
 request.user = MockSuperUser()
 fail_req = MockRequest()
 fail_req.user = MockUser()
 
 
-class AdminSetupTests(TestCase):
+class AdminSetupTests:
     """General expectations of the Admin. """
 
     def test_admin_set_for_all_expected_models(self):
@@ -54,13 +53,12 @@ class AdminSetupTests(TestCase):
         pass
 
 
-@skip("Not Implemented")
-class AdminModelManagement(TestCase):
+class AdminModelManagement:
     """Tests for Model create or modify in the Admin site. """
     Model = None
     AdminClass = None
     FormClass = None
-    model_fields_not_in_admin = ['id', 'date_added', 'date_modified', 'classoffer', ]
+    model_fields_not_in_admin = ['id', 'date_added', 'date_modified', ]  # list related models
     associated = [
         {
             'model': Model,

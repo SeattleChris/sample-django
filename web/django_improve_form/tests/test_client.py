@@ -4,7 +4,7 @@ from django.core.management import call_command
 from django.conf import settings
 from unittest import skip
 from os import environ
-from .helper_views import AnonymousUser, MockUser, MockStaffUser, MockSuperUser
+from .helper_general import AnonymousUser, MockUser, MockStaffUser, MockSuperUser
 
 
 class RouteTests(TestCase):
