@@ -74,3 +74,28 @@ class ModifyUserTests(MimicAsView, TestCase):
 
     # path('initial', RegisterActivateFlowView.as_view(), name='initial_signup'),  # Two-step, customized.
 
+
+class ActivateFlowTests(MimicAsView, TestCase):
+    url_name = 'initial_signup'
+    ViewClass = RegisterActivateFlowView
+    expected_form = RegisterUserForm
+
+    def setUp(self):
+        self.view = self.setup_view('get')
+        user = AnonymousUser()
+        self.view.request.user = user
+
+    def test_get_context_data(self):
+        expected_defaults = self.viewClass.default_context
+        context = self.view.get_context_data()
+        self.assertIsInstance(context['view'], self.viewClass)
+        self.assertIsInstance(context['form'], self.expected_form)
+        for key, val in expected_defaults.items():
+            self.assertEqual(context[key], val)
+
+    @skip("Not Implemented")
+    def test_register(self):
+        form = self.view.get_form()
+        register = self.view.register(form)
+        print("======================== SIMPLE FLOW TESTS - REGISTER =======================")
+        pprint(register)
