@@ -46,3 +46,31 @@ class SimpleFlowTests(MimicAsView, TestCase):
         print("======================== SIMPLE FLOW TESTS - REGISTER =======================")
         pprint(register)
 
+
+class ModifyUserTests(MimicAsView, TestCase):
+    url_name = 'user_update'
+    viewClass = ModifyUser
+    expected_form = RegisterChangeForm
+
+    def setUp(self):
+        self.view = self.setup_view('get')
+        user = UserModel.objects.create(**USER_DEFAULTS)
+        user.save()
+        self.view.request.user = user
+        self.view.object = user  # TODO: Should MimicAsView be updated to actually call the view get method?
+
+    def test_get_object(self):
+        expected = self.view.request.user
+        actual = self.view.get_object()
+        self.assertAlmostEqual(expected, actual)
+
+    def test_get_context_data(self):
+        expected_defaults = self.viewClass.default_context
+        context = self.view.get_context_data()
+        self.assertIsInstance(context['view'], self.viewClass)
+        self.assertIsInstance(context['form'], self.expected_form)
+        for key, val in expected_defaults.items():
+            self.assertEqual(context[key], val)
+
+    # path('initial', RegisterActivateFlowView.as_view(), name='initial_signup'),  # Two-step, customized.
+
