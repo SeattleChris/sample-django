@@ -40,7 +40,7 @@ class AdminSetupTests:
         registered_models = list(registered_admins_dict.keys())
         ignore_models = self.ignore_models_default
         ignore_models.update(self.ignore_models)
-        models = [ea for ea in models if models not in ignore_models]
+        models = [ea for ea in models if ea not in ignore_models]
         for model in models:
             self.assertIn(model, registered_models)
 
@@ -52,7 +52,7 @@ class AdminModelManagement:
     FormClass = None
     use_mock_users = True
     model_fields_not_in_admin = ['id', 'date_added', 'date_modified', ]  # list related models
-    associated = [
+    mod_setup = [
         {
             'model': Model,
             'consts': {},
@@ -65,7 +65,7 @@ class AdminModelManagement:
             'consts': {},
             'variations': [],  # either a list of stings to combine with 'var_name', or a list of dicts.
             'var_name': None,  # if a string, then for 'ea' in variations will be replaced with {var_name: ea}.
-            'related_name': '',  # As an associated model, this is the parameter name for main Model.
+            'related_name': '',  # As an mod_setup model, this is the parameter name for main Model.
             'unique_str': None,  # a tuple for field name and string to be formatted with an integer.
         },
         {
@@ -73,10 +73,11 @@ class AdminModelManagement:
             'consts': {},
             'variations': [],  # either a list of stings to combine with 'var_name', or a list of dicts.
             'var_name': None,  # if a string, then for 'ea' in variations will be replaced with {var_name: ea}.
-            'related_name': '',  # As an associated model, this is the parameter name for main Model.
+            'related_name': '',  # As an mod_setup model, this is the parameter name for main Model.
             'unique_str': None,  # a tuple for field name and string to be formatted with an integer.
         },
         ]
+    mod_setup_for_default = [{}]
 
     def test_admin_uses_correct_admin(self):
         """The admin site should use the expected AdminClass for the Model. """
@@ -144,17 +145,17 @@ class AdminModelManagement:
     def get_expected_column_values(self, *args, **kwargs):
         """Method for determining what the expected values for computed column display in an Admin view. """
         expected = []
-        associated = kwargs.get('associated', getattr(self, 'associated', [{}]))
+        mod_setup = kwargs.get('mod_setup', getattr(self, 'mod_setup', [{}]))
         # TODO: Magic goes here.
         value_lookup = kwargs.get('value_lookup', [])
         for collect in value_lookup:
-            result = '_'.join((associated[i][prop][j] for i, prop, j in collect))
+            result = '_'.join((mod_setup[i][prop][j] for i, prop, j in collect))
             expected.append(result)
         return expected
 
-    def get_computed_column_info(self, expected_values=[], associated=None, col_name=''):
+    def get_computed_column_info(self, expected_values=[], mod_setup=None, col_name=''):
         """Returns an iterable of expected, actual pairs, given the expected and data creating information. """
-        data_models = models_from_mod_setup(associated)
+        data_models = models_from_mod_setup(mod_setup)
         current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
         get_col = getattr(current_admin, col_name)
         return zip(expected_values, (get_col(ea) for ea in data_models))
@@ -164,9 +165,9 @@ class AdminModelManagement:
         # determine parameters to generate expected_values.
         expected_values = getattr(self, 'expected_values', None)
         expected_values = expected_values or self.get_expected_column_values(*args, **kwargs)
-        associated = kwargs.get('associated', getattr(self, 'associated', {}))
+        mod_setup = kwargs.get('mod_setup', getattr(self, 'mod_setup', {}))
         col_name = kwargs.get('col_name', getattr(self, 'col_name', ''))
-        test_pairs = self.get_computed_column_info(expected_values, associated, col_name)
+        test_pairs = self.get_computed_column_info(expected_values, mod_setup, col_name)
         for expected, actual in test_pairs:
             self.assertEqual(expected, actual)
 
@@ -175,9 +176,9 @@ class AdminModelManagement:
         # setup parameters that trigger a default value condition.
         expected_values = getattr(self, 'expected_default_values', None)
         expected_values = expected_values or self.get_expected_column_values(*args, **kwargs)
-        associated = kwargs.get('associated', getattr(self, 'associated_for_default', {}))
+        mod_setup = kwargs.get('mod_setup', getattr(self, 'mod_setup_for_default', {}))
         col_name = kwargs.get('col_name', getattr(self, 'col_name', ''))
-        test_pairs = self.get_computed_column_info(expected_values, associated, col_name)
+        test_pairs = self.get_computed_column_info(expected_values, mod_setup, col_name)
         for expected, actual in test_pairs:
             self.assertEqual(expected, actual)
 
