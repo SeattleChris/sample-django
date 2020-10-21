@@ -96,20 +96,21 @@ class AdminModelManagement:
             related_name = data.get('related_name', None)
             if not related_name:
                 return cur_opts
-            for r in cur_opts:
-                obj = data['model'].objects.create(**r)
-                opts += [dict(**{related_name: obj}, **m) for m in mod_opts]
         elif data and isinstance(data, list):
-            if not mod_opts:
-                mod_opts = []  # Current list of main model options, Eventually it will have all possible combos.
+            cur_opts = mod_opts or []  # Current list of main model options, Eventually it will have all possible combos
             for ea in data:
-                mod_opts = self.make_modelset(ea, mod_opts=mod_opts)
-            model = data[0]['model']
-            mod = data[0].get('mod', None)  # used if a unique name or other string is needed for each model.
-            for i, opt in enumerate(mod_opts):
-                if mod:
-                    opt.update({mod: f"m_{i}"})
-                opts.append(model.objects.create(**opt))
+                cur_opts = self.make_modelset(ea, mod_opts=cur_opts)
+            data = data[0]
+        else:
+            raise ImproperlyConfigured("Expected a properly configured dict, or a list of them for make_model_data. ")
+        st_field, st = data.get('unique_str', (None, ''))
+        for i, r in enumerate(cur_opts):
+            label = {st_field: st.format(i)} if st_field else {}
+            obj = data['model'].objects.create(**r, **label)
+            if related_name:
+                opts += [dict(**{related_name: obj}, **m) for m in mod_opts]
+            else:
+                opts.append(obj)
         return opts
 
     def test_admin_uses_correct_admin(self):
