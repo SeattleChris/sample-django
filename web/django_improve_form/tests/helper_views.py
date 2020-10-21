@@ -75,7 +75,7 @@ class MimicAsView:
             raise ValueError("Method '{}' not recognized as an allowed method string. ".format(method))
         factory = RequestFactory()
         request = getattr(factory, method)('/', **req_kwargs)
-
+        # TODO: Should MimicAsView be updated to actually call the view get method?
         key = 'template_name'
         template_name = template_name or getattr(self, key, None) or getattr(self.viewClass, key, None)
         view = self.viewClass(template_name=template_name, **init_kwargs)
