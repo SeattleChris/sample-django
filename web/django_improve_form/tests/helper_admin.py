@@ -1,5 +1,5 @@
 from django.test import Client  # , TestCase
-from unittest import skip
+# from unittest import skip
 from django.apps import apps
 from django.conf import settings
 from django.urls import reverse
@@ -10,14 +10,15 @@ from django.contrib.auth.models import Permission
 from django.contrib.sessions.models import Session as Session_contrib
 from django.contrib.contenttypes.models import ContentType
 # from django.forms import ValidationError
-# from datetime import date, time, timedelta  # , datetime as dt
+from datetime import date, time, timedelta  # , datetime as dt
 from os import environ
 # from copy import deepcopy
-# from types import GeneratorType
+from types import GeneratorType
 from django.utils.module_loading import import_string
-from .helper_general import MockRequest, MockUser, MockSuperUser  # UserModel, AnonymousUser,  MockStaffUser,
 # Resource = import_string('APPNAME.models.Resource')
 # ResourceAdmin = import_string('APPNAME.admin.ResourceAdmin')
+from .helper_general import models_from_mod_setup, MockRequest, MockUser, MockSuperUser
+# UserModel, AnonymousUser,  MockStaffUser,
 
 APP_NAME = __package__.split('.')[0]
 main_admin = import_string(APP_NAME + '.admin.admin')
@@ -29,28 +30,19 @@ fail_req.user = MockUser()
 
 class AdminSetupTests:
     """General expectations of the Admin. """
+    ignore_models = []  # May include the User model if all users are covered by proxy models that each have an Admin.
+    ignore_models_default = {LogEntry, Permission, ContentType, Session_contrib}
 
     def test_admin_set_for_all_expected_models(self):
         """Make sure all models can be managed in the admin. """
         models = apps.get_models()
         registered_admins_dict = main_admin.site._registry
         registered_models = list(registered_admins_dict.keys())
-        # All UserHC (imported as User here) management done by proxy models: StaffUser and StudentUser
-        # models.remove(User)
-        # The following models are from packages we do not need to test.
-        models.remove(LogEntry)
-        models.remove(Permission)
-        models.remove(ContentType)
-        models.remove(Session_contrib)
+        ignore_models = self.ignore_models_default
+        ignore_models.update(self.ignore_models)
+        models = [ea for ea in models if models not in ignore_models]
         for model in models:
             self.assertIn(model, registered_models)
-
-    @skip("Not Implemented")
-    def test_createsu_command(self):
-        """Our custom command to create a Superuser as an initial admin """
-        # TODO: Write tests for when there is no superuser.
-        # This seemed to not work when using this command on PythonAnywhere the first time
-        pass
 
 
 class AdminModelManagement:
@@ -58,6 +50,7 @@ class AdminModelManagement:
     Model = None
     AdminClass = None
     FormClass = None
+    use_mock_users = True
     model_fields_not_in_admin = ['id', 'date_added', 'date_modified', ]  # list related models
     associated = [
         {
@@ -65,7 +58,7 @@ class AdminModelManagement:
             'consts': {},
             'variations': [],  # either a list of stings to combine with 'var_name', or a list of dicts.
             'var_name': None,  # if a string, then for 'ea' in variations will be replaced with {var_name: ea}.
-            'mod': '',  # As this is the main model, if defined, this field will hold a unique string of m_<num>.
+            'unique_str': ('name', 'm_{}'),  # a tuple for field name and string to be formatted with an integer.
         },
         {
             'model': None,
@@ -73,6 +66,7 @@ class AdminModelManagement:
             'variations': [],  # either a list of stings to combine with 'var_name', or a list of dicts.
             'var_name': None,  # if a string, then for 'ea' in variations will be replaced with {var_name: ea}.
             'related_name': '',  # As an associated model, this is the parameter name for main Model.
+            'unique_str': None,  # a tuple for field name and string to be formatted with an integer.
         },
         {
             'model': None,
@@ -80,37 +74,9 @@ class AdminModelManagement:
             'variations': [],  # either a list of stings to combine with 'var_name', or a list of dicts.
             'var_name': None,  # if a string, then for 'ea' in variations will be replaced with {var_name: ea}.
             'related_name': '',  # As an associated model, this is the parameter name for main Model.
+            'unique_str': None,  # a tuple for field name and string to be formatted with an integer.
         },
         ]
-
-    def make_model_data(self, data, mod_opts=None):
-        opts = []
-        if isinstance(data, dict):
-            if not data.get('model', None):
-                return mod_opts
-            cur_vars = data.get('mod_vars', [])
-            if data.get('var_name', None):
-                cur_vars = [{data['var_name']: v} for v in cur_vars]
-            consts = data.get('consts', {})
-            cur_opts = [consts] if not cur_vars else [dict(**v, **consts) for v in cur_vars]
-            related_name = data.get('related_name', None)
-            if not related_name:
-                return cur_opts
-            for r in cur_opts:
-                obj = data['model'].objects.create(**r)
-                opts += [dict(**{related_name: obj}, **m) for m in mod_opts]
-        elif data and isinstance(data, list):
-            if not mod_opts:
-                mod_opts = []  # Current list of main model options, Eventually it will have all possible combos.
-            for ea in data:
-                mod_opts = self.make_modelset(ea, mod_opts=mod_opts)
-            model = data[0]['model']
-            mod = data[0].get('mod', None)  # used if a unique name or other string is needed for each model.
-            for i, opt in enumerate(mod_opts):
-                if mod:
-                    opt.update({mod: f"m_{i}"})
-                opts.append(model.objects.create(**opt))
-        return opts
 
     def test_admin_uses_correct_admin(self):
         """The admin site should use the expected AdminClass for the Model. """
@@ -160,16 +126,17 @@ class AdminModelManagement:
 
     def test_admin_can_create_first_model(self):
         """The first Model can be made in empty database (even if later models compute values from existing).  """
-        c = Client(user=MockSuperUser())
+        c = Client(user=MockSuperUser())  if self.use_mock_users else Client()
         add_url = ' '.join((APP_NAME, self.Model.__name__, 'add'))
         add_url = reverse(add_url)
-        # login_kwargs = self.get_login_kwargs()
-        # login_try = c.login(**login_kwargs)
+        if not self.use_mock_users:
+            login_kwargs = self.get_login_kwargs()
+            login_try = c.login(**login_kwargs)
+            self.assertTrue(login_try)
         kwargs = {'name': 'test_create'}
         # Update kwargs with info requested for the admin form to create a model.
         post_response = c.post(add_url, kwargs, follow=True)
         found = self.Model.objects.filter(name=kwargs['name']).first()
-        # self.assertTrue(login_try)
         self.assertEqual(post_response.status_code, 200)
         self.assertIsNotNone(found)
         self.assertIsInstance(found, self.Model)
@@ -187,7 +154,7 @@ class AdminModelManagement:
 
     def get_computed_column_info(self, expected_values=[], associated=None, col_name=''):
         """Returns an iterable of expected, actual pairs, given the expected and data creating information. """
-        data_models = self.make_model_data(associated)
+        data_models = models_from_mod_setup(associated)
         current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
         get_col = getattr(current_admin, col_name)
         return zip(expected_values, (get_col(ea) for ea in data_models))
@@ -220,130 +187,107 @@ class AdminModelManagement:
             current_admin.get_version_matrix()
 
 
-# class AdminClassDayListFilterTests(TestCase):
-#     # related_models = (ClassOfferAdmin, RegistrationAdmin)
-#     student_profile_attribute = 'student'  # 'profile' if only one profile model.
-#     staff_profile_attribute = 'staff'  # 'profile' if only one profile model.
+class AdminListFilterTests:
+    """These tests can help for developing custom list filters for the Admin. """
+    profile_attribute = 'student'  # 'profile' if only one profile model.
+    # staff_profile_attribute = 'staff'  # 'profile' if only one profile model.
+    Model = None
+    UserModel = None
+    Related_Model = None
+    Parent_Model_a = None
+    Parent_Model_b = None
+    AdminModel = None
+    AdminRelated = None
+    Admin_ListFilter = None
 
-#     def test_admin_classoffer_lookup(self):
-#         Registration = self.Model
-#         RegistrationAdmin = self.AdminModel
-#         ClassOffer = self.Related_Model
-#         ClassOfferAdmin = self.AdminRelated
-#         Session = self.Parent_Model_a
-#         Subject = self.Parent_Model_b
-#         ClassDayListFilter = self.Admin_ListFilter
+    def make_data_models(self):
+        key_day = date.today()
+        publish = key_day - timedelta(days=7*3+1)
+        data = []
+        a_consts = {'name': 's_1', 'key_day_date': key_day, 'max_day_shift': 6, 'publish_date': publish}
+        b_consts = {'name': "test_subj", 'version': self.Parent_Model_b.VERSION_CHOICES[0][0], }
+        consts = {'start_time': time(19, 0)}
+        class_days = [k for k, v in self.Related_Model.DOW_CHOICES if k % 2]
+        data.append({'model': self.Related_Model, 'consts': consts, 'variations': class_days, 'var_name': 'class_day'})
+        data.append({'model': self.Parent_Model_a, 'consts': a_consts, 'related_name': 'session'})
+        data.append({'model': self.Parent_Model_b, 'consts': b_consts, 'related_name': 'subject'})
+        models = models_from_mod_setup(data)
+        # s_1 = self.Parent_Model_a.objects.create(**a_consts)
+        # subj = self.Parent_Model_b.objects.create(**b_consts)
+        # related = {'subject': subj, 'session': s_1}
+        # models = [self.Related_Model.objects.create(class_day=d, **consts, **related) for d in class_days]
+        return models
 
-#         key_day, name = date.today(), 'sess1'
-#         publish = key_day - timedelta(days=7*3+1)
-#         sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
-#         subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
-#         kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
-#         classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
-#         expected_lookup = ((k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2)
+    def get_expected_lookup(self):
+        expected_lookup = ((k, v) for k, v in self.Related_Model.DOW_CHOICES if k % 2)
+        return expected_lookup
 
-#         current_admin = ClassOfferAdmin(model=ClassOffer, admin_site=AdminSite())
-#         day_filter = ClassDayListFilter(request, {}, ClassOffer, current_admin)
-#         lookup = day_filter.lookups(request, current_admin)
+    def test_admin_lookup(self):
+        data_models = self.make_data_models()
+        expected_lookup = self.get_expected_lookup()
+        current_admin = self.AdminRelated(model=self.Related_Model, admin_site=AdminSite())
+        day_filter = self.Admin_ListFilter(request, {}, self.Related_Model, current_admin)
+        lookup = day_filter.lookups(request, current_admin)
 
-#         self.assertEqual(len(classoffers), 3)
-#         self.assertEqual(ClassOffer.objects.count(), 3)
-#         self.assertIsInstance(lookup, GeneratorType)
-#         self.assertEqual(list(expected_lookup), list(lookup))
+        # self.assertEqual(len(data_models), 3)
+        # self.assertEqual(self.Related_Model.objects.count(), 3)
+        self.assertIsInstance(lookup, GeneratorType)
+        self.assertEqual(list(expected_lookup), list(lookup))
 
-#     def test_admin_classoffer_queryset(self):
-#         Registration = self.Model
-#         RegistrationAdmin = self.AdminModel
-#         ClassOffer = self.Related_Model
-#         ClassOfferAdmin = self.AdminRelated
-#         Session = self.Parent_Model_a
-#         Subject = self.Parent_Model_b
-#         ClassDayListFilter = self.Admin_ListFilter
+    def test_admin_queryset(self):
+        data_models = self.make_data_models()
+        expected_lookup = self.get_expected_lookup()
+        current_admin = self.AdminRelated(model=self.Related_Model, admin_site=AdminSite())
+        day_filter = self.Admin_ListFilter(request, {}, self.Related_Model, current_admin)
 
-#         key_day, name = date.today(), 'sess1'
-#         publish = key_day - timedelta(days=7*3+1)
-#         sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
-#         subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
-#         kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
-#         classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
-#         expected_lookup_list = [(k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2]
+        model_qs = current_admin.get_queryset(request)
+        expected_qs = model_qs.filter(class_day__in=(k for k, v in expected_lookup))
+        qs = day_filter.queryset(request, model_qs)
 
-#         current_admin = ClassOfferAdmin(model=ClassOffer, admin_site=AdminSite())
-#         day_filter = ClassDayListFilter(request, {}, ClassOffer, current_admin)
-#         model_qs = current_admin.get_queryset(request)
-#         expected_qs = model_qs.filter(class_day__in=(k for k, v in expected_lookup_list))
-#         qs = day_filter.queryset(request, model_qs)
+        # self.assertEqual(len(data_models), 3)
+        self.assertSetEqual(set(expected_qs), set(qs))
 
-#         self.assertEqual(len(classoffers), 3)
-#         self.assertSetEqual(set(expected_qs), set(qs))
+    def make_test_user(self):
+        password = environ.get('SUPERUSER_PASS', '')
+        admin_user_email = environ.get('SUPERUSER_EMAIL', settings.ADMINS[0][1])
+        user = self.UserModel.objects.create_superuser(admin_user_email, admin_user_email, password)
+        user.first_name = "test_super"
+        user.last_name = "test_user"
+        user.save()
+        return user
 
-#     def test_admin_registration_lookup(self):
-#         Registration = self.Model
-#         RegistrationAdmin = self.AdminModel
-#         ClassOffer = self.Related_Model
-#         ClassOfferAdmin = self.AdminRelated
-#         Session = self.Parent_Model_a
-#         Subject = self.Parent_Model_b
-#         ClassDayListFilter = self.Admin_ListFilter
+    def test_admin_registration_lookup(self):
+        data_models = self.make_data_models()
+        expected_lookup = self.get_expected_lookup()
+        user = self.make_test_student()
+        profile = getattr(user, self.profile_attribute, None)
+        registrations = [self.Model.objects.create(student=profile, classoffer=ea) for ea in data_models]
 
-#         key_day, name = date.today(), 'sess1'
-#         publish = key_day - timedelta(days=7*3+1)
-#         sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
-#         subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
-#         kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
-#         classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
-#         expected_lookup = ((k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2)
+        current_admin = self.AdminModel(model=self.Model, admin_site=AdminSite())
+        day_filter = self.Admin_ListFilter(request, {}, self.Model, current_admin)
+        lookup = day_filter.lookups(request, current_admin)
 
-#         password = environ.get('SUPERUSER_PASS', '')
-#         admin_user_email = environ.get('SUPERUSER_EMAIL', settings.ADMINS[0][1])
-#         user = User.objects.create_superuser(admin_user_email, admin_user_email, password)
-#         user.first_name = "test_super"
-#         user.last_name = "test_user"
-#         user.save()
-#         student = getattr(user, self.student_profile_attribute, None)
-#         registrations = [Registration.objects.create(student=student, classoffer=ea) for ea in classoffers]
+        self.assertEqual(len(registrations), 3)
+        self.assertEqual(self.Model.objects.count(), 3)
+        self.assertIsInstance(lookup, GeneratorType)
+        self.assertEqual(list(expected_lookup), list(lookup))
 
-#         current_admin = RegistrationAdmin(model=Registration, admin_site=AdminSite())
-#         day_filter = ClassDayListFilter(request, {}, Registration, current_admin)
-#         lookup = day_filter.lookups(request, current_admin)
+    def test_admin_registration_queryset(self):
+        data_models = self.make_data_models()
+        expected_lookup = self.get_expected_lookup()
+        user = self.make_test_student()
+        profile = getattr(user, self.profile_attribute, None)
+        registrations = [self.Model.objects.create(student=profile, classoffer=ea) for ea in data_models]
 
-#         self.assertEqual(len(registrations), 3)
-#         self.assertEqual(Registration.objects.count(), 3)
-#         self.assertIsInstance(lookup, GeneratorType)
-#         self.assertEqual(list(expected_lookup), list(lookup))
+        current_admin = self.AdminModel(model=self.Model, admin_site=AdminSite())
+        day_filter = self.Admin_ListFilter(request, {}, self.Model, current_admin)
+        model_qs = current_admin.get_queryset(request)
+        expected_qs = model_qs.filter(classoffer__class_day__in=(k for k, v in expected_lookup))
+        qs = day_filter.queryset(request, model_qs)
 
-#     def test_admin_registration_queryset(self):
-#         Registration = self.Model
-#         RegistrationAdmin = self.AdminModel
-#         ClassOffer = self.Related_Model
-#         ClassOfferAdmin = self.AdminRelated
-#         Session = self.Parent_Model_a
-#         Subject = self.Parent_Model_b
-#         ClassDayListFilter = self.Admin_ListFilter
-
-#         key_day, name = date.today(), 'sess1'
-#         publish = key_day - timedelta(days=7*3+1)
-#         sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
-#         subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
-#         kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
-#         classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
-#         expected_lookup = ((k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2)
-
-#         password = environ.get('SUPERUSER_PASS', '')
-#         admin_user_email = environ.get('SUPERUSER_EMAIL', settings.ADMINS[0][1])
-#         user = User.objects.create_superuser(admin_user_email, admin_user_email, password)
-#         student = getattr(user, self.student_profile_attribute, None)
-#         registrations = [Registration.objects.create(student=student, classoffer=ea) for ea in classoffers]
-
-#         current_admin = RegistrationAdmin(model=Registration, admin_site=AdminSite())
-#         day_filter = ClassDayListFilter(request, {}, Registration, current_admin)
-#         model_qs = current_admin.get_queryset(request)
-#         expected_qs = model_qs.filter(classoffer__class_day__in=(k for k, v in expected_lookup))
-#         qs = day_filter.queryset(request, model_qs)
-
-#         self.assertEqual(len(registrations), 3)
-#         self.assertEqual(model_qs.model, Registration)
-#         self.assertSetEqual(set(expected_qs), set(qs))
+        self.assertEqual(len(registrations), 3)
+        self.assertEqual(model_qs.model, self.Model)
+        self.assertSetEqual(set(expected_qs), set(qs))
 
 
 # class AdminUserHCTests:
