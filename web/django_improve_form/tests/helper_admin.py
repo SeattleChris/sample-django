@@ -189,25 +189,34 @@ class AdminModelManagement:
 
 class AdminListFilterTests:
     """These tests can help for developing custom list filters for the Admin. """
-    # related_models = (ClassOfferAdmin, RegistrationAdmin)
-    student_profile_attribute = 'student'  # 'profile' if only one profile model.
-    staff_profile_attribute = 'staff'  # 'profile' if only one profile model.
+    profile_attribute = 'student'  # 'profile' if only one profile model.
+    # staff_profile_attribute = 'staff'  # 'profile' if only one profile model.
     Model = None
-    AdminModel = None
+    UserModel = None
     Related_Model = None
-    AdminRelated = None
     Parent_Model_a = None
     Parent_Model_b = None
+    AdminModel = None
+    AdminRelated = None
     Admin_ListFilter = None
 
     def make_data_models(self):
-        key_day, name = date.today(), 'sess1'
+        key_day = date.today()
         publish = key_day - timedelta(days=7*3+1)
-        sess1 = self.Parent_Model_a.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
-        subj = self.Parent_Model_b.objects.create(version=self.Parent_Model_b.VERSION_CHOICES[0][0], name="test_subj")
-        kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
-        classoffers = [self.Related_Model.objects.create(class_day=k, **kwargs) for k, v in self.Related_Model.DOW_CHOICES if k % 2]
-        return classoffers
+        data = []
+        a_consts = {'name': 's_1', 'key_day_date': key_day, 'max_day_shift': 6, 'publish_date': publish}
+        b_consts = {'name': "test_subj", 'version': self.Parent_Model_b.VERSION_CHOICES[0][0], }
+        consts = {'start_time': time(19, 0)}
+        class_days = [k for k, v in self.Related_Model.DOW_CHOICES if k % 2]
+        data.append({'model': self.Related_Model, 'consts': consts, 'variations': class_days, 'var_name': 'class_day'})
+        data.append({'model': self.Parent_Model_a, 'consts': a_consts, 'related_name': 'session'})
+        data.append({'model': self.Parent_Model_b, 'consts': b_consts, 'related_name': 'subject'})
+        models = models_from_mod_setup(data)
+        # s_1 = self.Parent_Model_a.objects.create(**a_consts)
+        # subj = self.Parent_Model_b.objects.create(**b_consts)
+        # related = {'subject': subj, 'session': s_1}
+        # models = [self.Related_Model.objects.create(class_day=d, **consts, **related) for d in class_days]
+        return models
 
     def get_expected_lookup(self):
         expected_lookup = ((k, v) for k, v in self.Related_Model.DOW_CHOICES if k % 2)
@@ -218,11 +227,10 @@ class AdminListFilterTests:
         expected_lookup = self.get_expected_lookup()
         current_admin = self.AdminRelated(model=self.Related_Model, admin_site=AdminSite())
         day_filter = self.Admin_ListFilter(request, {}, self.Related_Model, current_admin)
-
         lookup = day_filter.lookups(request, current_admin)
 
-        self.assertEqual(len(data_models), 3)
-        self.assertEqual(self.Related_Model.objects.count(), 3)
+        # self.assertEqual(len(data_models), 3)
+        # self.assertEqual(self.Related_Model.objects.count(), 3)
         self.assertIsInstance(lookup, GeneratorType)
         self.assertEqual(list(expected_lookup), list(lookup))
 
@@ -236,73 +244,49 @@ class AdminListFilterTests:
         expected_qs = model_qs.filter(class_day__in=(k for k, v in expected_lookup))
         qs = day_filter.queryset(request, model_qs)
 
-        self.assertEqual(len(data_models), 3)
+        # self.assertEqual(len(data_models), 3)
         self.assertSetEqual(set(expected_qs), set(qs))
 
-    def test_admin_registration_lookup(self):
-        Registration = self.Model
-        RegistrationAdmin = self.AdminModel
-        ClassOffer = self.Related_Model
-        Session = self.Parent_Model_a
-        Subject = self.Parent_Model_b
-        ClassDayListFilter = self.Admin_ListFilter
-
-        key_day, name = date.today(), 'sess1'
-        publish = key_day - timedelta(days=7*3+1)
-        sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
-        subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
-        kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
-        classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
-        expected_lookup = ((k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2)
-
+    def make_test_user(self):
         password = environ.get('SUPERUSER_PASS', '')
         admin_user_email = environ.get('SUPERUSER_EMAIL', settings.ADMINS[0][1])
-        user = User.objects.create_superuser(admin_user_email, admin_user_email, password)
+        user = self.UserModel.objects.create_superuser(admin_user_email, admin_user_email, password)
         user.first_name = "test_super"
         user.last_name = "test_user"
         user.save()
-        student = getattr(user, self.student_profile_attribute, None)
-        registrations = [Registration.objects.create(student=student, classoffer=ea) for ea in classoffers]
+        return user
 
-        current_admin = RegistrationAdmin(model=Registration, admin_site=AdminSite())
-        day_filter = ClassDayListFilter(request, {}, Registration, current_admin)
+    def test_admin_registration_lookup(self):
+        data_models = self.make_data_models()
+        expected_lookup = self.get_expected_lookup()
+        user = self.make_test_student()
+        profile = getattr(user, self.profile_attribute, None)
+        registrations = [self.Model.objects.create(student=profile, classoffer=ea) for ea in data_models]
+
+        current_admin = self.AdminModel(model=self.Model, admin_site=AdminSite())
+        day_filter = self.Admin_ListFilter(request, {}, self.Model, current_admin)
         lookup = day_filter.lookups(request, current_admin)
 
         self.assertEqual(len(registrations), 3)
-        self.assertEqual(Registration.objects.count(), 3)
+        self.assertEqual(self.Model.objects.count(), 3)
         self.assertIsInstance(lookup, GeneratorType)
         self.assertEqual(list(expected_lookup), list(lookup))
 
     def test_admin_registration_queryset(self):
-        Registration = self.Model
-        RegistrationAdmin = self.AdminModel
-        ClassOffer = self.Related_Model
-        Session = self.Parent_Model_a
-        Subject = self.Parent_Model_b
-        ClassDayListFilter = self.Admin_ListFilter
+        data_models = self.make_data_models()
+        expected_lookup = self.get_expected_lookup()
+        user = self.make_test_student()
+        profile = getattr(user, self.profile_attribute, None)
+        registrations = [self.Model.objects.create(student=profile, classoffer=ea) for ea in data_models]
 
-        key_day, name = date.today(), 'sess1'
-        publish = key_day - timedelta(days=7*3+1)
-        sess1 = Session.objects.create(name=name, key_day_date=key_day, max_day_shift=6, publish_date=publish)
-        subj = Subject.objects.create(version=Subject.VERSION_CHOICES[0][0], name="test_subj")
-        kwargs = {'subject': subj, 'session': sess1, 'start_time': time(19, 0)}
-        classoffers = [ClassOffer.objects.create(class_day=k, **kwargs) for k, v in ClassOffer.DOW_CHOICES if k % 2]
-        expected_lookup = ((k, v) for k, v in ClassOffer.DOW_CHOICES if k % 2)
-
-        password = environ.get('SUPERUSER_PASS', '')
-        admin_user_email = environ.get('SUPERUSER_EMAIL', settings.ADMINS[0][1])
-        user = User.objects.create_superuser(admin_user_email, admin_user_email, password)
-        student = getattr(user, self.student_profile_attribute, None)
-        registrations = [Registration.objects.create(student=student, classoffer=ea) for ea in classoffers]
-
-        current_admin = RegistrationAdmin(model=Registration, admin_site=AdminSite())
-        day_filter = ClassDayListFilter(request, {}, Registration, current_admin)
+        current_admin = self.AdminModel(model=self.Model, admin_site=AdminSite())
+        day_filter = self.Admin_ListFilter(request, {}, self.Model, current_admin)
         model_qs = current_admin.get_queryset(request)
         expected_qs = model_qs.filter(classoffer__class_day__in=(k for k, v in expected_lookup))
         qs = day_filter.queryset(request, model_qs)
 
         self.assertEqual(len(registrations), 3)
-        self.assertEqual(model_qs.model, Registration)
+        self.assertEqual(model_qs.model, self.Model)
         self.assertSetEqual(set(expected_qs), set(qs))
 
 
