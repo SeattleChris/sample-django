@@ -6,13 +6,9 @@ from django.urls import reverse
 # from unittest import skip  # @skip("Not Implemented")
 # from datetime import time, timedelta, datetime as dt  # date,
 # Resource = import_string('APPNAME.models.Resource')
-from .helper_general import MockRequest, MockSuperUser  # UserModel, AnonymousUser, MockUser, MockStaffUser,
+# from .helper_general import MockRequest, MockSuperUser, UserModel, AnonymousUser, MockUser, MockStaffUser,
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
 OTHER_USER = {'email': 'other@fake.com', 'password': 'test1234', 'first_name': 'other_user', 'last_name': 'fake_y'}
-
-
-request = MockRequest()
-request.user = MockSuperUser()
 
 
 class TestFormLoginRequired:

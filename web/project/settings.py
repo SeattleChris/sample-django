@@ -102,7 +102,7 @@ DATABASES = {
     #         }
     #     }
     }
-if os.environ.get('DB_TYPE') == 'mysql':
+if os.environ.get('DB_TYPE') == 'mysql':  # pragma: no cover
     DATABASES['default']['OPTIONS'] = {'charset': 'utf8mb4'}
     MAX_INDEX_CHARACTER_SIZE = 191
 
