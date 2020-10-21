@@ -9,12 +9,10 @@ from .helper_general import AnonymousUser, UserModel  # , MockRequest, MockUser,
 # from django.core.exceptions import ObjectDoesNotExist
 # from django.db.models import Q, Max, Subquery
 # from django.urls import reverse
-from pprint import pprint
-# from unittest import skip
 # from datetime import date, time, timedelta, datetime as dt
+# from pprint import pprint
 
 # Create your tests here.
-# RegisterSimpleFlowView
 
 
 class AdminGeneralModelsTests(AdminSetupTests, TestCase):
@@ -44,7 +42,7 @@ class SimpleFlowTests(MimicAsView, TestCase):
         form = self.view.get_form()
         register = self.view.register(form)
         print("======================== SIMPLE FLOW TESTS - REGISTER =======================")
-        pprint(register)
+        # pprint(register)
 
 
 class ModifyUserTests(MimicAsView, TestCase):
@@ -72,8 +70,6 @@ class ModifyUserTests(MimicAsView, TestCase):
         for key, val in expected_defaults.items():
             self.assertEqual(context[key], val)
 
-    # path('initial', RegisterActivateFlowView.as_view(), name='initial_signup'),  # Two-step, customized.
-
 
 class ActivateFlowTests(MimicAsView, TestCase):
     url_name = 'initial_signup'
@@ -98,4 +94,4 @@ class ActivateFlowTests(MimicAsView, TestCase):
         form = self.view.get_form()
         register = self.view.register(form)
         print("======================== SIMPLE FLOW TESTS - REGISTER =======================")
-        pprint(register)
+        # pprint(register)
