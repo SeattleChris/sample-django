@@ -3,7 +3,6 @@ from django.test import Client  # , TestCase
 from django.apps import apps
 from django.conf import settings
 from django.urls import reverse
-from django.core.exceptions import ImproperlyConfigured
 from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth.models import Permission
@@ -16,9 +15,10 @@ from os import environ
 # from copy import deepcopy
 from types import GeneratorType
 from django.utils.module_loading import import_string
-from .helper_general import MockRequest, MockUser, MockSuperUser  # UserModel, AnonymousUser,  MockStaffUser,
 # Resource = import_string('APPNAME.models.Resource')
 # ResourceAdmin = import_string('APPNAME.admin.ResourceAdmin')
+from .helper_general import models_from_mod_setup, MockRequest, MockUser, MockSuperUser
+# UserModel, AnonymousUser,  MockStaffUser,
 
 APP_NAME = __package__.split('.')[0]
 main_admin = import_string(APP_NAME + '.admin.admin')
@@ -77,36 +77,6 @@ class AdminModelManagement:
             'unique_str': None,  # a tuple for field name and string to be formatted with an integer.
         },
         ]
-
-    def make_model_data(self, data, mod_opts=None):
-        opts = []
-        if isinstance(data, dict):
-            if not data.get('model', None):
-                return mod_opts
-            cur_vars = data.get('variations', [])
-            if data.get('var_name', None):
-                cur_vars = [{data['var_name']: v} for v in cur_vars]
-            consts = data.get('consts', {})
-            cur_opts = [consts] if not cur_vars else [dict(**v, **consts) for v in cur_vars]
-            related_name = data.get('related_name', None)
-            if not related_name:
-                return cur_opts
-        elif data and isinstance(data, list):
-            cur_opts = mod_opts or []  # Current list of main model options, Eventually it will have all possible combos
-            for ea in data:
-                cur_opts = self.make_modelset(ea, mod_opts=cur_opts)
-            data = data[0]
-        else:
-            raise ImproperlyConfigured("Expected a properly configured dict, or a list of them for make_model_data. ")
-        st_field, st = data.get('unique_str', (None, ''))
-        for i, r in enumerate(cur_opts):
-            label = {st_field: st.format(i)} if st_field else {}
-            obj = data['model'].objects.create(**r, **label)
-            if related_name:
-                opts += [dict(**{related_name: obj}, **m) for m in mod_opts]
-            else:
-                opts.append(obj)
-        return opts
 
     def test_admin_uses_correct_admin(self):
         """The admin site should use the expected AdminClass for the Model. """
@@ -184,7 +154,7 @@ class AdminModelManagement:
 
     def get_computed_column_info(self, expected_values=[], associated=None, col_name=''):
         """Returns an iterable of expected, actual pairs, given the expected and data creating information. """
-        data_models = self.make_model_data(associated)
+        data_models = models_from_mod_setup(associated)
         current_admin = self.AdminClass(model=self.Model, admin_site=AdminSite())
         get_col = getattr(current_admin, col_name)
         return zip(expected_values, (get_col(ea) for ea in data_models))
