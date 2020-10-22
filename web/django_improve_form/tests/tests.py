@@ -10,7 +10,7 @@ from .helper_general import AnonymousUser, UserModel  # , MockRequest, MockUser,
 # from django.db.models import Q, Max, Subquery
 # from django.urls import reverse
 # from datetime import date, time, timedelta, datetime as dt
-# from pprint import pprint
+from pprint import pprint
 
 # Create your tests here.
 
@@ -42,7 +42,7 @@ class SimpleFlowTests(MimicAsView, TestCase):
         form = self.view.get_form()
         register = self.view.register(form)
         print("======================== SIMPLE FLOW TESTS - REGISTER =======================")
-        # pprint(register)
+        pprint(register)
 
 
 class ModifyUserTests(MimicAsView, TestCase):
@@ -73,7 +73,7 @@ class ModifyUserTests(MimicAsView, TestCase):
 
 class ActivateFlowTests(MimicAsView, TestCase):
     url_name = 'initial_signup'
-    ViewClass = RegisterActivateFlowView
+    viewClass = RegisterActivateFlowView
     expected_form = RegisterUserForm
 
     def setUp(self):
@@ -94,4 +94,4 @@ class ActivateFlowTests(MimicAsView, TestCase):
         form = self.view.get_form()
         register = self.view.register(form)
         print("======================== SIMPLE FLOW TESTS - REGISTER =======================")
-        # pprint(register)
+        pprint(register)
