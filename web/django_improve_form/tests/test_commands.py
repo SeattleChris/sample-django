@@ -7,6 +7,9 @@ from project.management.commands.urllist import Command as urllist
 from ..urls import urlpatterns
 import json
 import re
+import contextlib
+from io import StringIO
+
 # from django.conf import settings
 # from pprint import pprint
 
@@ -20,7 +23,6 @@ class UrllistTests(TestCase):
     base_opts.update({'long': True, 'sort': urllist.initial_sort, 'sub_cols': urllist.initial_sub_cols, })
     # 'long' and 'data' are False by default, but most of our tests use True for clarity sake.
 
-    # @skip("Example view function code")
     def sample_use_for_url_list(self):
         """This code could be the view function for a home page, with a template for the 'all_urls' list. """
         # urls = call_command('urllist', ignore=['admin'], only=['source', 'name'], long=True, data=True)
@@ -129,7 +131,6 @@ class UrllistTests(TestCase):
                     u[col] = re.sub(regex, new_str, u[col])
         expected = [list(u.values()) for u in no_subs]  # simplified since we are using all_columns.
         actual = self.com.get_url_data(opts['sources'], opts['ignore'], col_names, opts['sort'], sub_rules)
-
         self.assertListEqual(expected, actual)
 
     def test_sort_get_url_data(self):
@@ -167,7 +168,25 @@ class UrllistTests(TestCase):
     @skip("Not Implemented")
     def test_handle_when_not_data_response(self):
         """If 'data' is false, it should call data_to_string, write to stdout, and return 0. """
-        pass
+        opts = self.base_opts.copy()
+        opts['data'] = False
+        opts['ignore'] = ['admin', 'project', 'django_registration']
+        result = self.com.get_url_data(opts['sources'], opts['ignore'], self.com.all_columns, opts['sort'], None)
+        result = self.com.data_to_string(result)
+        print("======================== HANDLE WHEN NOT DATA RESPONSE ============================")
+        print(result)
+        # result = result.split('\n')
+        print(f"---------------------------- {len(result)} ---------------------------------------")
+        # captured_stdout = StringIO()
+        # with contextlib.redirect_stdout(captured_stdout):
+        with contextlib.redirect_stdout(StringIO()) as captured_stdout:
+            self.com.handle(**opts)              # Call function.
+        output = captured_stdout.getvalue()
+        # print(output)
+        # output = output.split("\n")
+        # print(f"---------------------------- {len(output)} ---------------------------------------")
+        # self.assertAlmostEqual(0, returned)
+        self.assertEqual(result, output)
 
     def test_data_to_string_not_data(self):
         """If input for data_to_string method evaluates to False, returns EMPTY_VALUE. """
