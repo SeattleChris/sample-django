@@ -165,28 +165,20 @@ class UrllistTests(TestCase):
         expected = []
         self.assertListEqual(expected, actual)
 
-    @skip("Not Implemented")
-    def test_handle_when_not_data_response(self):
+    def test_handle_stdout_response(self):
         """If 'data' is false, it should call data_to_string, write to stdout, and return 0. """
-        opts = self.base_opts.copy()
-        opts['data'] = False
-        opts['ignore'] = ['admin', 'project', 'django_registration']
-        result = self.com.get_url_data(opts['sources'], opts['ignore'], self.com.all_columns, opts['sort'], None)
+        # 'ignore': ['admin', 'project', 'django_registration']
+        opts = {'long': True, }  # 'sort': self.base_opts['sort']
+        result = self.com.get_url_data([APP_NAME], [], self.com.all_columns, self.base_opts['sort'], None)
         result = self.com.data_to_string(result)
-        print("======================== HANDLE WHEN NOT DATA RESPONSE ============================")
-        print(result)
-        # result = result.split('\n')
-        print(f"---------------------------- {len(result)} ---------------------------------------")
-        # captured_stdout = StringIO()
-        # with contextlib.redirect_stdout(captured_stdout):
-        with contextlib.redirect_stdout(StringIO()) as captured_stdout:
-            self.com.handle(**opts)              # Call function.
+        captured_stdout = StringIO()
+        returned = call_command('urllist', APP_NAME, **opts, stdout=captured_stdout)
         output = captured_stdout.getvalue()
-        # print(output)
-        # output = output.split("\n")
-        # print(f"---------------------------- {len(output)} ---------------------------------------")
-        # self.assertAlmostEqual(0, returned)
-        self.assertEqual(result, output)
+
+        self.assertAlmostEqual(0, returned)
+        pairs = zip(result.split('\n'), output.split('\n'))
+        for res, line in pairs:
+            self.assertEqual(res, line)
 
     def test_data_to_string_not_data(self):
         """If input for data_to_string method evaluates to False, returns EMPTY_VALUE. """
