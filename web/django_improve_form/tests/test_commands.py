@@ -1,9 +1,11 @@
 from django.test import TestCase  # , TransactionTestCase, Client, RequestFactory,
 from unittest import skip
-# from django.core.management import call_command
-# from .helper_admin import APP_NAME
+from django.core.management import call_command
+from django.urls import resolvers
+from .helper_admin import APP_NAME
 from project.management.commands.urllist import Command as urllist
-# import json
+from ..urls import urlpatterns
+import json
 # from django.conf import settings
 # from pprint import pprint
 
@@ -16,6 +18,25 @@ class UrllistTests(TestCase):
     base_opts = {'sources': [], 'ignore': [], 'only': ['5'], 'not': [], 'add': [], 'cols': None, 'data': True, }
     base_opts.update({'long': True, 'sort': urllist.initial_sort, 'sub_cols': urllist.initial_sub_cols, })
     # 'long' and 'data' are False by default, but most of our tests use True for clarity sake.
+
+    # @skip("Example view function code")
+    def sample_use_for_url_list(self):
+        """This code could be the view function for a home page, with a template for the 'all_urls' list. """
+        # urls = call_command('urllist', ignore=['admin'], only=['source', 'name'], long=True, data=True)
+        # urls = [(ea[0] + '  - - ' + ea[1], ea[1], ) for ea in json.loads(urls)]
+        # context = {'all_urls': urls}
+        # return render(request, 'generic/home.html', context=context)
+        pass
+
+    def test_call_command(self):
+        """The expected results should be returned from the call_command and appropriate parameters. """
+        opts = {'ignore': ['admin', 'django_registration'], 'only': ['name'], 'data': True, 'long': True}
+        actual = call_command('urllist', APP_NAME, **opts)
+        actual = json.loads(actual)
+        urls = [ea.name for ea in urlpatterns if isinstance(ea, resolvers.URLPattern)]
+        urls.sort()
+        urls = [[ea] for ea in urls]
+        self.assertListEqual(urls, actual)
 
     def test_get_col_names_by_priority(self):
         """Confirm it processes correctly when the 'only' parameter has an integer value. """
