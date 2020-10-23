@@ -1,5 +1,5 @@
 from django.test import TestCase  # , TransactionTestCase, Client, RequestFactory,
-# from unittest import skip
+from unittest import skip
 # from django.core.management import call_command
 # from .helper_admin import APP_NAME
 from project.management.commands.urllist import Command as urllist
@@ -76,3 +76,38 @@ class UrllistTests(TestCase):
         opts['add'] = new_rules
         actual = self.com.get_sub_rules(opts)
         self.assertListEqual(expected, actual)
+
+    def test_error_on_malformed_collect_urls(self):
+        """The collect_urls method requires urls parameter to be a URLResolver, URLPattern, or None. """
+        bad_input = 'This is not any kind of a django.urls resolver.'
+        with self.assertRaises(ValueError):
+            self.com.collect_urls(bad_input)
+
+    @skip("Not Implemented")
+    def test_get_url_data_when_all_urls_empty(self):
+        """Returns an empty list if the urlpatterns are empty. """
+        # override settings so the settings.ROOT_URLCONF will resolve in an empty list of urls.
+        # urlconf_name is the dotted Python path to the module defining urlpatterns.
+        # It may also be an object with an urlpatterns attribute
+        # or urlpatterns itself.
+        pass
+
+    @skip("Not Implemented")
+    def test_get_url_data_append_sources(self):
+        """If sources parameter is not None, it will have 'source' appended to the list of this parameter value. """
+        pass
+
+    @skip("Not Implemented")
+    def test_process_sub_rules(self):
+        """If sub_rules parameter has a value for get_url_data, these rules should be processed for the results. """
+        pass
+
+    @skip("Not Implemented")
+    def test_get_url_data_empty_result(self):
+        """If the non-empty all_urls are filtered down to no results, it sends an empty list and not the title. """
+        pass
+
+    @skip("Not Implemented")
+    def test_handle_when_not_data_response(self):
+        """If 'data' is false, it should call data_to_string, write to stdout, and return 0. """
+        pass
