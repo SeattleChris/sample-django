@@ -99,14 +99,12 @@ class Command(BaseCommand):
 
     def get_url_data(self, sources=None, ignore=None, cols=None, sort=None, sub_rules=None):
         """Collects all urls, then filters down to the desired data. Sets title & col_widths, Returns a 2d data list."""
-        all_urls = self.collect_urls()
-        if not all_urls:
-            return []
+        all_urls = self.collect_urls()  # always returns a list, even if empty, or raises ValueError.
         if sort:
             all_urls = sorted(all_urls, key=lambda x: [str(x[key] or '') for key in sort])
         title = {key: key for key in all_urls[0].keys()}
         all_urls.append(title)
-        if sources:
+        if sources:  # make sure the title row does not get filtered out.
             sources.append('source')
         remove_idx, col_widths = [], {}
         for i, u in enumerate(all_urls):
