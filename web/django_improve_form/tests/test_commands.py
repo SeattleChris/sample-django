@@ -12,20 +12,19 @@ from project.management.commands.urllist import Command as urllist
 
 
 class UrllistTests(TestCase):
+    com = urllist()
+    base_opts = {'sources': [], 'ignore': [], 'only': ['5'], 'not': [], 'add': [], 'cols': None, 'data': True, }
+    base_opts.update({'long': True, 'sort': urllist.initial_sort, 'sub_cols': urllist.initial_sub_cols, })
+    # 'long' and 'data' are False by default, but most of our tests use True for clarity sake.
 
     def test_get_col_names(self):
         """Confirm it processes correctly when the 'only' parameter has an integer value. """
         priorities = urllist.column_priority
         all_cols = urllist.all_columns
         max_value = len(priorities)
-        base_opts = {'sources': [], 'ignore': [], 'only': ['5'], 'not': [], 'add': [], 'cols': None, 'data': True, }
-        base_opts.update({'long': True, 'sort': urllist.initial_sort, 'sub_cols': urllist.initial_sub_cols, })
-        # 'long' and 'data' are False by default, but most of our tests use True for clarity sake.
-
+        opts = self.base_opts.copy()
         for i in range(1, max_value):
             expected = [ea for ea in all_cols if ea in priorities[:i]]
-            opts = base_opts.copy()
             opts['only'] = [str(i)]
-            com = urllist()
-            actual = com.get_col_names(opts)
+            actual = self.com.get_col_names(opts)
             self.assertListEqual(expected, actual)
