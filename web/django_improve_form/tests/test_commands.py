@@ -133,19 +133,22 @@ class UrllistTests(TestCase):
         self.assertListEqual(expected, actual)
 
     @skip("Not Implemented")
-    def test_get_url_data_append_sources(self):
-        """If sources parameter is not None, it will have 'source' appended to the list of this parameter value. """
+    def test_sort_get_url_data(self):
+        """If sort parameter has a value for get_url_data, these rules should be processed for the results. """
         pass
 
     @skip("Not Implemented")
-    def test_process_sub_rules(self):
-        """If sub_rules parameter has a value for get_url_data, these rules should be processed for the results. """
+    def test_sort_undisplayed_get_url_data(self):
+        """All the sort rules should still be used, even if a column sorted by is not in the final output. """
         pass
 
-    @skip("Not Implemented")
     def test_get_url_data_empty_result(self):
         """If the non-empty all_urls are filtered down to no results, it sends an empty list and not the title. """
-        pass
+        sources, ignore = [APP_NAME], [APP_NAME]
+        col_names = self.com.all_columns
+        actual = self.com.get_url_data(sources, ignore, col_names)  # sort & sub_rules are None.
+        expected = []
+        self.assertListEqual(expected, actual)
 
     @skip("Not Implemented")
     def test_handle_when_not_data_response(self):
