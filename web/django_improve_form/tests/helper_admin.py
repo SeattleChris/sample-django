@@ -127,7 +127,7 @@ class AdminModelManagement:
 
     def test_admin_can_create_first_model(self):
         """The first Model can be made in empty database (even if later models compute values from existing).  """
-        c = Client(user=MockSuperUser())  if self.use_mock_users else Client()
+        c = Client(user=MockSuperUser()) if self.use_mock_users else Client()
         add_url = ' '.join((APP_NAME, self.Model.__name__, 'add'))
         add_url = reverse(add_url)
         if not self.use_mock_users:

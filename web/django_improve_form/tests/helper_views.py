@@ -71,11 +71,12 @@ class MimicAsView:
         if isinstance(method, str):
             method = method.lower()
         allowed_methods = getattr(self.viewClass, 'http_method_names', {'get', })
-        if method not in allowed_methods or not getattr(self.viewClass, method, None):
+        allowed_methods = set(ea.lower() for ea in allowed_methods)
+        if method not in allowed_methods:  # or not getattr(self.viewClass, method, None)
             raise ValueError("Method '{}' not recognized as an allowed method string. ".format(method))
         factory = RequestFactory()
         request = getattr(factory, method)('/', **req_kwargs)
-
+        # TODO: Should MimicAsView be updated to actually call the view get method?
         key = 'template_name'
         template_name = template_name or getattr(self, key, None) or getattr(self.viewClass, key, None)
         view = self.viewClass(template_name=template_name, **init_kwargs)

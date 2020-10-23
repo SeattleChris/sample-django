@@ -75,7 +75,7 @@ class RegisterActivateFlowView(RegistrationViewTwoStep):
 
 @method_decorator(csrf_protect, name='dispatch')
 class RegisterModelSimpleFlowView(RegistrationViewOneStep):
-    model = None
+    # model = None
     form_class = RegisterModelForm
     form_as_type = None
     template_name = None

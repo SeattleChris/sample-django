@@ -2,6 +2,7 @@ from django.urls import path, include
 # from django.views.generic.base import TemplateView
 from django.contrib.auth.views import PasswordChangeView
 from .views import RegisterSimpleFlowView, RegisterActivateFlowView, ModifyUser
+from .views import RegisterModelSimpleFlowView, RegisterModelActivateFlowView
 
 urlpatterns = [
     path('', include('django_registration.backends.one_step.urls')),  # One-step, defaults and/or remaining views.
@@ -11,6 +12,8 @@ urlpatterns = [
     path('signup', RegisterSimpleFlowView.as_view(), name='django_registration_register'),  # One-step, customized.
     path('update/', ModifyUser.as_view(), name='user_update'),
     path('password/', PasswordChangeView.as_view(template_name='update.html'), name='password'),
+    path('model/signup', RegisterModelSimpleFlowView.as_view(), name='model_signup'),  # One-step, customized.
+    path('model/initial', RegisterModelActivateFlowView.as_view(), name='model_initial'),  # Two-step, customized.
 ]
 
 # TODO: Only use the django_registration urls we need. Possibly with shorter names.

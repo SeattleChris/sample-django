@@ -95,24 +95,24 @@ def make_names(constructors, early, setting, extras, address, model, user_model=
 #     pass
 
 
-class RegisterModelForm(AddressUsernameMixIn, ModelForm):
+class RegisterModelForm(AddressUsernameMixIn, UserCreationForm):
     """Model Form with configurable computed username. Includes foreign vs local country address feature.  """
 
-    # class Meta(ModelForm.Meta):
-    #     model = None
-    #     user_model = get_user_model()
-    #     constructor_names = None  # Set to a list of model field names, otherwise assumes ['first_name', 'last_name']
-    #     early_names = []  # User model fields that should have a form input BEFORE email, username, password.
-    #     username_flag_name = 'username_not_email'  # Set to None if the User model does not have this field type.
-    #     extra_names = []  # User model fields that should have a form input AFTER email, username, password.
-    #     address_names = None  # Assumes defaults or the provided list of model fields. Set to [] for no address.
-    #     address_on_profile_name = None  # Set to the model used as profile if it stores the address fields.
-    #     fields, user_fields, missing = make_names(constructor_names, early_names, username_flag_name, extra_names,
-    #                                               address_names, model, user_model, address_on_profile_name)
-    #     help_texts = {
-    #         'name_for_email': _("Used for confirmation and typically for login"),
-    #         'name_for_user': _("Without a unique email, a username is needed. Use suggested or create one. "),
-    #     }
+    class Meta(UserCreationForm.Meta):
+        model = get_user_model()  # Expected to be overwritten in implementation.
+        user_model = get_user_model()
+        constructor_names = None  # Set to a list of model field names, otherwise assumes ['first_name', 'last_name']
+        early_names = []  # User model fields that should have a form input BEFORE email, username, password.
+        username_flag_name = 'username_not_email'  # Set to None if the User model does not have this field type.
+        extra_names = []  # User model fields that should have a form input AFTER email, username, password.
+        address_names = None  # Assumes defaults or the provided list of model fields. Set to [] for no address.
+        address_on_profile_name = None  # Set to the model used as profile if it stores the address fields.
+        fields, user_fields, missing = make_names(constructor_names, early_names, username_flag_name, extra_names,
+                                                  address_names, model, user_model, address_on_profile_name)
+        help_texts = {
+            'name_for_email': _("Used for confirmation and typically for login"),
+            'name_for_user': _("Without a unique email, a username is needed. Use suggested or create one. "),
+        }
 
     error_css_class = "error"
     required_css_class = "required"
