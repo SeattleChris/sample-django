@@ -132,15 +132,29 @@ class UrllistTests(TestCase):
 
         self.assertListEqual(expected, actual)
 
-    @skip("Not Implemented")
     def test_sort_get_url_data(self):
         """If sort parameter has a value for get_url_data, these rules should be processed for the results. """
-        pass
+        opts = self.base_opts.copy()
+        col_names = self.com.all_columns
+        result_no_sort = self.com.get_url_data(opts['sources'], opts['ignore'], col_names, None, None)
+        title = self.com.title
+        no_sort = [dict(zip(title, ea)) for ea in result_no_sort]
+        expected = sorted(no_sort, key=lambda x: [str(x[key] or '') for key in opts['sort']])
+        expected = [list(u.values()) for u in expected]  # simplified since we are using all_columns.
+        actual = self.com.get_url_data(opts['sources'], opts['ignore'], col_names, opts['sort'], None)
+        self.assertListEqual(expected, actual)
 
-    @skip("Not Implemented")
     def test_sort_undisplayed_get_url_data(self):
         """All the sort rules should still be used, even if a column sorted by is not in the final output. """
-        pass
+        opts = self.base_opts.copy()
+        col_names = self.com.all_columns
+        result_all_cols = self.com.get_url_data(opts['sources'], opts['ignore'], col_names, opts['sort'], None)
+        title = self.com.title
+        all_cols = [dict(zip(title, ea)) for ea in result_all_cols]
+        col_names = set(col_names) - set(self.com.initial_sub_cols)
+        expected = [[v for k, v in ea.items() if k in col_names] for ea in all_cols]
+        actual = self.com.get_url_data(opts['sources'], opts['ignore'], list(col_names), opts['sort'], None)
+        self.assertListEqual(expected, actual)
 
     def test_get_url_data_empty_result(self):
         """If the non-empty all_urls are filtered down to no results, it sends an empty list and not the title. """
