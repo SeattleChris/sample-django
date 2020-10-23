@@ -1,20 +1,14 @@
 from django.test import TestCase  # , TransactionTestCase, Client, RequestFactory,
-from unittest import skip
+# from unittest import skip
 from django.core.management import call_command
 from django.urls import resolvers
-from .helper_admin import APP_NAME
-from project.management.commands.urllist import Command as urllist
+from .helper_general import APP_NAME
+from django.utils.module_loading import import_string
 from ..urls import urlpatterns
+from io import StringIO
 import json
 import re
-import contextlib
-from io import StringIO
-
-# from django.conf import settings
-# from pprint import pprint
-
-# urls = call_command('urllist', APP_NAME, only=i, long=True, data=True)
-# Create your tests here.
+urllist = import_string('project.management.commands.urllist.Command')
 
 
 class UrllistTests(TestCase):
@@ -106,15 +100,6 @@ class UrllistTests(TestCase):
         bad_input = 'This is not any kind of a django.urls resolver.'
         with self.assertRaises(ValueError):
             self.com.collect_urls(bad_input)
-
-    @skip("Not Implemented")
-    def test_get_url_data_when_all_urls_empty(self):
-        """Returns an empty list if the urlpatterns are empty. """
-        # override settings so the settings.ROOT_URLCONF will resolve in an empty list of urls.
-        # urlconf_name is the dotted Python path to the module defining urlpatterns.
-        # It may also be an object with an urlpatterns attribute
-        # or urlpatterns itself.
-        pass
 
     def test_process_sub_rules(self):
         """If sub_rules parameter has a value for get_url_data, these rules should be processed for the results. """
