@@ -6,6 +6,7 @@ from .helper_admin import APP_NAME
 from project.management.commands.urllist import Command as urllist
 from ..urls import urlpatterns
 import json
+import re
 # from django.conf import settings
 # from pprint import pprint
 
@@ -112,6 +113,24 @@ class UrllistTests(TestCase):
         # It may also be an object with an urlpatterns attribute
         # or urlpatterns itself.
         pass
+
+    def test_process_sub_rules(self):
+        """If sub_rules parameter has a value for get_url_data, these rules should be processed for the results. """
+        opts = self.base_opts.copy()
+        opts['long'] = False
+        sub_rules = self.com.get_sub_rules(opts)
+        col_names = self.com.all_columns
+        result_no_subs = self.com.get_url_data(opts['sources'], opts['ignore'], col_names, opts['sort'], None)
+        title = self.com.title
+        no_subs = [dict(zip(title, ea)) for ea in result_no_subs]
+        for u in no_subs:
+            for regex, new_str, sub_cols in sub_rules:
+                for col in sub_cols:
+                    u[col] = re.sub(regex, new_str, u[col])
+        expected = [list(u.values()) for u in no_subs]  # simplified since we are using all_columns.
+        actual = self.com.get_url_data(opts['sources'], opts['ignore'], col_names, opts['sort'], sub_rules)
+
+        self.assertListEqual(expected, actual)
 
     @skip("Not Implemented")
     def test_get_url_data_append_sources(self):
