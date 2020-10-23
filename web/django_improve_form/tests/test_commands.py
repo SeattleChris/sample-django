@@ -28,3 +28,11 @@ class UrllistTests(TestCase):
             opts['only'] = [str(i)]
             actual = self.com.get_col_names(opts)
             self.assertListEqual(expected, actual)
+
+    def test_sub_rules_when_not_long(self):
+        """The sub_rules are expected to include the defaults when long is not set to True. """
+        expected = [(*rule, urllist.initial_sub_cols) for rule in urllist.initial_sub_rules]
+        opts = self.base_opts.copy()
+        opts['long'] = False
+        actual = self.com.get_sub_rules(opts)
+        self.assertListEqual(expected, actual)
