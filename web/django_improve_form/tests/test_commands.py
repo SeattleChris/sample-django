@@ -132,3 +132,33 @@ class UrllistTests(TestCase):
     def test_handle_when_not_data_response(self):
         """If 'data' is false, it should call data_to_string, write to stdout, and return 0. """
         pass
+
+    def test_data_to_string_not_data(self):
+        """If input for data_to_string method evaluates to False, returns EMPTY_VALUE. """
+        expected = self.com.EMPTY_VALUE
+        empty_list = self.com.data_to_string([])
+        none_value = self.com.data_to_string(None)
+        self.assertEqual(expected, empty_list)
+        self.assertEqual(expected, none_value)
+
+    def test_data_to_string_single_column(self):
+        """If the data is a single column, it should not have a title row and no width formatting is needed. """
+        self.com.title = ['data_title']
+        data = [['first'], ['second'], ['third']]
+        actual = self.com.data_to_string(data)
+        expected = '\n'.join([ea[0] for ea in data])
+        self.assertEqual(expected, actual)
+
+    def test_data_to_string_many_columns(self):
+        """If 'data' and title are many columns, the data_to_string method should have the appropriate formatting. """
+        url_data = [['r_1', '1_2', '1_3'], ['r_2', '2_2', '2_3'], ['r_3', '3_2', '3_3']]
+        title = ['first', 'second', 'third']
+        widths = [6, 10, 7]
+        self.com.col_widths = dict(zip(title, widths))
+        self.com.title = title
+        bar = ['*' * width for width in widths]
+        data = [title, bar] + url_data
+        expected = [' | '.join(('{:%d}' % widths[i]).format(v) for i, v in enumerate(ea)) for ea in data]
+        expected = '\n'.join(expected)
+        actual = self.com.data_to_string(url_data)
+        self.assertEqual(expected, actual)
