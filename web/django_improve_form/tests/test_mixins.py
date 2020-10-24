@@ -1,5 +1,5 @@
 from django.test import TestCase  # , Client, override_settings, modify_settings, TransactionTestCase, RequestFactory
-# from unittest import skip
+from unittest import skip
 # from django.core.exceptions import ImproperlyConfigured  # , ValidationError
 # from django.utils.translation import gettext_lazy as _
 # from django.contrib.auth import get_user_model
@@ -19,6 +19,7 @@ class FormTests:
 
     def setUp(self):
         self.request = MockRequest()
+        self.request.method = 'GET'
         form_kwargs = {}  # ?initial, prefix?
         if self.request.method in ('POST', 'PUT'):
             form_kwargs.update({'data': self.request.POST, 'files': self.request.FILES, })
@@ -27,22 +28,28 @@ class FormTests:
     def test_as_table(self):
         """All forms should return HTML table rows when .as_table is called. """
         output = self.form.as_table().split('\n')  # Fortunately it is convention to have a line for each row.
-        regex_match = ''  # '^<tr' ... '</tr>'
+        print(output)
+        # regex_match = ''  # '^<tr' ... '</tr>'
         # all_rows = all()  # every line break starts and ends with the HTML tr tags.
-        pass
+        self.assertNotEqual([], output)
 
     def test_as_ul(self):
         """All forms should return HTML <li>s when .as_ul is called. """
         output = self.form.as_table().split('\n')  # Fortunately it is convention to have a line for each row.
-        regex_match = ''  # '^<li' ... '</li'
+        print(output)
+        # regex_match = ''  # '^<li' ... '</li'
         # all_rows = all()  # every line break starts and ends with the HTML li tags.
+        self.assertNotEqual([], output)
 
     def test_as_p(self):
         """All forms should return HTML <p>s when .as_p is called. """
         output = self.form.as_table().split('\n')  # Fortunately it is convention to have a line for each row.
-        regex_match = ''  # '^<p' ... '</p'
+        print(output)
+        # regex_match = ''  # '^<p' ... '</p'
         # all_rows = all()  # every line break starts and ends with the HTML p tags.
+        self.assertNotEqual([], output)
 
+    @skip("Not Implemented")
     def test_html_output(self):
         """All forms should have a working _html_output method. ? Should it conform to the same API? """
         pass
