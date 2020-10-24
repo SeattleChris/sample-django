@@ -1,6 +1,6 @@
-from django.forms import ModelForm  # , BaseModelForm, ModelFormMetaclass
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+# from django.forms import ModelForm  # , BaseModelForm, ModelFormMetaclass
 # from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
