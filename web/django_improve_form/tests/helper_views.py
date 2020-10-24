@@ -1,12 +1,15 @@
 from django.test import Client, RequestFactory  # , TestCase,  TransactionTestCase
 from django.urls import reverse
+from unittest import skip
 # from django.conf import settings
 # from django.core.exceptions import ObjectDoesNotExist
 # from django.utils.module_loading import import_string
 # from unittest import skip  # @skip("Not Implemented")
 # from datetime import time, timedelta, datetime as dt  # date,
 # Resource = import_string('APPNAME.models.Resource')
-# from .helper_general import MockRequest, MockSuperUser, UserModel, AnonymousUser, MockUser, MockStaffUser,
+from .helper_general import AnonymousUser, UserModel  # , MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
+from pprint import pprint
+
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
 OTHER_USER = {'email': 'other@fake.com', 'password': 'test1234', 'first_name': 'other_user', 'last_name': 'fake_y'}
 
@@ -123,3 +126,56 @@ class MimicAsView:
         if bad_text:
             self.assertNotContains(response, bad_text)
         self.assertContains(response, good_text)
+
+
+class BaseRegisterTests(MimicAsView):
+    url_name = None
+    viewClass = None
+    expected_form = None
+    user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
+
+    def setUp(self):
+        # self.viewClass.model = getattr(self.viewClass, 'model', None) or get_user_model()
+        # self.expected_form.Meta.model = getattr(self.expected_form.Meta, 'model', None) or get_user_model()
+        self.view = self.setup_view('get')
+        user_setup = USER_DEFAULTS.copy()
+        if self.user_type == 'anonymous':
+            user = AnonymousUser()
+        elif self.user_type == 'superuser':
+            temp = {'is_staff': True, 'is_superuser': True}
+            user_setup.update(temp)
+            user = UserModel.objects.create(**user_setup)
+            user.save()
+        elif self.user_type == 'admin':
+            temp = {'is_staff': True, 'is_superuser': False}
+            user_setup.update(temp)
+            user = UserModel.objects.create(**user_setup)
+            user.save()
+        elif self.user_type == 'user':
+            temp = {'is_staff': False, 'is_superuser': False}
+            user_setup.update(temp)
+            user = UserModel.objects.create(**user_setup)
+            user.save()
+        elif self.user_type == 'inactive':
+            temp = {'is_staff': False, 'is_superuser': False, 'is_active': False}
+            user_setup.update(temp)
+            user = UserModel.objects.create(**user_setup)
+            user.save()
+        self.view.request.user = user
+        if self.user_type != 'anonymous' and hasattr(self.view, 'get_object'):
+            self.view.object = user  # TODO: Should MimicAsView be updated to actually call the view get method?
+
+    def test_get_context_data(self):
+        expected_defaults = self.viewClass.default_context
+        context = self.view.get_context_data()
+        self.assertIsInstance(context['view'], self.viewClass)
+        self.assertIsInstance(context['form'], self.expected_form)
+        for key, val in expected_defaults.items():
+            self.assertEqual(context[key], val)
+
+    @skip("Not Implemented")
+    def test_register(self):
+        form = self.view.get_form()
+        register = self.view.register(form)
+        print("======================== SIMPLE FLOW TESTS - REGISTER =======================")
+        pprint(register)

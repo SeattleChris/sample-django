@@ -3,6 +3,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 UserModel = import_string('django.contrib.auth.models.User')
 AnonymousUser = import_string('django.contrib.auth.models.AnonymousUser')
+APP_NAME = __package__.split('.')[0]
 
 
 class MockRequest:

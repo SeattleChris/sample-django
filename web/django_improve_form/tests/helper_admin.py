@@ -17,10 +17,9 @@ from types import GeneratorType
 from django.utils.module_loading import import_string
 # Resource = import_string('APPNAME.models.Resource')
 # ResourceAdmin = import_string('APPNAME.admin.ResourceAdmin')
-from .helper_general import models_from_mod_setup, MockRequest, MockUser, MockSuperUser
+from .helper_general import APP_NAME, models_from_mod_setup, MockRequest, MockUser, MockSuperUser
 # UserModel, AnonymousUser,  MockStaffUser,
 
-APP_NAME = __package__.split('.')[0]
 main_admin = import_string(APP_NAME + '.admin.admin')
 request = MockRequest()
 request.user = MockSuperUser()
