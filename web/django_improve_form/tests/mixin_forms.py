@@ -4,7 +4,7 @@ from django.test import TestCase  # , Client, override_settings, modify_settings
 # from django.contrib.auth import get_user_model
 # from .helper_general import AnonymousUser, MockUser  # MockRequest, UserModel, MockStaffUser, MockSuperUser, APP_NAME
 # from django.conf import settings
-from django.forms import Form  # , ModelForm, BaseModelForm, ModelFormMetaclass
+from django.forms import CharField, Form  # , ModelForm, BaseModelForm, ModelFormMetaclass
 from django.contrib.auth.forms import UserCreationForm  # , UserChangeForm
 from ..mixins import (
     FocusMixIn, CriticalFieldMixIn, ComputedFieldsMixIn, FormOverrideMixIn, FormFieldsetMixIn,
@@ -22,34 +22,34 @@ from ..views import RegisterModelSimpleFlowView, RegisterModelActivateFlowView
 
 
 class FocusForm(FocusMixIn, Form):
-    pass
+    generic_field = CharField()
 
 
 class CriticalForm(CriticalFieldMixIn, Form):
-    pass
+    generic_field = CharField()
 
 
 class ComputedForm(ComputedFieldsMixIn, Form):
-    pass
+    generic_field = CharField()
 
 
 class OverrideForm(FormOverrideMixIn, Form):
-    pass
+    generic_field = CharField()
 
 
 class FormFieldsetForm(FormFieldsetMixIn, Form):
-    pass
+    generic_field = CharField()
 
 
 # # Extended MixIns # #
 
 
 class ComputedUsernameForm(ComputedFieldsMixIn, UserCreationForm):
-    pass
+    generic_field = CharField()
 
 
 class CountryForm(OverrideCountryMixIn, Form):
-    pass
+    generic_field = CharField()
 
 
 # # MixIn Interactions # #
@@ -57,17 +57,17 @@ class CountryForm(OverrideCountryMixIn, Form):
 
 class OverrideFieldsetForm(FieldsetOverrideMixIn, Form):
     """There is an interaction of Override handle_modifiers and Focus assign_focus_field with FormFieldset features. """
-    pass
+    generic_field = CharField()
 
 
 class UsernameFocusForm(FocusMixIn, ComputedUsernameMixIn, Form):
     """There is an interaction of Focus named_focus in ComputedUsernameMixIn.configure_username_confirmation. """
-    pass
+    generic_field = CharField()
 
 
 class ComputedCountryForm(OverrideCountryMixIn, ComputedFieldsMixIn):
     """The Computed get_critical_field method & computed_fields property are used in OverrideCountryMixIn.__init__. """
-    pass
+    generic_field = CharField()
 
 
 class ModelSimpleFlowTests(BaseRegisterTests, TestCase):
