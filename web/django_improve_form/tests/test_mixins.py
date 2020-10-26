@@ -4,17 +4,14 @@ from django.core.exceptions import ImproperlyConfigured  # , ValidationError, Ob
 from django.forms.utils import pretty_name
 # from django.utils.translation import gettext_lazy as _
 # from django.conf import settings
-# from django.utils.html import conditional_escape  # , format_html
 from django.contrib.auth import get_user_model
+from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
-# from .helper_views import MimicAsView, USER_DEFAULTS
-# from datetime import date, time, timedelta, datetime as dt
-# from pprint import pprint
-from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
-from django_registration import validators
+from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
 from copy import deepcopy
+# from pprint import pprint
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
 NAME_LENGTH = 'maxlength="150" '
@@ -48,15 +45,12 @@ names_text = '' + \
     '%(name_length)sid="id_last_name">%(end_tag)s\n'
 TOS_TXT = '%(start_tag)s<label for="id_tos_field">I have read and agree to the Terms of Service:</label>' + \
     '%(label_end)s<input type="checkbox" name="tos_field" required id="id_tos_field">%(end_tag)s\n'
-# DEFAULT_TXT = '%(start_tag)s<label for="id_generic_field">Generic field:</label>%(label_end)s' + \
-#     '<input type="text" name="generic_field"%(attrs)srequired id="id_generic_field">%(end_tag)s\n'
 DEFAULT_TXT = '%(start_tag)s<label for="id_%(name)s">%(name_pretty)s:</label>%(label_end)s' + \
     '<input type="text" name="%(name)s"%(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
 REPLACE_TEXT = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
 REPLACE_TEXT['email'] = EMAIL_TXT
 for name in ('first_name', 'last_name'):
     REPLACE_TEXT[name] = DEFAULT_TXT % dict(attrs=' ' + NAME_LENGTH, required='', **DEFAULT_RE)  # TODO: ? required ?
-# computed_text = names_text + password_text + EMAIL_TXT  # + username_text
 
 
 class FormTests:
@@ -144,19 +138,6 @@ class FormTests:
             default_re['required'] = REQUIRED if self.form.fields[name].required else ''
             txt = replace_text.get(name, DEFAULT_TXT) % default_re
             form_list.append(txt)
-        # if issubclass(self.form_class, ComputedUsernameMixIn):
-        #     if 'first_name' in self.form.fields and 'last_name' in self.form.fields:
-        #         form_list.append(names_text)
-        #     if 'password1' in self.form.fields:
-        #         form_list.append(password_text)
-        #     if 'email' in self.form.fields:
-        #         form_list.append(email_text)
-        #     if 'username' in self.form.fields:
-        #         form_list.append(username_text)
-        #     if 'tos_field' in self.form.fields:
-        #         form_list.append(tos_text)
-        # if 'generic_field' in self.form.fields:
-        #     form_list.append(default_text)
         expected = ''.join(form_list) % setup
         return expected.strip()
 
@@ -175,8 +156,6 @@ class FormTests:
             print(output)
             print("------------------------------------------------------------------------------------------")
             print(expected)
-        # regex_match = ''  # '^<tr' ... '</tr>'
-        # all_rows = all()  # every line break starts and ends with the HTML tr tags.
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
@@ -195,8 +174,6 @@ class FormTests:
             print(output)
             print("------------------------------------------------------------------------------------------")
             print(expected)
-        # regex_match = ''  # '^<li' ... '</li'
-        # all_rows = all()  # every line break starts and ends with the HTML li tags.
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
@@ -213,8 +190,6 @@ class FormTests:
             if issubclass(self.form_class, ComputedUsernameMixIn):
                 print("*** is sub class of ComputedUsernameMixIn ***")
             print(output)
-        # regex_match = ''  # '^<p' ... '</p'
-        # all_rows = all()  # every line break starts and ends with the HTML p tags.
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
@@ -264,7 +239,6 @@ class CriticalTests(FormTests, TestCase):
 
     def test_raise_on_missing_critical(self):
         """If the field is missing or misconfigured, it should raise ImproperlyConfigured. """
-        # self.form.setup_critical_fields({'critical_fields': critical_fields})
         name_for_field = 'absent_field'
         field_opts = {'names': (name_for_field, 'absent'), 'alt_field': '', 'computed': False}
         critical_fields = {'absent_field': field_opts}
@@ -275,8 +249,6 @@ class CriticalTests(FormTests, TestCase):
         """After fields have been formed, get_critical_field should return from fields, not from base_fields. """
         name = 'generic_field'
         opts = {'names': (name, ), 'alt_field': '', 'computed': False}
-        # critical_fields = {name: opts}
-        # base_ver = self.form.base_fields.get(name, None)
         expected_field = self.form.fields.get(name, None)
         actual_name, actual_field = self.form.get_critical_field(opts['names'])
         self.assertEqual(name, actual_name)
@@ -288,7 +260,6 @@ class CriticalTests(FormTests, TestCase):
             return ''
         return name
 
-    # @skip("Not Implemented")
     def test_callable_name_get_critical_field(self):
         """It should work on the returned value if a name in names is a callable. """
         special = self.get_generic_name
@@ -298,7 +269,6 @@ class CriticalTests(FormTests, TestCase):
         self.assertEqual(expected_name, name)
         self.assertEqual(expected_field, field)
 
-    # @skip("Not Implemented")
     def test_raise_attach_broken(self):
         """If attach_critical_validators cannot access either fields or base_fields, it should raise as needed. """
         orig_fields = deepcopy(self.form.fields)
@@ -310,23 +280,6 @@ class CriticalTests(FormTests, TestCase):
         self.form.fields = orig_fields
         self.form.base_fields = orig_base_fields
 
-    @skip("Not Implemented OR Not Needed?")
-    def test_tos_only_if_configured(self):
-        """Confirm it does NOT add the tos_field when not configured to do so. """
-        self.form.tos_required = False
-        self.form_class.tos_required = False
-        self.form = self.make_form_request()
-        # initial_kwargs = {}
-        # returned_kwargs = self.form.setup_critical_fields(**initial_kwargs)
-        # expected = {}
-        # actual = self.form.critical_fields
-        name = self.form.name_for_tos or 'tos_field'
-        found = self.form.fields.get(name, None)
-        self.assertIsNone(found)
-        # self.assertDictEqual(initial_kwargs, returned_kwargs)
-        # self.assertDictEqual(expected, actual)
-
-    # @skip("Not Implemented")
     def test_manage_tos_field(self):
         """Confirm tos_field is only present when configured to add the field. """
         name = self.form.name_for_tos or 'tos_field'
@@ -336,9 +289,6 @@ class CriticalTests(FormTests, TestCase):
         original_critical = deepcopy(self.form.critical_fields)
 
         self.form.tos_required = True
-        # print("=================== TEST ADD TOS FIELD ===========================")
-        # print(original_critical)
-        # print(self.form.fields)
         expected = deepcopy(original_critical)
         name = getattr(self.form, 'name_for_tos', None) or ''
         tos_opts = {'names': (name, ), 'alt_field': 'tos_field', 'computed': False}
@@ -359,8 +309,6 @@ class CriticalTests(FormTests, TestCase):
         self.form.critical_fields = original_critical
         reset_kwargs = self.form.setup_critical_fields(**initial_kwargs)
         self.assertDictEqual({}, reset_kwargs)
-        # print(reset_kwargs)
-        # print(self.form.fields)
 
     def test_validators_attach(self):
         """Confirm that the custom validator on this Form is called and applies the expected validator. """
