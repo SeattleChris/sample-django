@@ -227,6 +227,33 @@ class CriticalTests(FormTests, TestCase):
         with self.assertRaises(ImproperlyConfigured):
             self.form.fields_for_critical(critical_fields)
 
+    def test_get_critical_from_existing_fields(self):
+        """After fields have been formed, get_critical_field should return from fields, not from base_fields. """
+        name = 'generic_field'
+        opts = {'names': (name, ), 'alt_field': '', 'computed': False}
+        # critical_fields = {name: opts}
+        # base_ver = self.form.base_fields.get(name, None)
+        expected_field = self.form.fields.get(name, None)
+        actual_name, actual_field = self.form.get_critical_field(opts['names'])
+        self.assertEqual(name, actual_name)
+        self.assertEqual(expected_field, actual_field)
+
+    def get_generic_name(self):
+        name = 'generic_field'
+        if name not in self.form.fields:
+            return ''
+        return name
+
+    # @skip("Not Implemented")
+    def test_callable_name_get_critical_field(self):
+        """It should work on the returned value if a name in names is a callable. """
+        special = self.get_generic_name
+        name, field = self.form.get_critical_field(special)
+        expected_name = special()
+        expected_field = self.form.fields[expected_name]
+        self.assertEqual(expected_name, name)
+        self.assertEqual(expected_field, field)
+
     # @skip("Not Implemented")
     def test_raise_attach_broken(self):
         """If attach_critical_validators cannot access either fields or base_fields, it should raise as needed. """
@@ -238,6 +265,58 @@ class CriticalTests(FormTests, TestCase):
             self.form.attach_critical_validators()
         self.form.fields = orig_fields
         self.form.base_fields = orig_base_fields
+
+    @skip("Not Implemented OR Not Needed?")
+    def test_tos_only_if_configured(self):
+        """Confirm it does NOT add the tos_field when not configured to do so. """
+        self.form.tos_required = False
+        self.form_class.tos_required = False
+        self.form = self.make_form_request()
+        # initial_kwargs = {}
+        # returned_kwargs = self.form.setup_critical_fields(**initial_kwargs)
+        # expected = {}
+        # actual = self.form.critical_fields
+        name = self.form.name_for_tos or 'tos_field'
+        found = self.form.fields.get(name, None)
+        self.assertIsNone(found)
+        # self.assertDictEqual(initial_kwargs, returned_kwargs)
+        # self.assertDictEqual(expected, actual)
+
+    # @skip("Not Implemented")
+    def test_manage_tos_field(self):
+        """Confirm tos_field is only present when configured to add the field. """
+        name = self.form.name_for_tos or 'tos_field'
+        initial_is_off = self.form.tos_required is False
+        name_in_initial = name in self.form.fields
+        found = self.form.fields.get(name, None)
+        original_critical = deepcopy(self.form.critical_fields)
+
+        self.form.tos_required = True
+        # print("=================== TEST ADD TOS FIELD ===========================")
+        # print(original_critical)
+        # print(self.form.fields)
+        expected = deepcopy(original_critical)
+        name = getattr(self.form, 'name_for_tos', None) or ''
+        tos_opts = {'names': (name, ), 'alt_field': 'tos_field', 'computed': False}
+        tos_opts.update({'name': 'tos_field', 'field': self.form_class.tos_field})
+        expected.update(name_for_tos=tos_opts)
+        initial_kwargs = {}
+        returned_kwargs = self.form.setup_critical_fields(**initial_kwargs)
+        actual = self.form.critical_fields
+
+        self.assertTrue(initial_is_off)
+        self.assertFalse(name_in_initial)
+        self.assertIsNone(found)
+        self.assertDictEqual(initial_kwargs, returned_kwargs)
+        self.assertDictEqual(expected, actual)
+
+        self.form.fields.pop('tos_field', None)
+        self.form.tos_required = False
+        self.form.critical_fields = original_critical
+        reset_kwargs = self.form.setup_critical_fields(**initial_kwargs)
+        self.assertDictEqual({}, reset_kwargs)
+        # print(reset_kwargs)
+        # print(self.form.fields)
 
     def test_validators_attach(self):
         """Confirm that the custom validator on this Form is called and applies the expected validator. """
