@@ -227,6 +227,26 @@ class CriticalTests(FormTests, TestCase):
         with self.assertRaises(ImproperlyConfigured):
             self.form.fields_for_critical(critical_fields)
 
+    # @skip("Not Implemented")
+    def test_raise_attach_broken(self):
+        """If attach_critical_validators cannot access either fields or base_fields, it should raise as needed. """
+        orig_fields = deepcopy(self.form.fields)
+        orig_base_fields = deepcopy(self.form.base_fields)
+        self.form.fields = None
+        self.form.base_fields = None
+        with self.assertRaises(ImproperlyConfigured):
+            self.form.attach_critical_validators()
+        self.form.fields = orig_fields
+        self.form.base_fields = orig_base_fields
+
+    def test_validators_attach(self):
+        """Confirm that the custom validator on this Form is called and applies the expected validator. """
+        expected = validators.validate_confusables
+        field_name = 'generic_field'
+        field = self.form.fields.get(field_name, None)
+        all_validators = field.validators if field else []
+        self.assertIn(expected, all_validators)
+
 
 class ComputedTests(FormTests, TestCase):
     form_class = ComputedForm

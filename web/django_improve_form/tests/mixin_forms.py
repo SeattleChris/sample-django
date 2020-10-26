@@ -15,6 +15,7 @@ from ..mixins import (
 from .helper_views import BaseRegisterTests  # , USER_DEFAULTS, MimicAsView,
 from ..views import RegisterSimpleFlowView, RegisterActivateFlowView, ModifyUser
 from ..views import RegisterModelSimpleFlowView, RegisterModelActivateFlowView
+from django_registration import validators
 # from datetime import date, time, timedelta, datetime as dt
 # from pprint import pprint
 
@@ -27,6 +28,12 @@ class FocusForm(FocusMixIn, Form):
 
 class CriticalForm(CriticalFieldMixIn, Form):
     generic_field = CharField()
+
+    def generic_field_validators(self, fields, **opts):
+        field_name = 'generic_field'
+        validators_test = [validators.validate_confusables]
+        fields[field_name].validators.extend(validators_test)
+        return True
 
 
 class ComputedForm(ComputedFieldsMixIn, Form):
