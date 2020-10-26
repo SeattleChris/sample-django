@@ -136,7 +136,7 @@ class CriticalFieldMixIn:
 
     def get_critical_field(self, names, alt_name=''):
         """Returns the first existing field matching possible names, if present, or the MixIn defined field. """
-        names = names if isinstance(names, tuple) else tuple(names)
+        names = names if isinstance(names, tuple) else (names, )
         fields_made = isinstance(getattr(self, 'fields', None), dict)
         for name in names:  # Find the first valid existing field (amongst fields & base_fields) matching a name.
             if callable(name):
