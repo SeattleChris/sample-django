@@ -116,10 +116,10 @@ class FormTests:
             setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
             expected = computed_text % setup
             expected = expected.strip()
-        elif issubclass(self.form_class, FormOverrideMixIn):
-            expected += '<td><input type="text" name="generic_field" size="15" required id="id_generic_field"></td></tr>'
         else:
-            expected += '<td><input type="text" name="generic_field" required id="id_generic_field"></td></tr>'
+            expected += '<td><input type="text" name="generic_field"%(attrs)srequired id="id_generic_field"></td></tr>'
+        override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
+        expected = expected % {'attrs': override_attrs}
         if output != expected:
             form_class = self.form.__class__.__name__
             print(f"//////////////////////////////// {form_class} AS_TABLE /////////////////////////////////////")
@@ -139,10 +139,10 @@ class FormTests:
         if issubclass(self.form_class, ComputedUsernameMixIn):
             expected = computed_text % {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
             expected = expected.strip()
-        elif issubclass(self.form_class, FormOverrideMixIn):
-            expected += '<input type="text" name="generic_field" size="15" required id="id_generic_field"></li>'
         else:
-            expected += '<input type="text" name="generic_field" required id="id_generic_field"></li>'
+            expected += '<input type="text" name="generic_field"%(attrs)srequired id="id_generic_field"></li>'
+        override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
+        expected = expected % {'attrs': override_attrs}
         if output != expected:
             form_class = self.form.__class__.__name__
             print(f"//////////////////////////////// {form_class} AS_UL /////////////////////////////////////")
@@ -161,10 +161,10 @@ class FormTests:
         if issubclass(self.form_class, ComputedUsernameMixIn):
             expected = computed_text % {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
             expected = expected.strip()
-        elif issubclass(self.form_class, FormOverrideMixIn):
-            expected += '<input type="text" name="generic_field" size="15" required id="id_generic_field"></p>'
         else:
-            expected += '<input type="text" name="generic_field" required id="id_generic_field"></p>'
+            expected += '<input type="text" name="generic_field"%(attrs)srequired id="id_generic_field"></p>'
+        override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
+        expected = expected % {'attrs': override_attrs}
         if output != expected:
             form_class = self.form.__class__.__name__
             print(f"//////////////////////////////// {form_class} AS_P /////////////////////////////////////")
