@@ -325,10 +325,12 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
 
     def confirm_required_fields(self):
         """The form must have the email field and any fields that may be used to construct the username. """
-        constructor_fields = getattr(self, 'constructor_fields', [])
+        constructor_fields = getattr(self, 'constructor_fields', None)
+        if not constructor_fields:
+            raise ImproperlyConfigured(_("Expected a list of field name strings for constructor_fields. "))
         required_fields = [*constructor_fields, self.name_for_email, self.name_for_user, self.USERNAME_FLAG_FIELD]
         missing_fields = [name for name in required_fields if name not in self.base_fields]
-        if missing_fields or not self.constructor_fields:
+        if missing_fields:
             raise ImproperlyConfigured(_("The fields for email, username, and constructor must be set in fields. "))
         return True
 

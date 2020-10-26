@@ -1,36 +1,44 @@
 from django.test import TestCase  # , Client, override_settings, modify_settings, TransactionTestCase, RequestFactory
 from unittest import skip
-# from django.core.exceptions import ImproperlyConfigured  # , ValidationError
+# from django.core.exceptions import ImproperlyConfigured  # , ValidationError, ObjectDoesNotExist
 # from django.utils.translation import gettext_lazy as _
-# from django.contrib.auth import get_user_model
-# from .helper_views import MimicAsView, USER_DEFAULTS
-from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 # from django.conf import settings
-# from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.auth import get_user_model
+from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
+# from .helper_views import MimicAsView, USER_DEFAULTS
 # from datetime import date, time, timedelta, datetime as dt
 # from pprint import pprint
+from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
-from ..mixins import (
-    FocusMixIn, CriticalFieldMixIn, ComputedFieldsMixIn, FormOverrideMixIn, FormFieldsetMixIn,
-    ComputedUsernameMixIn, OverrideCountryMixIn,
-    FieldsetOverrideMixIn,  # FieldsetOverrideComputedMixIn, FieldsetOverrideUsernameMixIn,
-    # AddressMixIn, AddressUsernameMixIn,
-    )
-# from .mixin_forms import OverrideFieldsetForm, UsernameFocusForm, ComputedCountryForm  # # MixIn Interactions # #
+
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
-computed_text = '<%(col_tag)s><label for="id_username">Username:</label> <input type="text" name="username" maxlength="150" ' + \
-    'autocapitalize="none" autocomplete="username" autofocus required id="id_username"> <span class="helptext">' + \
-    'Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</span></%(col_tag)s>\n' + \
-    '<%(col_tag)s><label for="id_password1">Password:</label> <input type="password" name="password1" ' + \
-    'autocomplete="new-password" required id="id_password1"> <span class="helptext"><ul><li>Your password can’t be ' + \
+username_text = '' + \
+    '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" maxlength="150" ' + \
+    'autocapitalize="none" autocomplete="username" autofocus required id="id_username">%(input_end)s<span class="helptext">' + \
+    'Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</span>%(end_tag)s\n'
+password_text = '' + \
+    '%(start_tag)s<label for="id_password1">Password:</label>%(label_end)s<input type="password" name="password1" ' + \
+    'autocomplete="new-password" required id="id_password1">%(input_end)s<span class="helptext"><ul><li>Your password can’t be ' + \
     'too similar to your other personal information.</li><li>Your password must contain at least 8 ' + \
     'characters.</li><li>Your password can’t be a commonly used password.</li><li>Your password can’t be entirely ' + \
     'numeric.</li></ul></span></%(col_tag)s>\n' + \
-    '<%(col_tag)s><label for="id_password2">Password confirmation:</label> <input type="password" name="password2" ' + \
-    'autocomplete="new-password" required id="id_password2"> <span class="helptext">Enter the same password as ' + \
+    '%(start_tag)s<label for="id_password2">Password confirmation:</label>%(label_end)s<input type="password" name="password2" ' + \
+    'autocomplete="new-password" required id="id_password2">%(input_end)s<span class="helptext">Enter the same password as ' + \
     'before, for verification.</span></%(col_tag)s>\n'
-computed_table = '<tr><th><label for="id_username">Username:</label></th><td><input type="text" name="username" ' + \
+email_text = '' + \
+    '%(start_tag)s<label for="id_email_field">Email:</label>%(label_end)s<input type="email" name="email_field" ' + \
+    'maxlength="191" required id="id_email_field"></%(col_tag)s>\n'
+names_text = '' + \
+    '%(start_tag)s<label for="id_first_name">First name:</label>%(label_end)s<input type="text" name="first_name" ' + \
+    'maxlength="150" id="id_first_name"></%(col_tag)s>\n' + \
+    '%(start_tag)s<label for="id_last_name">Last name:</label>%(label_end)s<input type="text" name="last_name" ' + \
+    'maxlength="150" id="id_last_name"></%(col_tag)s>\n'
+
+computed_text = names_text + password_text + email_text  # + username_text
+# computed_text = computed_text.strip()
+computed_table = '' + \
+    '<tr><th><label for="id_username">Username:</label></th><td><input type="text" name="username" ' + \
     'maxlength="150" autocapitalize="none" autocomplete="username" autofocus required id="id_username"><br><span ' + \
     'class="helptext">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</span></td></tr>\n' + \
     '<tr><th><label for="id_password1">Password:</label></th><td><input type="password" name="password1" ' + \
@@ -41,6 +49,12 @@ computed_table = '<tr><th><label for="id_username">Username:</label></th><td><in
     '<tr><th><label for="id_password2">Password confirmation:</label></th><td><input type="password" ' + \
     'name="password2" autocomplete="new-password" required id="id_password2"><br><span class="helptext">Enter ' + \
     'the same password as before, for verification.</span></td></tr>\n'
+
+'<tr><th><label for="id_first_name">First name:</label></th><td><input type="text" name="first_name" maxlength="150" id="id_first_name"></td></tr>'
+'<tr><th><label for="id_last_name">Last name:</label></th><td><input type="text" name="last_name" maxlength="150" id="id_last_name"></td></tr>'
+'<tr><th><label for="id_password1">Password:</label></th><td><input type="password" name="password1" autocomplete="new-password" required id="id_password1"><br><span class="helptext"><ul><li>Your password can’t be too similar to your other personal information.</li><li>Your password must contain at least 8 characters.</li><li>Your password can’t be a commonly used password.</li><li>Your password can’t be entirely numeric.</li></ul></span></td></tr>'
+'<tr><th><label for="id_password2">Password confirmation:</label></th><td><input type="password" name="password2" autocomplete="new-password" required id="id_password2"><br><span class="helptext">Enter the same password as before, for verification.</span></td></tr>'
+'<tr><th><label for="id_email_field">Email:</label></th><td><input type="email" name="email_field" maxlength="191" required id="id_email_field"></td></tr>'
 
 
 class FormTests:
@@ -72,8 +86,7 @@ class FormTests:
         return form
 
     def _make_real_user(self, user_type=None, **user_setup):
-        from .helper_general import UserModel
-
+        UserModel = get_user_model()
         user = None
         if self.user_type == 'anonymous':
             user = AnonymousUser()
@@ -118,15 +131,18 @@ class FormTests:
         """All forms should return HTML table rows when .as_table is called. """
         output = self.form.as_table().strip()  # .split('\n')  # Fortunately it is convention to have a line for each row.
         expected = '<tr><th><label for="id_generic_field">Generic field:</label></th>'
-        if issubclass(self.form_class, ComputedUsernameForm):
-            expected = computed_table + expected  # col_tag = '%(col_tag)s'
-        if issubclass(self.form_class, FormOverrideMixIn):
+        if issubclass(self.form_class, ComputedUsernameMixIn):
+            setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
+            expected = computed_text % setup
+        elif issubclass(self.form_class, FormOverrideMixIn):
             expected += '<td><input type="text" name="generic_field" size="15" required id="id_generic_field"></td></tr>'
         else:
             expected += '<td><input type="text" name="generic_field" required id="id_generic_field"></td></tr>'
         if output != expected:
             form_class = self.form.__class__.__name__
             print(f"//////////////////////////////// {form_class} AS_TABLE /////////////////////////////////////")
+            if issubclass(self.form_class, ComputedUsernameMixIn):
+                print("*** is sub class of ComputedUsernameMixIn ***")
             print(output)
         # regex_match = ''  # '^<tr' ... '</tr>'
         # all_rows = all()  # every line break starts and ends with the HTML tr tags.
@@ -137,15 +153,18 @@ class FormTests:
         """All forms should return HTML <li>s when .as_ul is called. """
         output = self.form.as_ul().strip()  # .split('\n')  # Fortunately it is convention to have a line for each row.
         expected = '<li><label for="id_generic_field">Generic field:</label> '
-        if issubclass(self.form_class, ComputedUsernameForm):
-            expected = computed_text % {'col_tag': 'li'} + expected  # col_tag = '%(col_tag)s'
-        if issubclass(self.form_class, FormOverrideMixIn):
+        if issubclass(self.form_class, ComputedUsernameMixIn):
+            expected = computed_text % {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
+            expected = expected.strip()
+        elif issubclass(self.form_class, FormOverrideMixIn):
             expected += '<input type="text" name="generic_field" size="15" required id="id_generic_field"></li>'
         else:
             expected += '<input type="text" name="generic_field" required id="id_generic_field"></li>'
         if output != expected:
             form_class = self.form.__class__.__name__
             print(f"//////////////////////////////// {form_class} AS_UL /////////////////////////////////////")
+            if issubclass(self.form_class, ComputedUsernameMixIn):
+                print("*** is sub class of ComputedUsernameMixIn ***")
             print(output)
         # regex_match = ''  # '^<li' ... '</li'
         # all_rows = all()  # every line break starts and ends with the HTML li tags.
@@ -156,15 +175,18 @@ class FormTests:
         """All forms should return HTML <p>s when .as_p is called. """
         output = self.form.as_p().strip()  # .split('\n')  # Fortunately it is convention to have a line for each row.
         expected = '<p><label for="id_generic_field">Generic field:</label> '
-        if issubclass(self.form_class, ComputedUsernameForm):
-            expected = computed_text % {'col_tag': 'p'} + expected  # col_tag = '%(col_tag)s'
-        if issubclass(self.form_class, FormOverrideMixIn):
+        if issubclass(self.form_class, ComputedUsernameMixIn):
+            expected = computed_text % {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
+            expected = expected.strip()
+        elif issubclass(self.form_class, FormOverrideMixIn):
             expected += '<input type="text" name="generic_field" size="15" required id="id_generic_field"></p>'
         else:
             expected += '<input type="text" name="generic_field" required id="id_generic_field"></p>'
         if output != expected:
             form_class = self.form.__class__.__name__
             print(f"//////////////////////////////// {form_class} AS_P /////////////////////////////////////")
+            if issubclass(self.form_class, ComputedUsernameMixIn):
+                print("*** is sub class of ComputedUsernameMixIn ***")
             print(output)
         # regex_match = ''  # '^<p' ... '</p'
         # all_rows = all()  # every line break starts and ends with the HTML p tags.

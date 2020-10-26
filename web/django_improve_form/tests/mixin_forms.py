@@ -1,7 +1,7 @@
 from django.test import TestCase  # , Client, override_settings, modify_settings, TransactionTestCase, RequestFactory
 # from django.core.exceptions import ImproperlyConfigured  # , ValidationError
 # from django.utils.translation import gettext_lazy as _
-# from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model
 # from .helper_general import AnonymousUser, MockUser  # MockRequest, UserModel, MockStaffUser, MockSuperUser, APP_NAME
 # from django.conf import settings
 from django.forms import CharField, Form  # , ModelForm, BaseModelForm, ModelFormMetaclass
@@ -44,8 +44,15 @@ class FormFieldsetForm(FormFieldsetMixIn, Form):
 # # Extended MixIns # #
 
 
-class ComputedUsernameForm(ComputedFieldsMixIn, UserCreationForm):
-    generic_field = CharField()
+class ComputedUsernameForm(ComputedUsernameMixIn, UserCreationForm):
+    # email = ''
+    # username = ''
+    # first_name = CharField(_('first name'), max_length=150, blank=True)
+    # last_name = CharField(_('last name'), max_length=150, blank=True)
+
+    class Meta(UserCreationForm.Meta):
+        model = get_user_model()
+        fields = ['first_name', 'last_name', 'username']
 
 
 class CountryForm(OverrideCountryMixIn, Form):
