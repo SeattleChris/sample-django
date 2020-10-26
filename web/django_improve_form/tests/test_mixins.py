@@ -14,47 +14,28 @@ from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns 
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
 username_text = '' + \
-    '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" maxlength="150" ' + \
-    'autocapitalize="none" autocomplete="username" autofocus required id="id_username">%(input_end)s<span class="helptext">' + \
-    'Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</span>%(end_tag)s\n'
+    '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" ' + \
+    'maxlength="150" autocapitalize="none" autocomplete="username" autofocus required id="id_username">' + \
+    '%(input_end)s<span class="helptext">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.' + \
+    '</span>%(end_tag)s\n'
 password_text = '' + \
     '%(start_tag)s<label for="id_password1">Password:</label>%(label_end)s<input type="password" name="password1" ' + \
-    'autocomplete="new-password" required id="id_password1">%(input_end)s<span class="helptext"><ul><li>Your password can’t be ' + \
-    'too similar to your other personal information.</li><li>Your password must contain at least 8 ' + \
+    'autocomplete="new-password" required id="id_password1">%(input_end)s<span class="helptext"><ul><li>Your pass' + \
+    'word can’t be too similar to your other personal information.</li><li>Your password must contain at least 8 ' + \
     'characters.</li><li>Your password can’t be a commonly used password.</li><li>Your password can’t be entirely ' + \
-    'numeric.</li></ul></span></%(col_tag)s>\n' + \
-    '%(start_tag)s<label for="id_password2">Password confirmation:</label>%(label_end)s<input type="password" name="password2" ' + \
-    'autocomplete="new-password" required id="id_password2">%(input_end)s<span class="helptext">Enter the same password as ' + \
-    'before, for verification.</span></%(col_tag)s>\n'
+    'numeric.</li></ul></span>%(end_tag)s\n' + \
+    '%(start_tag)s<label for="id_password2">Password confirmation:</label>%(label_end)s<input type="password" ' + \
+    'name="password2" autocomplete="new-password" required id="id_password2">%(input_end)s<span class="helptext">' + \
+    'Enter the same password as before, for verification.</span>%(end_tag)s\n'
 email_text = '' + \
     '%(start_tag)s<label for="id_email_field">Email:</label>%(label_end)s<input type="email" name="email_field" ' + \
-    'maxlength="191" required id="id_email_field"></%(col_tag)s>\n'
+    'maxlength="191" required id="id_email_field">%(end_tag)s\n'
 names_text = '' + \
     '%(start_tag)s<label for="id_first_name">First name:</label>%(label_end)s<input type="text" name="first_name" ' + \
-    'maxlength="150" id="id_first_name"></%(col_tag)s>\n' + \
+    'maxlength="150" id="id_first_name">%(end_tag)s\n' + \
     '%(start_tag)s<label for="id_last_name">Last name:</label>%(label_end)s<input type="text" name="last_name" ' + \
-    'maxlength="150" id="id_last_name"></%(col_tag)s>\n'
-
+    'maxlength="150" id="id_last_name">%(end_tag)s\n'
 computed_text = names_text + password_text + email_text  # + username_text
-# computed_text = computed_text.strip()
-computed_table = '' + \
-    '<tr><th><label for="id_username">Username:</label></th><td><input type="text" name="username" ' + \
-    'maxlength="150" autocapitalize="none" autocomplete="username" autofocus required id="id_username"><br><span ' + \
-    'class="helptext">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</span></td></tr>\n' + \
-    '<tr><th><label for="id_password1">Password:</label></th><td><input type="password" name="password1" ' + \
-    'autocomplete="new-password" required id="id_password1"><br><span class="helptext"><ul><li>Your password can’t ' + \
-    'be too similar to your other personal information.</li><li>Your password must contain at least 8 ' + \
-    'characters.</li><li>Your password can’t be a commonly used password.</li><li>Your password can’t be entirely ' + \
-    'numeric.</li></ul></span></td></tr>\n' + \
-    '<tr><th><label for="id_password2">Password confirmation:</label></th><td><input type="password" ' + \
-    'name="password2" autocomplete="new-password" required id="id_password2"><br><span class="helptext">Enter ' + \
-    'the same password as before, for verification.</span></td></tr>\n'
-
-'<tr><th><label for="id_first_name">First name:</label></th><td><input type="text" name="first_name" maxlength="150" id="id_first_name"></td></tr>'
-'<tr><th><label for="id_last_name">Last name:</label></th><td><input type="text" name="last_name" maxlength="150" id="id_last_name"></td></tr>'
-'<tr><th><label for="id_password1">Password:</label></th><td><input type="password" name="password1" autocomplete="new-password" required id="id_password1"><br><span class="helptext"><ul><li>Your password can’t be too similar to your other personal information.</li><li>Your password must contain at least 8 characters.</li><li>Your password can’t be a commonly used password.</li><li>Your password can’t be entirely numeric.</li></ul></span></td></tr>'
-'<tr><th><label for="id_password2">Password confirmation:</label></th><td><input type="password" name="password2" autocomplete="new-password" required id="id_password2"><br><span class="helptext">Enter the same password as before, for verification.</span></td></tr>'
-'<tr><th><label for="id_email_field">Email:</label></th><td><input type="email" name="email_field" maxlength="191" required id="id_email_field"></td></tr>'
 
 
 class FormTests:
@@ -134,6 +115,7 @@ class FormTests:
         if issubclass(self.form_class, ComputedUsernameMixIn):
             setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
             expected = computed_text % setup
+            expected = expected.strip()
         elif issubclass(self.form_class, FormOverrideMixIn):
             expected += '<td><input type="text" name="generic_field" size="15" required id="id_generic_field"></td></tr>'
         else:
@@ -146,6 +128,7 @@ class FormTests:
             print(output)
         # regex_match = ''  # '^<tr' ... '</tr>'
         # all_rows = all()  # every line break starts and ends with the HTML tr tags.
+        self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
     # @skip("Not Implemented")
@@ -168,7 +151,7 @@ class FormTests:
             print(output)
         # regex_match = ''  # '^<li' ... '</li'
         # all_rows = all()  # every line break starts and ends with the HTML li tags.
-        self.assertNotEqual([], output)
+        self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
     def test_as_p(self):
@@ -176,7 +159,7 @@ class FormTests:
         output = self.form.as_p().strip()  # .split('\n')  # Fortunately it is convention to have a line for each row.
         expected = '<p><label for="id_generic_field">Generic field:</label> '
         if issubclass(self.form_class, ComputedUsernameMixIn):
-            expected = computed_text % {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
+            expected = computed_text % {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
             expected = expected.strip()
         elif issubclass(self.form_class, FormOverrideMixIn):
             expected += '<input type="text" name="generic_field" size="15" required id="id_generic_field"></p>'
@@ -190,7 +173,7 @@ class FormTests:
             print(output)
         # regex_match = ''  # '^<p' ... '</p'
         # all_rows = all()  # every line break starts and ends with the HTML p tags.
-        self.assertNotEqual([], output)
+        self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
     @skip("Not Implemented")
