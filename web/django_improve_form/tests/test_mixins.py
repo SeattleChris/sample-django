@@ -196,12 +196,16 @@ class FormTests:
     def test_focus(self, name=None):
         """Always True if the assign_focus_field method is absent. Otherwise checks if configured properly. """
         focus_func = getattr(self.form, 'assign_focus_field', None)
-        if not focus_func:
-            self.assertTrue(True)
-            return
         fields = self.get_current_fields()
-        name = name or getattr(self.form, 'named_focus', None)
-        expected = focus_func(name, fields)
+        if focus_func:
+            name = name or getattr(self.form, 'named_focus', None)
+            expected = focus_func(name, fields)
+        else:
+            expected = 'username' if 'username' in fields else None
+            expected = name or expected or None
+            if not expected:
+                self.assertTrue(True)
+                return
         focus_list = self.find_focus_field()
         self.assertEqual(1, len(focus_list))
         self.assertEqual(expected, focus_list[0])
