@@ -1,6 +1,6 @@
 from django.test import TestCase  # , Client, override_settings, modify_settings, TransactionTestCase, RequestFactory
 from unittest import skip
-# from django.core.exceptions import ImproperlyConfigured  # , ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ImproperlyConfigured  # , ValidationError, ObjectDoesNotExist
 # from django.utils.translation import gettext_lazy as _
 # from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -217,6 +217,15 @@ class FocusTests(FormTests, TestCase):
 
 class CriticalTests(FormTests, TestCase):
     form_class = CriticalForm
+
+    def test_raise_on_missing_critical(self):
+        """If the field is missing or misconfigured, it should raise ImproperlyConfigured. """
+        # self.form.setup_critical_fields({'critical_fields': critical_fields})
+        name_for_field = 'absent_field'
+        field_opts = {'names': (name_for_field, 'absent'), 'alt_field': '', 'computed': False}
+        critical_fields = {'absent_field': field_opts}
+        with self.assertRaises(ImproperlyConfigured):
+            self.form.fields_for_critical(critical_fields)
 
 
 class ComputedTests(FormTests, TestCase):
