@@ -181,17 +181,30 @@ class FormTests:
 
     def find_focus_field(self):
         """Returns a list of all fields that have been given an HTML attribute of 'autofocus'. """
-        output_fields = self.get_current_fields()
+        fields = self.get_current_fields()
         found = []
-        for field_name, field in output_fields.items():
+        for field_name, field in fields.items():
             has_focus = field.widget.attrs.get('autofocus', None)
             if has_focus:
-                found.push(field_name)
+                found.append(field_name)
         return found
 
     def get_current_fields(self):
         """The form currently outputs these fields. """
-        pass
+        return self.form.fields.copy()
+
+    def test_focus(self, name=None):
+        """Always True if the assign_focus_field method is absent. Otherwise checks if configured properly. """
+        focus_func = getattr(self.form, 'assign_focus_field', None)
+        if not focus_func:
+            self.assertTrue(True)
+            return
+        fields = self.get_current_fields()
+        name = name or getattr(self.form, 'named_focus', None)
+        expected = focus_func(name, fields)
+        focus_list = self.find_focus_field()
+        self.assertEqual(1, len(focus_list))
+        self.assertEqual(expected, focus_list[0])
 
 
 class FocusTests(FormTests, TestCase):
