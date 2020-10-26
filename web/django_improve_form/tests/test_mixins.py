@@ -4,7 +4,7 @@ from unittest import skip
 # from django.utils.translation import gettext_lazy as _
 # from django.contrib.auth import get_user_model
 # from .helper_views import MimicAsView, USER_DEFAULTS
-from .helper_general import MockRequest  # AnonymousUser, MockUser, UserModel, MockStaffUser, MockSuperUser, APP_NAME
+from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 # from django.conf import settings
 # from django.core.exceptions import ObjectDoesNotExist
 # from datetime import date, time, timedelta, datetime as dt
@@ -13,17 +13,78 @@ from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, Fo
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
 # from .mixin_forms import OverrideFieldsetForm, UsernameFocusForm, ComputedCountryForm  # # MixIn Interactions # #
 
+USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
+
 
 class FormTests:
     form_class = None
+    user_type = 'anonymous'  # 'superuser' | 'staff' | 'user' | 'anonymous'
+    mock_users = True
 
     def setUp(self):
-        self.request = MockRequest()
-        self.request.method = 'GET'
-        form_kwargs = {}  # ?initial, prefix?
+        self.user = self.make_user()
+        self.form = self.make_form_request()
+
+    def make_form_request(self, method='GET', **kwargs):
+        """Constructs a mocked request object with the method, and applies the kwargs. """
+        initial = kwargs.pop('initial', {})
+        prefix = kwargs.pop('prefix', None)
+        data = kwargs.pop('data', {})
+        kwargs.setdefault('FILES', kwargs.pop('files', {}))
+        request = MockRequest(**kwargs)
+        request.method = method.upper()
+        if request.method == 'PUT':
+            method = 'POST'
+        setattr(request, method, data)
+        request.user = self.user
+        self.request = request
+        form_kwargs = {'initial': initial, 'prefix': prefix}
         if self.request.method in ('POST', 'PUT'):
             form_kwargs.update({'data': self.request.POST, 'files': self.request.FILES, })
-        self.form = self.form_class(**form_kwargs)
+        form = self.form_class(**form_kwargs)
+        return form
+
+    def _make_real_user(self, user_type=None, **user_setup):
+        from .helper_general import UserModel
+
+        user = None
+        if self.user_type == 'anonymous':
+            user = AnonymousUser()
+        elif self.user_type == 'superuser':
+            temp = {'is_staff': True, 'is_superuser': True}
+            user_setup.update(temp)
+            user = UserModel.objects.create(**user_setup)
+            user.save()
+        elif self.user_type == 'staff':
+            temp = {'is_staff': True, 'is_superuser': False}
+            user_setup.update(temp)
+            user = UserModel.objects.create(**user_setup)
+            user.save()
+        elif self.user_type == 'user':
+            temp = {'is_staff': False, 'is_superuser': False}
+            user_setup.update(temp)
+            user = UserModel.objects.create(**user_setup)
+            user.save()
+        elif self.user_type == 'inactive':
+            temp = {'is_staff': False, 'is_superuser': False, 'is_active': False}
+            user_setup.update(temp)
+            user = UserModel.objects.create(**user_setup)
+            user.save()
+        return user
+
+    def make_user(self, user_type=None, mock_users=None, **kwargs):
+        """Returns a user object. Uses defaults that can be overridden by passed parameters. """
+        user_type = user_type or self.user_type
+        mock_users = self.mock_users if mock_users is None else mock_users
+        if user_type == 'anonymous':
+            return AnonymousUser()
+        user_setup = USER_DEFAULTS.copy()
+        user_setup.update(kwargs)
+        if not self.mock_users:
+            return self._make_real_user(user_type, **user_setup)
+        type_lookup = {'superuser': MockSuperUser, 'staff': MockStaffUser, 'user': MockUser}
+        user = type_lookup[user_type](**user_setup)
+        return user
 
     def test_as_table(self):
         """All forms should return HTML table rows when .as_table is called. """
@@ -62,12 +123,13 @@ class FormTests:
             has_focus = field.widget.attrs.get('autofocus', None)
             if has_focus:
                 found.push(field_name)
-        if not match or len(found) > 1:
-            return found
-        elif len(found) == 1:
-            return match == found[0]
-        else:
-            return None
+        # if not match or len(found) > 1:
+        #     return found
+        # elif len(found) == 1:
+        #     return match == found[0]
+        # else:
+        #     return None
+        return found
 
     def get_current_fields(self):
         """The form currently outputs these fields. """
