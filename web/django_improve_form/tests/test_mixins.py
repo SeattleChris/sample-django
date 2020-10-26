@@ -107,10 +107,9 @@ class FormTests:
         user = type_lookup[user_type](**user_setup)
         return user
 
-    # @skip("Not Implemented")
     def test_as_table(self):
         """All forms should return HTML table rows when .as_table is called. """
-        output = self.form.as_table().strip()  # .split('\n')  # Fortunately it is convention to have a line for each row.
+        output = self.form.as_table().strip()
         expected = '<tr><th><label for="id_generic_field">Generic field:</label></th>'
         if issubclass(self.form_class, ComputedUsernameMixIn):
             setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
@@ -131,10 +130,9 @@ class FormTests:
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    # @skip("Not Implemented")
     def test_as_ul(self):
         """All forms should return HTML <li>s when .as_ul is called. """
-        output = self.form.as_ul().strip()  # .split('\n')  # Fortunately it is convention to have a line for each row.
+        output = self.form.as_ul().strip()
         expected = '<li><label for="id_generic_field">Generic field:</label> '
         if issubclass(self.form_class, ComputedUsernameMixIn):
             expected = computed_text % {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
@@ -156,7 +154,7 @@ class FormTests:
 
     def test_as_p(self):
         """All forms should return HTML <p>s when .as_p is called. """
-        output = self.form.as_p().strip()  # .split('\n')  # Fortunately it is convention to have a line for each row.
+        output = self.form.as_p().strip()
         expected = '<p><label for="id_generic_field">Generic field:</label> '
         if issubclass(self.form_class, ComputedUsernameMixIn):
             expected = computed_text % {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
@@ -181,7 +179,7 @@ class FormTests:
         """All forms should have a working _html_output method. ? Should it conform to the same API? """
         pass
 
-    def find_focus_field(self, match=None):
+    def find_focus_field(self):
         """Returns a list of all fields that have been given an HTML attribute of 'autofocus'. """
         output_fields = self.get_current_fields()
         found = []
@@ -189,12 +187,6 @@ class FormTests:
             has_focus = field.widget.attrs.get('autofocus', None)
             if has_focus:
                 found.push(field_name)
-        # if not match or len(found) > 1:
-        #     return found
-        # elif len(found) == 1:
-        #     return match == found[0]
-        # else:
-        #     return None
         return found
 
     def get_current_fields(self):
