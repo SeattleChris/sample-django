@@ -1,8 +1,10 @@
 from django.test import TestCase  # , Client, override_settings, modify_settings, TransactionTestCase, RequestFactory
 from unittest import skip
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError, ObjectDoesNotExist
+from django.forms.utils import pretty_name
 # from django.utils.translation import gettext_lazy as _
 # from django.conf import settings
+# from django.utils.html import conditional_escape  # , format_html
 from django.contrib.auth import get_user_model
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 # from .helper_views import MimicAsView, USER_DEFAULTS
@@ -11,31 +13,50 @@ from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser,
 from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
+from django_registration import validators
+from copy import deepcopy
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
-username_text = '' + \
+NAME_LENGTH = 'maxlength="150" '
+USER_ATTRS = 'autocapitalize="none" autocomplete="username" '
+FOCUS = 'autofocus '
+REQUIRED = 'required '
+DEFAULT_RE = {ea: '%(' + ea + ')s' for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'name_pretty']}
+USERNAME_TXT = '' + \
     '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" ' + \
-    'maxlength="150" autocapitalize="none" autocomplete="username" autofocus required id="id_username">' + \
+    '%(name_length)s%(user_attrs)s%(focus)srequired id="id_username">' + \
     '%(input_end)s<span class="helptext">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.' + \
     '</span>%(end_tag)s\n'
-password_text = '' + \
+USERNAME_TXT = USERNAME_TXT % dict(name_length=NAME_LENGTH, user_attrs=USER_ATTRS, focus=FOCUS, **DEFAULT_RE)
+PASSWORD1_TXT = '' + \
     '%(start_tag)s<label for="id_password1">Password:</label>%(label_end)s<input type="password" name="password1" ' + \
     'autocomplete="new-password" required id="id_password1">%(input_end)s<span class="helptext"><ul><li>Your pass' + \
     'word can’t be too similar to your other personal information.</li><li>Your password must contain at least 8 ' + \
     'characters.</li><li>Your password can’t be a commonly used password.</li><li>Your password can’t be entirely ' + \
-    'numeric.</li></ul></span>%(end_tag)s\n' + \
+    'numeric.</li></ul></span>%(end_tag)s\n'
+PASSWORD2_TXT = '' + \
     '%(start_tag)s<label for="id_password2">Password confirmation:</label>%(label_end)s<input type="password" ' + \
     'name="password2" autocomplete="new-password" required id="id_password2">%(input_end)s<span class="helptext">' + \
     'Enter the same password as before, for verification.</span>%(end_tag)s\n'
-email_text = '' + \
+EMAIL_TXT = '' + \
     '%(start_tag)s<label for="id_email_field">Email:</label>%(label_end)s<input type="email" name="email_field" ' + \
     'maxlength="191" required id="id_email_field">%(end_tag)s\n'
 names_text = '' + \
     '%(start_tag)s<label for="id_first_name">First name:</label>%(label_end)s<input type="text" name="first_name" ' + \
-    'maxlength="150" id="id_first_name">%(end_tag)s\n' + \
+    '%(name_length)sid="id_first_name">%(end_tag)s\n' + \
     '%(start_tag)s<label for="id_last_name">Last name:</label>%(label_end)s<input type="text" name="last_name" ' + \
-    'maxlength="150" id="id_last_name">%(end_tag)s\n'
-computed_text = names_text + password_text + email_text  # + username_text
+    '%(name_length)sid="id_last_name">%(end_tag)s\n'
+TOS_TXT = '%(start_tag)s<label for="id_tos_field">I have read and agree to the Terms of Service:</label>' + \
+    '%(label_end)s<input type="checkbox" name="tos_field" required id="id_tos_field">%(end_tag)s\n'
+# DEFAULT_TXT = '%(start_tag)s<label for="id_generic_field">Generic field:</label>%(label_end)s' + \
+#     '<input type="text" name="generic_field"%(attrs)srequired id="id_generic_field">%(end_tag)s\n'
+DEFAULT_TXT = '%(start_tag)s<label for="id_%(name)s">%(name_pretty)s:</label>%(label_end)s' + \
+    '<input type="text" name="%(name)s"%(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
+REPLACE_TEXT = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
+REPLACE_TEXT['email'] = EMAIL_TXT
+for name in ('first_name', 'last_name'):
+    REPLACE_TEXT[name] = DEFAULT_TXT % dict(attrs=' ' + NAME_LENGTH, required='', **DEFAULT_RE)  # TODO: ? required ?
+# computed_text = names_text + password_text + EMAIL_TXT  # + username_text
 
 
 class FormTests:
@@ -107,24 +128,53 @@ class FormTests:
         user = type_lookup[user_type](**user_setup)
         return user
 
+    def get_expected_format(self, setup):
+        replace_text = REPLACE_TEXT.copy()
+        form_list = []
+        if issubclass(self.form_class, ComputedUsernameMixIn):
+            name_for_email = self.form.name_for_email or 'email'
+            name_for_user = self.form.name_for_user or 'username'
+            replace_text[name_for_email] = replace_text.pop('email')
+            replace_text[name_for_user] = replace_text.pop('username')
+            order = ['first_name', 'last_name', 'username', 'password1', 'password2', 'email']
+            self.form.order_fields(order)
+        for name in self.form.fields:
+            default_re = DEFAULT_RE.copy()
+            default_re.update({'name': name, 'name_pretty': pretty_name(name), 'attrs': '%(attrs)s'})
+            default_re['required'] = REQUIRED if self.form.fields[name].required else ''
+            txt = replace_text.get(name, DEFAULT_TXT) % default_re
+            form_list.append(txt)
+        # if issubclass(self.form_class, ComputedUsernameMixIn):
+        #     if 'first_name' in self.form.fields and 'last_name' in self.form.fields:
+        #         form_list.append(names_text)
+        #     if 'password1' in self.form.fields:
+        #         form_list.append(password_text)
+        #     if 'email' in self.form.fields:
+        #         form_list.append(email_text)
+        #     if 'username' in self.form.fields:
+        #         form_list.append(username_text)
+        #     if 'tos_field' in self.form.fields:
+        #         form_list.append(tos_text)
+        # if 'generic_field' in self.form.fields:
+        #     form_list.append(default_text)
+        expected = ''.join(form_list) % setup
+        return expected.strip()
+
     def test_as_table(self):
         """All forms should return HTML table rows when .as_table is called. """
         output = self.form.as_table().strip()
-        expected = '<tr><th><label for="id_generic_field">Generic field:</label></th>'
-        if issubclass(self.form_class, ComputedUsernameMixIn):
-            setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
-            expected = computed_text % setup
-            expected = expected.strip()
-        else:
-            expected += '<td><input type="text" name="generic_field"%(attrs)srequired id="id_generic_field"></td></tr>'
+        setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
         override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
-        expected = expected % {'attrs': override_attrs}
+        setup.update(attrs=override_attrs)
+        expected = self.get_expected_format(setup)
         if output != expected:
             form_class = self.form.__class__.__name__
             print(f"//////////////////////////////// {form_class} AS_TABLE /////////////////////////////////////")
             if issubclass(self.form_class, ComputedUsernameMixIn):
                 print("*** is sub class of ComputedUsernameMixIn ***")
             print(output)
+            print("------------------------------------------------------------------------------------------")
+            print(expected)
         # regex_match = ''  # '^<tr' ... '</tr>'
         # all_rows = all()  # every line break starts and ends with the HTML tr tags.
         self.assertNotEqual('', output)
@@ -133,20 +183,18 @@ class FormTests:
     def test_as_ul(self):
         """All forms should return HTML <li>s when .as_ul is called. """
         output = self.form.as_ul().strip()
-        expected = '<li><label for="id_generic_field">Generic field:</label> '
-        if issubclass(self.form_class, ComputedUsernameMixIn):
-            expected = computed_text % {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
-            expected = expected.strip()
-        else:
-            expected += '<input type="text" name="generic_field"%(attrs)srequired id="id_generic_field"></li>'
+        setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
         override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
-        expected = expected % {'attrs': override_attrs}
+        setup.update(attrs=override_attrs)
+        expected = self.get_expected_format(setup)
         if output != expected:
             form_class = self.form.__class__.__name__
             print(f"//////////////////////////////// {form_class} AS_UL /////////////////////////////////////")
             if issubclass(self.form_class, ComputedUsernameMixIn):
                 print("*** is sub class of ComputedUsernameMixIn ***")
             print(output)
+            print("------------------------------------------------------------------------------------------")
+            print(expected)
         # regex_match = ''  # '^<li' ... '</li'
         # all_rows = all()  # every line break starts and ends with the HTML li tags.
         self.assertNotEqual('', output)
@@ -155,14 +203,10 @@ class FormTests:
     def test_as_p(self):
         """All forms should return HTML <p>s when .as_p is called. """
         output = self.form.as_p().strip()
-        expected = '<p><label for="id_generic_field">Generic field:</label> '
-        if issubclass(self.form_class, ComputedUsernameMixIn):
-            expected = computed_text % {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
-            expected = expected.strip()
-        else:
-            expected += '<input type="text" name="generic_field"%(attrs)srequired id="id_generic_field"></p>'
+        setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
         override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
-        expected = expected % {'attrs': override_attrs}
+        setup.update(attrs=override_attrs)
+        expected = self.get_expected_format(setup)
         if output != expected:
             form_class = self.form.__class__.__name__
             print(f"//////////////////////////////// {form_class} AS_P /////////////////////////////////////")
