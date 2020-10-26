@@ -11,9 +11,36 @@ from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser,
 # from pprint import pprint
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
+from ..mixins import (
+    FocusMixIn, CriticalFieldMixIn, ComputedFieldsMixIn, FormOverrideMixIn, FormFieldsetMixIn,
+    ComputedUsernameMixIn, OverrideCountryMixIn,
+    FieldsetOverrideMixIn,  # FieldsetOverrideComputedMixIn, FieldsetOverrideUsernameMixIn,
+    # AddressMixIn, AddressUsernameMixIn,
+    )
 # from .mixin_forms import OverrideFieldsetForm, UsernameFocusForm, ComputedCountryForm  # # MixIn Interactions # #
-
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
+computed_text = '<%(col_tag)s><label for="id_username">Username:</label> <input type="text" name="username" maxlength="150" ' + \
+    'autocapitalize="none" autocomplete="username" autofocus required id="id_username"> <span class="helptext">' + \
+    'Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</span></%(col_tag)s>\n' + \
+    '<%(col_tag)s><label for="id_password1">Password:</label> <input type="password" name="password1" ' + \
+    'autocomplete="new-password" required id="id_password1"> <span class="helptext"><ul><li>Your password can’t be ' + \
+    'too similar to your other personal information.</li><li>Your password must contain at least 8 ' + \
+    'characters.</li><li>Your password can’t be a commonly used password.</li><li>Your password can’t be entirely ' + \
+    'numeric.</li></ul></span></%(col_tag)s>\n' + \
+    '<%(col_tag)s><label for="id_password2">Password confirmation:</label> <input type="password" name="password2" ' + \
+    'autocomplete="new-password" required id="id_password2"> <span class="helptext">Enter the same password as ' + \
+    'before, for verification.</span></%(col_tag)s>\n'
+computed_table = '<tr><th><label for="id_username">Username:</label></th><td><input type="text" name="username" ' + \
+    'maxlength="150" autocapitalize="none" autocomplete="username" autofocus required id="id_username"><br><span ' + \
+    'class="helptext">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</span></td></tr>\n' + \
+    '<tr><th><label for="id_password1">Password:</label></th><td><input type="password" name="password1" ' + \
+    'autocomplete="new-password" required id="id_password1"><br><span class="helptext"><ul><li>Your password can’t ' + \
+    'be too similar to your other personal information.</li><li>Your password must contain at least 8 ' + \
+    'characters.</li><li>Your password can’t be a commonly used password.</li><li>Your password can’t be entirely ' + \
+    'numeric.</li></ul></span></td></tr>\n' + \
+    '<tr><th><label for="id_password2">Password confirmation:</label></th><td><input type="password" ' + \
+    'name="password2" autocomplete="new-password" required id="id_password2"><br><span class="helptext">Enter ' + \
+    'the same password as before, for verification.</span></td></tr>\n'
 
 
 class FormTests:
@@ -86,29 +113,63 @@ class FormTests:
         user = type_lookup[user_type](**user_setup)
         return user
 
+    # @skip("Not Implemented")
     def test_as_table(self):
         """All forms should return HTML table rows when .as_table is called. """
-        output = self.form.as_table().split('\n')  # Fortunately it is convention to have a line for each row.
-        print(output)
+        output = self.form.as_table().strip()  # .split('\n')  # Fortunately it is convention to have a line for each row.
+        expected = '<tr><th><label for="id_generic_field">Generic field:</label></th>'
+        if issubclass(self.form_class, ComputedUsernameForm):
+            expected = computed_table + expected  # col_tag = '%(col_tag)s'
+        if issubclass(self.form_class, FormOverrideMixIn):
+            expected += '<td><input type="text" name="generic_field" size="15" required id="id_generic_field"></td></tr>'
+        else:
+            expected += '<td><input type="text" name="generic_field" required id="id_generic_field"></td></tr>'
+        if output != expected:
+            form_class = self.form.__class__.__name__
+            print(f"//////////////////////////////// {form_class} AS_TABLE /////////////////////////////////////")
+            print(output)
         # regex_match = ''  # '^<tr' ... '</tr>'
         # all_rows = all()  # every line break starts and ends with the HTML tr tags.
-        self.assertNotEqual([], output)
+        self.assertEqual(expected, output)
 
+    # @skip("Not Implemented")
     def test_as_ul(self):
         """All forms should return HTML <li>s when .as_ul is called. """
-        output = self.form.as_table().split('\n')  # Fortunately it is convention to have a line for each row.
-        print(output)
+        output = self.form.as_ul().strip()  # .split('\n')  # Fortunately it is convention to have a line for each row.
+        expected = '<li><label for="id_generic_field">Generic field:</label> '
+        if issubclass(self.form_class, ComputedUsernameForm):
+            expected = computed_text % {'col_tag': 'li'} + expected  # col_tag = '%(col_tag)s'
+        if issubclass(self.form_class, FormOverrideMixIn):
+            expected += '<input type="text" name="generic_field" size="15" required id="id_generic_field"></li>'
+        else:
+            expected += '<input type="text" name="generic_field" required id="id_generic_field"></li>'
+        if output != expected:
+            form_class = self.form.__class__.__name__
+            print(f"//////////////////////////////// {form_class} AS_UL /////////////////////////////////////")
+            print(output)
         # regex_match = ''  # '^<li' ... '</li'
         # all_rows = all()  # every line break starts and ends with the HTML li tags.
         self.assertNotEqual([], output)
+        self.assertEqual(expected, output)
 
     def test_as_p(self):
         """All forms should return HTML <p>s when .as_p is called. """
-        output = self.form.as_table().split('\n')  # Fortunately it is convention to have a line for each row.
-        print(output)
+        output = self.form.as_p().strip()  # .split('\n')  # Fortunately it is convention to have a line for each row.
+        expected = '<p><label for="id_generic_field">Generic field:</label> '
+        if issubclass(self.form_class, ComputedUsernameForm):
+            expected = computed_text % {'col_tag': 'p'} + expected  # col_tag = '%(col_tag)s'
+        if issubclass(self.form_class, FormOverrideMixIn):
+            expected += '<input type="text" name="generic_field" size="15" required id="id_generic_field"></p>'
+        else:
+            expected += '<input type="text" name="generic_field" required id="id_generic_field"></p>'
+        if output != expected:
+            form_class = self.form.__class__.__name__
+            print(f"//////////////////////////////// {form_class} AS_P /////////////////////////////////////")
+            print(output)
         # regex_match = ''  # '^<p' ... '</p'
         # all_rows = all()  # every line break starts and ends with the HTML p tags.
         self.assertNotEqual([], output)
+        self.assertEqual(expected, output)
 
     @skip("Not Implemented")
     def test_html_output(self):
