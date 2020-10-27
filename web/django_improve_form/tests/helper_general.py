@@ -7,7 +7,9 @@ APP_NAME = __package__.split('.')[0]
 
 
 class MockRequest:
-    pass
+    def __init__(self, *args, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
 class MockUser:
@@ -17,14 +19,16 @@ class MockUser:
     is_staff = False
     is_superuser = False
 
+    def __init__(self, *args, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
 
 class MockStaffUser(MockUser):
     is_staff = True
-    is_superuser = False
 
 
-class MockSuperUser(MockUser):
-    is_staff = True
+class MockSuperUser(MockStaffUser):
     is_superuser = True
 
     def has_perm(self, perm):

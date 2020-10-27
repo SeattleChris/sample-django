@@ -630,7 +630,7 @@ class FormOverrideMixIn:
         """Modifies self.fields and possibly self.data according to overrides, maxlength, and get_alt_field_info. """
         fields = self.fields
         if self.get_flat_fields_setting():  # collect and apply all prep methods
-            opts = {'modifiers': getattr(self, 'prep_modifiers', [])}
+            opts = {'modifiers': getattr(self, 'prep_modifiers', None) or []}
             args = [opts, None, fields, prep_args]
             kwargs.update(flat_fields=True)
             opts, _ignored, fields, *prep_args, kwargs = self.handle_modifiers(*args, **kwargs)
@@ -1162,7 +1162,7 @@ class FormFieldsetMixIn:
             col_tag='span',
             single_col_tag='',
             col_head_data='',
-            col_data='%(errors)s%(label)s%(field)s%(help_text)s',
+            col_data='%(errors)s%(label)s %(field)s%(help_text)s',
             help_text_br=False,
             errors_on_separate_row=False,
             as_type='ul',
@@ -1176,7 +1176,7 @@ class FormFieldsetMixIn:
             col_tag='span',
             single_col_tag='',
             col_head_data='',
-            col_data='%(label)s%(field)s%(help_text)s',
+            col_data='%(label)s %(field)s%(help_text)s',
             help_text_br=False,
             errors_on_separate_row=True,
             as_type='p'
@@ -1190,7 +1190,7 @@ class FormFieldsetMixIn:
             col_tag='span',
             single_col_tag='',
             col_head_data='',
-            col_data='%(errors)s%(label)s%(field)s%(help_text)s',
+            col_data='%(errors)s%(label)s %(field)s%(help_text)s',
             help_text_br=False,
             errors_on_separate_row=False,
             as_type='fieldset',
