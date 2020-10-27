@@ -233,6 +233,16 @@ class FormTests:
 class FocusTests(FormTests, TestCase):
     form_class = FocusForm
 
+    @skip("Not Implemented")
+    def test_focus_not_on_hidden(self):
+        """Focus is never assigned to a hidden or disabled field when targeted. """
+        pass
+
+    @skip("Not Implemented")
+    def test_remove_previous_focus(self):
+        """All fields that previously had focus should have it removed when giving focus to another field. """
+        pass
+
 
 class CriticalTests(FormTests, TestCase):
     form_class = CriticalForm
@@ -321,6 +331,76 @@ class CriticalTests(FormTests, TestCase):
 
 class ComputedTests(FormTests, TestCase):
     form_class = ComputedForm
+
+    @skip("Not Implemented")
+    def test_use_existing_computed_field_dict(self):
+        """The get_computed_field_names method should include the names when computed_fields is already determined. """
+        pass
+
+    @skip("Not Implemented")
+    def test_raise_on_corrupt_computed_fields(self):
+        """The computed_field_names method raises ImproperlyConfigured when computed_fields is an unexpected type. """
+        pass
+
+    @skip("Not Implemented")
+    def test_construct_values_skips_already_caught_errors(self):
+        """Return None from construct_value_from_values method if the relevant fields already have recorded errors. """
+        pass
+
+    @skip("Not Implemented")
+    def test_construct_values_raises_for_missing_fields(self):
+        """Raises ImproperlyConfigured for missing cleaned_data on targeted field_names in constructing values. """
+        pass
+
+    @skip("Not Implemented")
+    def test_construct_values_calls_passed_normalize_function(self):
+        """When a function is passed for normalize, it is used in constructing values. """
+        pass
+
+    @skip("Not Implemented")
+    def test_construct_values_raises_on_invalid_normalize(self):
+        """The normalize parameter can be None or a callback function, otherwise raise ImproperlyConfigured. """
+        pass
+
+    @skip("Not Implemented")
+    def test_construct_values_as_expected(self):
+        """Get the expected response when given valid inputs when constructing values. """
+        pass
+
+    @skip("Not Implemented")
+    def test_validation_errors_assigned_in_clean_computed_fields(self):
+        """When _clean_computed_fields raises ValidationError, it creates expected compute_errors & form errors. """
+        pass
+
+    @skip("Not Implemented")
+    def test_populates_cleaned_data_in_clean_computed_fields(self):
+        """A field's custom clean meethod is called when appropriate in the _clean_computed_fields method. """
+        pass
+
+    @skip("Not Implemented")
+    def test_populates_cleaned_data_in_clean_computed_fields(self):
+        """The cleaned_data is populated for a field without errors in _clean_computed_fields method. """
+        pass
+
+    @skip("Not Implemented")
+    def test_validation_error_for_compute_error(self):
+        """The Form's clean method calls and raises ValidationError for errors from _clean_computed_fields method. """
+        pass
+
+    @skip("Not Implemented")
+    def test_cleaned_data_for_compute_error(self):
+        """The cleaned_data is removed of data for computed_fields if there is an error from _clean_computed_fields. """
+        pass
+
+    @skip("Not Implemented")
+    def test_cleaned_data_for_compute_success(self):
+        """The cleaned_data has data for computed_fields when there are no errors from _clean_computed_fields. """
+        pass
+
+    @skip("Not Implemented")
+    def test_expected_cleaned_data_for_compute(self):
+        """When successful, the Form's clean method returns the expected cleaned_data for all fields. """
+        pass
 
 
 class OverrideTests(FormTests, TestCase):
