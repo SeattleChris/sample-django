@@ -414,6 +414,83 @@ class FormFieldsetTests(FormTests, TestCase):
 class ComputedUsernameTests(FormTests, TestCase):
     form_class = ComputedUsernameForm
 
+    @skip("Not Implemented")
+    def test_raises_on_not_user_model(self):
+        """Raises ImproperlyConfigured if an appropriate User like model cannot be discovered. """
+        # get_form_user_model
+        pass
+
+    @skip("Not Implemented")
+    def test_raises_on_constructor_fields_error(self):
+        """Raises ImproperlyConfigured if constructor_fields property is not a list or tuple of strings. """
+        # confirm_required_fields
+        pass
+
+    @skip("Not Implemented")
+    def test_raises_on_missing_needed_fields(self):
+        """Raises ImproperlyConfigured if missing any fields from constructor, username, email, and flag_field. """
+        # confirm_required_fields
+        pass
+
+    @skip("Not Implemented")
+    def test_username_validators(self):
+        """The validators from name_for_user_validators are applied as expected. """
+        pass
+
+    @skip("Not Implemented")
+    def test_email_validators(self):
+        """The validators from name_for_email_validators are applied as expected. """
+        pass
+
+    @skip("Not Implemented")
+    def test_constructor_fields_used_when_email_fails(self):
+        """If email already used, uses constructor_fields to make a username in username_from_email_or_names. """
+        pass
+
+    @skip("Not Implemented")
+    def test_email_from_username_from_email_or_names(self):
+        """When email is a valid username, username_from_email_or_names method returns email. """
+        pass
+
+    @skip("Not Implemented")
+    def test_names_from_username_from_email_or_names(self):
+        """When email is not valid username, username_from_email_or_names method returns expected constructed value. """
+        pass
+
+    @skip("Not Implemented")
+    def test_interface_compute_name_for_user(self):
+        """The compute_name_for_user method, when not overwritten, calls the default username_from_email_or_names. """
+        pass
+
+    # TODO: tests for configure_username_confirmation
+    # TODO: tests for get_login_message
+    # TODO: tests for handle_flag_field
+
+    @skip("Not Implemented")
+    def test_confirmation_username_not_email(self):
+        """If the computed username is not the given email, raise ValidationError to get username confirmation. """
+        pass
+
+    @skip("Not Implemented")
+    def test_confirmed_username(self):
+        """If user has already confirmed an atypical username, it is used without further confirmation checks. """
+        pass
+
+    @skip("Not Implemented")
+    def test_handle_flag_error(self):
+        """The Form's clean method raises ValidationError if error found in handle_flag_field method. """
+        pass
+
+    @skip("Not Implemented")
+    def test_fields_updated_with_computed(self):
+        """The computed_fields are added to fields if there is no error in username or other computed fields. """
+        pass
+
+    @skip("Not Implemented")
+    def test_cleaned_data_worked(self):
+        """The Form's clean method returns the expected cleaned_data, after cleaning all fields. """
+        pass
+
 
 class CountryTests(FormTests, TestCase):
     form_class = CountryForm
