@@ -2,23 +2,22 @@ from django.test import TestCase  # , Client, override_settings, modify_settings
 from unittest import skip
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError, ObjectDoesNotExist
 from django.forms.utils import pretty_name
-# from django.utils.translation import gettext_lazy as _
-# from django.conf import settings
 from django.contrib.auth import get_user_model
 from django_registration import validators
+from django.forms.widgets import HiddenInput, MultipleHiddenInput
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
 from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
 from copy import deepcopy
-# from pprint import pprint
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
 NAME_LENGTH = 'maxlength="150" '
 USER_ATTRS = 'autocapitalize="none" autocomplete="username" '
-FOCUS = 'autofocus '
+FOCUS = 'autofocus '  # TODO: Deal with HTML output for a field (besides username) that has 'autofocus' on a field?
 REQUIRED = 'required '
-DEFAULT_RE = {ea: '%(' + ea + ')s' for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'name_pretty']}
+DEFAULT_RE = {ea: f"%({ea})s" for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'pretty', 'attrs']}
+# TODO: ? required ?
 USERNAME_TXT = '' + \
     '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" ' + \
     '%(name_length)s%(user_attrs)s%(focus)srequired id="id_username">' + \
@@ -45,12 +44,16 @@ names_text = '' + \
     '%(name_length)sid="id_last_name">%(end_tag)s\n'
 TOS_TXT = '%(start_tag)s<label for="id_tos_field">I have read and agree to the Terms of Service:</label>' + \
     '%(label_end)s<input type="checkbox" name="tos_field" required id="id_tos_field">%(end_tag)s\n'
-DEFAULT_TXT = '%(start_tag)s<label for="id_%(name)s">%(name_pretty)s:</label>%(label_end)s' + \
+HIDDEN_TXT = '<input type="hidden" name="%(name)s" value="%(initial)s" id="id_%(name)s">'
+DISABLED_ATTRS = ' value="%(initial)s" required disabled '
+DEFAULT_TXT = '%(start_tag)s<label for="id_%(name)s">%(pretty)s:</label>%(label_end)s' + \
     '<input type="text" name="%(name)s"%(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
 REPLACE_TEXT = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
 REPLACE_TEXT['email'] = EMAIL_TXT
 for name in ('first_name', 'last_name'):
-    REPLACE_TEXT[name] = DEFAULT_TXT % dict(attrs=' ' + NAME_LENGTH, required='', **DEFAULT_RE)  # TODO: ? required ?
+    name_re = DEFAULT_RE.copy()
+    name_re.update(attrs=' ' + NAME_LENGTH, required='')
+    REPLACE_TEXT[name] = DEFAULT_TXT % name_re
 
 
 class FormTests:
@@ -132,12 +135,30 @@ class FormTests:
             replace_text[name_for_user] = replace_text.pop('username')
             order = ['first_name', 'last_name', 'username', 'password1', 'password2', 'email']
             self.form.order_fields(order)
-        for name in self.form.fields:
+        hidden_list = []
+        for name, field in self.form.fields.items():
+            if isinstance(field.widget, (HiddenInput, MultipleHiddenInput, )):
+                hide_re = {'name': name, 'initial': field.initial}
+                txt = HIDDEN_TXT % hide_re
+                hidden_list.append(txt)
+                continue
             default_re = DEFAULT_RE.copy()
-            default_re.update({'name': name, 'name_pretty': pretty_name(name), 'attrs': '%(attrs)s'})
-            default_re['required'] = REQUIRED if self.form.fields[name].required else ''
+            default_re.update({'name': name, 'pretty': pretty_name(name), 'attrs': '%(attrs)s'})
+            if field.initial:
+                default_re['attrs'] += f'value="{field.initial}" '
+            default_re['required'] = REQUIRED if field.required else ''
+            if field.disabled:
+                default_re['required'] += 'disabled '
             txt = replace_text.get(name, DEFAULT_TXT) % default_re
             form_list.append(txt)
+        str_hidden = ''.join(hidden_list)
+        if len(form_list) > 0:
+            last_row = form_list[-1]
+            default_re = DEFAULT_RE.copy()
+            default_re.update({'attrs': '%(attrs)s', 'end_tag': str_hidden + '%(end_tag)s'})
+            form_list[-1] = last_row % default_re
+        else:
+            form_list.append(str_hidden)
         expected = ''.join(form_list) % setup
         return expected.strip()
 
@@ -153,9 +174,9 @@ class FormTests:
             print(f"//////////////////////////////// {form_class} AS_TABLE /////////////////////////////////////")
             if issubclass(self.form_class, ComputedUsernameMixIn):
                 print("*** is sub class of ComputedUsernameMixIn ***")
-            print(output)
-            print("------------------------------------------------------------------------------------------")
             print(expected)
+            print("------------------------------------------------------------------------------------------")
+            print(output)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
@@ -190,6 +211,8 @@ class FormTests:
             if issubclass(self.form_class, ComputedUsernameMixIn):
                 print("*** is sub class of ComputedUsernameMixIn ***")
             print(output)
+            print("------------------------------------------------------------------------------------------")
+            print(expected)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
@@ -201,12 +224,12 @@ class FormTests:
     def find_focus_field(self):
         """Returns a list of all fields that have been given an HTML attribute of 'autofocus'. """
         fields = self.get_current_fields()
-        found = []
+        found_names = []
         for field_name, field in fields.items():
             has_focus = field.widget.attrs.get('autofocus', None)
             if has_focus:
-                found.append(field_name)
-        return found
+                found_names.append(field_name)
+        return found_names
 
     def get_current_fields(self):
         """The form currently outputs these fields. """
@@ -233,15 +256,51 @@ class FormTests:
 class FocusTests(FormTests, TestCase):
     form_class = FocusForm
 
-    @skip("Not Implemented")
     def test_focus_not_on_hidden(self):
-        """Focus is never assigned to a hidden or disabled field when targeted. """
-        pass
+        """Focus is never assigned to a hidden field when targeted. """
+        target = 'hide_field'
+        field = self.form.fields.get(target, None)
+        result_name = self.form.assign_focus_field(target)
+        focused = self.find_focus_field()
 
-    @skip("Not Implemented")
+        self.assertTrue(isinstance(getattr(field, 'widget', None), (HiddenInput, MultipleHiddenInput, )))
+        self.assertIn(target, self.form.fields)
+        self.assertEqual(1, len(focused))
+        self.assertNotEqual(target, focused[0])
+        self.assertNotEqual(target, result_name)
+
+    def test_focus_not_on_disabled(self):
+        """Focus is never assigned to a disabled field when targeted. """
+        target = 'disable_field'
+        field = self.form.fields.get(target, None)
+        result_name = self.form.assign_focus_field(target)
+        focused = self.find_focus_field()
+
+        self.assertTrue(field.disabled)
+        self.assertIn(target, self.form.fields)
+        self.assertEqual(1, len(focused))
+        self.assertNotEqual(target, focused[0])
+        self.assertNotEqual(target, result_name)
+
     def test_remove_previous_focus(self):
         """All fields that previously had focus should have it removed when giving focus to another field. """
-        pass
+        target_1 = 'generic_field'
+        result_1 = self.form.assign_focus_field(target_1)
+        focused_1 = self.find_focus_field()
+
+        target_2 = 'another_field'
+        result_2 = self.form.assign_focus_field(target_2)
+        focused_2 = self.find_focus_field()
+
+        self.assertNotEqual(target_1, target_2)
+        self.assertIn(target_1, self.form.fields)
+        self.assertEqual(1, len(focused_1))
+        self.assertEqual(target_1, focused_1[0])
+        self.assertEqual(target_1, result_1)
+        self.assertIn(target_2, self.form.fields)
+        self.assertEqual(1, len(focused_2))
+        self.assertEqual(target_2, focused_2[0])
+        self.assertEqual(target_2, result_2)
 
 
 class CriticalTests(FormTests, TestCase):
@@ -332,40 +391,120 @@ class CriticalTests(FormTests, TestCase):
 class ComputedTests(FormTests, TestCase):
     form_class = ComputedForm
 
-    @skip("Not Implemented")
     def test_use_existing_computed_field_dict(self):
         """The get_computed_field_names method should include the names when computed_fields is already determined. """
-        pass
+        if isinstance(self.form.computed_fields, list):
+            self.form.computed_fields = self.form.get_computed_fields(self.form.computed_fields)
+        self.form.fields.update(self.form.computed_fields)  # only names in fields included in get_computed_field_names.
+        result_names = self.form.get_computed_field_names([], self.form.fields)
 
-    @skip("Not Implemented")
+        self.assertIsInstance(self.form.computed_fields, dict)
+        self.assertIn('compute_field', result_names)
+
     def test_raise_on_corrupt_computed_fields(self):
         """The computed_field_names method raises ImproperlyConfigured when computed_fields is an unexpected type. """
-        pass
+        initial = self.form.computed_fields
+        self.form.computed_fields = 'This is a broken value'
+        with self.assertRaises(ImproperlyConfigured):
+            self.form.get_computed_field_names([], self.form.fields)
+        self.form.computed_fields = None
+        with self.assertRaises(ImproperlyConfigured):
+            self.form.get_computed_field_names([], self.form.fields)
+        self.form.computed_fields = initial
 
     @skip("Not Implemented")
     def test_construct_values_skips_already_caught_errors(self):
         """Return None from construct_value_from_values method if the relevant fields already have recorded errors. """
-        pass
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['FirstValue', 'SecondValue', 'LastValue']
+        # expected = '_'.join(ea for ea in values if ea).casefold()
+        expected = None
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields[:-1], values[:-1])))
+        self.form.cleaned_data = cleaned_data
+        self.form.add_error('last', 'An error for testing')
+        result = self.form.construct_value_from_values(constructor_fields)
 
-    @skip("Not Implemented")
+        self.assertIsNone(result)
+        self.assertEqual(expected, result)
+
     def test_construct_values_raises_for_missing_fields(self):
         """Raises ImproperlyConfigured for missing cleaned_data on targeted field_names in constructing values. """
-        pass
+        # with self.assertRaises(ImproperlyConfigured):
+        message = "There must me one or more field names to compute a value. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.construct_value_from_values()
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.construct_value_from_values('')
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.construct_value_from_values([])
 
-    @skip("Not Implemented")
-    def test_construct_values_calls_passed_normalize_function(self):
-        """When a function is passed for normalize, it is used in constructing values. """
-        pass
+    def test_construct_values_raises_for_missing_cleaned_data(self):
+        """Raises ImproperlyConfigured for missing cleaned_data on targeted field_names in constructing values. """
+        constructor_fields = ('first', 'second', 'last', )
+        if hasattr(self.form, 'cleaned_data'):
+            del self.form.cleaned_data
+        message = "This method can only be evaluated after 'cleaned_data' has been populated. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.construct_value_from_values(constructor_fields)
 
-    @skip("Not Implemented")
-    def test_construct_values_raises_on_invalid_normalize(self):
-        """The normalize parameter can be None or a callback function, otherwise raise ImproperlyConfigured. """
-        pass
-
-    @skip("Not Implemented")
     def test_construct_values_as_expected(self):
         """Get the expected response when given valid inputs when constructing values. """
-        pass
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['FirstValue', 'SecondValue', 'LastValue']
+        expected = '_**_'.join(ea for ea in values if ea).casefold()
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields, values)))
+        self.form.cleaned_data = cleaned_data
+        actual = self.form.construct_value_from_values(constructor_fields, '_**_')
+        simple = self.form.construct_value_from_values(constructor_fields)
+
+        self.assertEqual(expected, actual)
+        self.assertEqual('firstvalue_**_secondvalue_**_lastvalue', actual)
+        self.assertEqual('_'.join(values).casefold(), simple)
+
+    def test_construct_values_no_join_artifact_if_empty_value(self):
+        """Raises ImproperlyConfigured for missing cleaned_data on targeted field_names in constructing values. """
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['first_value', 'second_value', 'last_value']
+        values[1] = ''
+        expected = '_'.join(ea for ea in values if ea).casefold()
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields, values)))
+        self.form.cleaned_data = cleaned_data
+        actual = self.form.construct_value_from_values(constructor_fields)
+
+        self.assertEqual('', self.form.cleaned_data['second'])
+        self.assertEqual(expected, actual)
+        self.assertEqual('first_value_last_value', actual)
+
+    def test_construct_values_calls_passed_normalize_function(self):
+        """When a function is passed for normalize, it is used in constructing values. """
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['FiRsT_FaLue', 'sEcOnd_vAlUE', 'LaST_VaLue']
+        expected = '_'.join(ea for ea in values if ea).casefold()
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields, values)))
+        self.form.cleaned_data = cleaned_data
+        def normal_lower(val): return val.lower()
+        def normal_upper(val): return val.upper()
+        lower = self.form.construct_value_from_values(constructor_fields, normalize=normal_lower)
+        upper = self.form.construct_value_from_values(constructor_fields, normalize=normal_upper)
+
+        self.assertEqual(expected.lower(), lower)
+        self.assertEqual(expected.upper(), upper)
+
+    def test_construct_values_raises_on_invalid_normalize(self):
+        """The normalize parameter can be None or a callback function, otherwise raise ImproperlyConfigured. """
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['first_value', 'second_value', 'last_value']
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields, values)))
+        self.form.cleaned_data = cleaned_data
+        normalize = 'not a valid normalize function'
+        message = "The normalize parameter must be a callable or None. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.construct_value_from_values(constructor_fields, normalize=normalize)
 
     @skip("Not Implemented")
     def test_validation_errors_assigned_in_clean_computed_fields(self):

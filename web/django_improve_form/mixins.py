@@ -4,8 +4,9 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.contrib.admin.utils import flatten
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UsernameField
+from django.forms.widgets import Input, CheckboxInput, CheckboxSelectMultiple, RadioSelect, Textarea
+from django.forms.widgets import HiddenInput, MultipleHiddenInput
 from django.forms.fields import Field, CharField
-from django.forms.widgets import Input, CheckboxInput, CheckboxSelectMultiple, RadioSelect, HiddenInput, Textarea
 from django.forms.utils import ErrorDict  # , ErrorList
 from django.utils.translation import gettext as _
 from django.utils.html import conditional_escape, format_html
@@ -36,10 +37,10 @@ class FocusMixIn:
         fields = fields or self.fields
         found = fields.get(name, None) if name else None
         found_name = name if found else None
-        if found and (getattr(found, 'disabled', False) or getattr(found, 'is_hidden', False)):
+        if found and (found.disabled or isinstance(found.widget, (HiddenInput, MultipleHiddenInput))):
             found, found_name = None, None
         for field_name, field in fields.items():
-            if not found and not field.disabled and not getattr(field, 'is_hidden', False):
+            if not found and not field.disabled and not isinstance(field.widget, (HiddenInput, MultipleHiddenInput)):
                 found_name, found = field_name, field
             else:
                 field.widget.attrs.pop('autofocus', None)
@@ -222,7 +223,7 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
             err = "This computed value can only be evaluated after fields it depends on have been cleaned. "
             err += "The field order must have the computed field after fields used for its value. "
             raise ImproperlyConfigured(_(err))
-        names = (self.cleaned_data[key].strip() for key in field_names if key in self.cleaned_data)
+        names = (self.cleaned_data[key].strip() for key in field_names if self.cleaned_data[key].strip())
         result_value = joiner.join(names).casefold()
         if callable(normalize):
             result_value = normalize(result_value)
