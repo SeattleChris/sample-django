@@ -204,12 +204,12 @@ class FormTests:
     def find_focus_field(self):
         """Returns a list of all fields that have been given an HTML attribute of 'autofocus'. """
         fields = self.get_current_fields()
-        found = []
+        found_names = []
         for field_name, field in fields.items():
             has_focus = field.widget.attrs.get('autofocus', None)
             if has_focus:
-                found.append(field_name)
-        return found
+                found_names.append(field_name)
+        return found_names
 
     def get_current_fields(self):
         """The form currently outputs these fields. """
