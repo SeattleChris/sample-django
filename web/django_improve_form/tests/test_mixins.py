@@ -447,12 +447,18 @@ class ComputedTests(FormTests, TestCase):
         self.assertIsNone(actual)
         self.assertEqual(expected, actual)
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_construct_values_raises_missing_cleaned_no_error(self):
         """Return None from construct_value_from_values method if the relevant fields already have recorded errors. """
-        # err = "This computed value can only be evaluated after fields it depends on have been cleaned. "
-        # err += "The field order must have the computed field after fields used for its value. "
-        pass
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['FirstValue', 'SecondValue', 'LastValue']
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields[:-1], values[:-1])))
+        self.form.cleaned_data = cleaned_data
+        err = "This computed value can only be evaluated after fields it depends on have been cleaned. "
+        err += "The field order must have the computed field after fields used for its value. "
+        with self.assertRaisesMessage(ImproperlyConfigured, err):
+            self.form.construct_value_from_values(constructor_fields)
 
     def test_construct_values_raises_on_invalid_normalize(self):
         """The normalize parameter can be None or a callback function, otherwise raise ImproperlyConfigured. """
