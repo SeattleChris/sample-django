@@ -605,7 +605,7 @@ class ComputedTests(FormTests, TestCase):
         self.form.test_func = original_func
         self.form._errors = original_errors
 
-    # @skip("Not Implemented")
+    @skip("Not Implemented")
     def test_validation_error_for_compute_error(self):
         """The Form's clean method calls and raises ValidationError for errors from _clean_computed_fields method. """
         name = 'test_field'
@@ -649,10 +649,54 @@ class ComputedTests(FormTests, TestCase):
         self.form.test_func = original_func
         self.form._errors = original_errors
 
-    @skip("Not Implemented")
     def test_cleaned_data_for_compute_error(self):
         """The cleaned_data is removed of data for computed_fields if there is an error from _clean_computed_fields. """
-        pass
+        name = 'test_field'
+        message = "This is the test error on test_field. "
+        original_errors = deepcopy(self.form._errors)
+        response = ValidationError(message)
+        original_func = deepcopy(self.form.test_func)
+        def make_error(value): raise response
+        self.form.test_func = make_error
+        if isinstance(self.form.computed_fields, (list, tuple)):
+            self.form.computed_fields = self.form.get_computed_fields([name])
+        computed_names = list(self.form.computed_fields.keys())
+        field_names = list(self.form.fields.keys())
+        field_data = {f_name: f"input_{f_name}_{i}" for i, f_name in enumerate(field_names)}
+        original_cleaned_data = deepcopy(getattr(self.form, 'cleaned_data', None))
+        populated_cleaned_data = deepcopy(original_cleaned_data or {})
+        populated_cleaned_data.update(field_data)
+        populated_cleaned_data.update({name: f"value_{f_name}_{i}" for i, f_name in enumerate(computed_names)})
+        self.form.cleaned_data = populated_cleaned_data.copy()  # ensure cleaned_data is present
+
+        with self.assertRaises(ValidationError):  # as result
+            self.form.clean()
+        final_cleaned_data = self.form.cleaned_data
+        # actual_exception = result.exception
+        # actual_errors = result.exception.error_list
+        # result_errors = self.form._errors
+        # print("////////////////////////////////////////////////////////////////////////////////////////////")
+        # print(actual_exception)
+        # print(actual_errors)
+        # print(result_errors)
+        # print("---------------------------------------------------------")
+        # print(original_cleaned_data)
+        # print(final_cleaned_data)
+        # print("---------------------------------------------------------")
+
+        self.assertIn(name, computed_names)
+        self.assertNotIn(name, field_names)
+        self.assertIn(name, populated_cleaned_data)
+        self.assertNotIn(name, final_cleaned_data)
+        self.assertNotEqual(original_cleaned_data, final_cleaned_data)
+        self.assertNotEqual(populated_cleaned_data, final_cleaned_data)
+
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+        else:
+            self.form.cleaned_data = original_cleaned_data
+        self.form._errors = original_errors
+        self.form.test_func = original_func
 
     @skip("Not Implemented")
     def test_cleaned_data_for_compute_success(self):
