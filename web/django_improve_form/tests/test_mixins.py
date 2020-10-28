@@ -14,7 +14,7 @@ from copy import deepcopy
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
 NAME_LENGTH = 'maxlength="150" '
 USER_ATTRS = 'autocapitalize="none" autocomplete="username" '
-FOCUS = 'autofocus '
+FOCUS = 'autofocus '  # TODO: Deal with HTML output for a field (besides username) that has 'autofocus' on a field?
 REQUIRED = 'required '
 DEFAULT_RE = {ea: f"%({ea})s" for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'pretty', 'attrs']}
 # TODO: ? required ?
@@ -45,6 +45,7 @@ names_text = '' + \
 TOS_TXT = '%(start_tag)s<label for="id_tos_field">I have read and agree to the Terms of Service:</label>' + \
     '%(label_end)s<input type="checkbox" name="tos_field" required id="id_tos_field">%(end_tag)s\n'
 HIDDEN_TXT = '<input type="hidden" name="%(name)s" value="%(initial)s" id="id_%(name)s">'
+DISABLED_ATTRS = ' value="%(initial)s" required disabled '
 DEFAULT_TXT = '%(start_tag)s<label for="id_%(name)s">%(pretty)s:</label>%(label_end)s' + \
     '<input type="text" name="%(name)s"%(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
 REPLACE_TEXT = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
@@ -141,10 +142,13 @@ class FormTests:
                 txt = HIDDEN_TXT % hide_re
                 hidden_list.append(txt)
                 continue
-            # TODO: What about disabled fields?
             default_re = DEFAULT_RE.copy()
             default_re.update({'name': name, 'pretty': pretty_name(name), 'attrs': '%(attrs)s'})
+            if field.initial:
+                default_re['attrs'] += f'value="{field.initial}" '
             default_re['required'] = REQUIRED if field.required else ''
+            if field.disabled:
+                default_re['required'] += 'disabled '
             txt = replace_text.get(name, DEFAULT_TXT) % default_re
             form_list.append(txt)
         str_hidden = ''.join(hidden_list)
@@ -207,6 +211,8 @@ class FormTests:
             if issubclass(self.form_class, ComputedUsernameMixIn):
                 print("*** is sub class of ComputedUsernameMixIn ***")
             print(output)
+            print("------------------------------------------------------------------------------------------")
+            print(expected)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
@@ -251,6 +257,19 @@ class FocusTests(FormTests, TestCase):
     form_class = FocusForm
 
     def test_focus_not_on_hidden(self):
+        """Focus is never assigned to a hidden or disabled field when targeted. """
+        target = 'hide_field'
+        field = self.form.fields.get(target, None)
+        result_name = self.form.assign_focus_field(target)
+        focused = self.find_focus_field()
+
+        self.assertTrue(isinstance(getattr(field, 'widget', None), (HiddenInput, MultipleHiddenInput, )))
+        self.assertIn(target, self.form.fields)
+        self.assertEqual(1, len(focused))
+        self.assertNotEqual(target, focused[0])
+        self.assertNotEqual(target, result_name)
+
+    def test_focus_not_on_disabled(self):
         """Focus is never assigned to a hidden or disabled field when targeted. """
         target = 'hide_field'
         field = self.form.fields.get(target, None)

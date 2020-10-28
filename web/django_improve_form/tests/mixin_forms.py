@@ -22,7 +22,8 @@ from django_registration import validators
 
 class FocusForm(FocusMixIn, Form):
     hide_field = CharField(widget=HiddenInput(), initial='hide_data')
-    generic_field = CharField()
+    disable_field = CharField(disabled=True, initial='disable_data')
+    generic_field = CharField(initial='initial_data')
 
 
 class CriticalForm(CriticalFieldMixIn, Form):
