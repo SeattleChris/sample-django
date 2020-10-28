@@ -605,10 +605,49 @@ class ComputedTests(FormTests, TestCase):
         self.form.test_func = original_func
         self.form._errors = original_errors
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_validation_error_for_compute_error(self):
         """The Form's clean method calls and raises ValidationError for errors from _clean_computed_fields method. """
-        pass
+        name = 'test_field'
+        message = "This is the test error on test_field. "
+        response = ValidationError(message)
+        expected = ErrorDict({name: response})
+        expected_errors = {NON_FIELD_ERRORS: self.form.error_class(error_class='nonfield')}
+        expected_errors[NON_FIELD_ERRORS].append(message)
+        compute_error_message = "Error occurred with the computed fields. "
+        expected_errors[NON_FIELD_ERRORS].append(compute_error_message)
+
+        original_errors = deepcopy(self.form._errors)
+        original_func = deepcopy(self.form.test_func)
+        def make_error(value): raise response
+        self.form.test_func = make_error
+        if isinstance(self.form.computed_fields, (list, tuple)):
+            self.form.computed_fields = self.form.get_computed_fields([name])
+        self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # ensure cleaned_data is present
+        original_cleaned_data = self.form.cleaned_data
+
+        with self.assertRaises(ValidationError) as result:
+            self.form.clean()
+        result_errors = self.form._errors
+        print("////////////////////////////////////////////////////////////////////////////////////////////")
+        print(expected_errors)
+        print("---------------------------------------------------------")
+        print(result_errors)
+        # print(dir(result))
+        # print(result.exception)
+        # print(result.expected)
+        actual = result.exception.error_list
+        # expected = expected_errors[NON_FIELD_ERRORS]
+
+        # self.assertDictEqual(expected, actual)
+        self.assertEqual(expected, actual)
+        self.assertNotEqual(original_errors, result_errors)
+        # self.assertEqual(expected_errors, result_errors)
+        self.assertEqual({}, original_cleaned_data)
+        self.assertTrue(False)
+
+        self.form.test_func = original_func
+        self.form._errors = original_errors
 
     @skip("Not Implemented")
     def test_cleaned_data_for_compute_error(self):
