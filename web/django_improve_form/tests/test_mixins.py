@@ -412,22 +412,6 @@ class ComputedTests(FormTests, TestCase):
             self.form.get_computed_field_names([], self.form.fields)
         self.form.computed_fields = initial
 
-    @skip("Not Implemented")
-    def test_construct_values_skips_already_caught_errors(self):
-        """Return None from construct_value_from_values method if the relevant fields already have recorded errors. """
-        constructor_fields = ('first', 'second', 'last', )
-        values = ['FirstValue', 'SecondValue', 'LastValue']
-        # expected = '_'.join(ea for ea in values if ea).casefold()
-        expected = None
-        cleaned_data = getattr(self.form, 'cleaned_data', {})
-        cleaned_data.update(dict(zip(constructor_fields[:-1], values[:-1])))
-        self.form.cleaned_data = cleaned_data
-        self.form.add_error('last', 'An error for testing')
-        result = self.form.construct_value_from_values(constructor_fields)
-
-        self.assertIsNone(result)
-        self.assertEqual(expected, result)
-
     def test_construct_values_raises_for_missing_fields(self):
         """Raises ImproperlyConfigured for missing cleaned_data on targeted field_names in constructing values. """
         # with self.assertRaises(ImproperlyConfigured):
@@ -448,6 +432,40 @@ class ComputedTests(FormTests, TestCase):
         with self.assertRaisesMessage(ImproperlyConfigured, message):
             self.form.construct_value_from_values(constructor_fields)
 
+    def test_construct_values_skips_already_caught_errors(self):
+        """Return None from construct_value_from_values method if the relevant fields already have recorded errors. """
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['FirstValue', 'SecondValue', 'LastValue']
+        # expected = '_'.join(ea for ea in values if ea).casefold()
+        expected = None
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields[:-1], values[:-1])))
+        self.form.cleaned_data = cleaned_data
+        self.form.add_error('last', 'An error for testing')
+        actual = self.form.construct_value_from_values(constructor_fields)
+
+        self.assertIsNone(actual)
+        self.assertEqual(expected, actual)
+
+    @skip("Not Implemented")
+    def test_construct_values_raises_missing_cleaned_no_error(self):
+        """Return None from construct_value_from_values method if the relevant fields already have recorded errors. """
+        # err = "This computed value can only be evaluated after fields it depends on have been cleaned. "
+        # err += "The field order must have the computed field after fields used for its value. "
+        pass
+
+    def test_construct_values_raises_on_invalid_normalize(self):
+        """The normalize parameter can be None or a callback function, otherwise raise ImproperlyConfigured. """
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['first_value', 'second_value', 'last_value']
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields, values)))
+        self.form.cleaned_data = cleaned_data
+        normalize = 'not a valid normalize function'
+        message = "The normalize parameter must be a callable or None. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.construct_value_from_values(constructor_fields, normalize=normalize)
+
     def test_construct_values_as_expected(self):
         """Get the expected response when given valid inputs when constructing values. """
         constructor_fields = ('first', 'second', 'last', )
@@ -462,6 +480,7 @@ class ComputedTests(FormTests, TestCase):
         self.assertEqual(expected, actual)
         self.assertEqual('firstvalue_**_secondvalue_**_lastvalue', actual)
         self.assertEqual('_'.join(values).casefold(), simple)
+        self.assertEqual('firstvalue_secondvalue_lastvalue', simple)
 
     def test_construct_values_no_join_artifact_if_empty_value(self):
         """Raises ImproperlyConfigured for missing cleaned_data on targeted field_names in constructing values. """
@@ -493,18 +512,6 @@ class ComputedTests(FormTests, TestCase):
 
         self.assertEqual(expected.lower(), lower)
         self.assertEqual(expected.upper(), upper)
-
-    def test_construct_values_raises_on_invalid_normalize(self):
-        """The normalize parameter can be None or a callback function, otherwise raise ImproperlyConfigured. """
-        constructor_fields = ('first', 'second', 'last', )
-        values = ['first_value', 'second_value', 'last_value']
-        cleaned_data = getattr(self.form, 'cleaned_data', {})
-        cleaned_data.update(dict(zip(constructor_fields, values)))
-        self.form.cleaned_data = cleaned_data
-        normalize = 'not a valid normalize function'
-        message = "The normalize parameter must be a callable or None. "
-        with self.assertRaisesMessage(ImproperlyConfigured, message):
-            self.form.construct_value_from_values(constructor_fields, normalize=normalize)
 
     @skip("Not Implemented")
     def test_validation_errors_assigned_in_clean_computed_fields(self):
