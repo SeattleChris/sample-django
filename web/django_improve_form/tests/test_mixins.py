@@ -2,8 +2,6 @@ from django.test import TestCase  # , Client, override_settings, modify_settings
 from unittest import skip
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError, ObjectDoesNotExist
 from django.forms.utils import pretty_name
-# from django.utils.translation import gettext_lazy as _
-# from django.conf import settings
 from django.contrib.auth import get_user_model
 from django_registration import validators
 from django.forms.widgets import HiddenInput, MultipleHiddenInput
@@ -12,7 +10,6 @@ from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, Fo
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
 from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
 from copy import deepcopy
-# from pprint import pprint
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
 NAME_LENGTH = 'maxlength="150" '
@@ -253,11 +250,8 @@ class FormTests:
 class FocusTests(FormTests, TestCase):
     form_class = FocusForm
 
-    # @skip("Not Implemented")
     def test_focus_not_on_hidden(self):
         """Focus is never assigned to a hidden or disabled field when targeted. """
-        # hidden = self.form.hidden_fields()
-        # target = hidden[0]
         target = 'hide_field'
         field = self.form.fields.get(target, None)
         result_name = self.form.assign_focus_field(target)

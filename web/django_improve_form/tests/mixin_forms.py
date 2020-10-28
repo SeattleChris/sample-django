@@ -3,7 +3,6 @@ from django.test import TestCase  # , Client, override_settings, modify_settings
 # from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 # from .helper_general import AnonymousUser, MockUser  # MockRequest, UserModel, MockStaffUser, MockSuperUser, APP_NAME
-# from django.conf import settings
 from django.forms import Form, CharField, HiddenInput  # , ModelForm, BaseModelForm, ModelFormMetaclass
 from django.contrib.auth.forms import UserCreationForm  # , UserChangeForm
 from ..mixins import (
@@ -16,7 +15,6 @@ from .helper_views import BaseRegisterTests  # , USER_DEFAULTS, MimicAsView,
 from ..views import RegisterSimpleFlowView, RegisterActivateFlowView, ModifyUser
 from ..views import RegisterModelSimpleFlowView, RegisterModelActivateFlowView
 from django_registration import validators
-# from datetime import date, time, timedelta, datetime as dt
 # from pprint import pprint
 
 # # Base MixIns # #
@@ -86,28 +84,24 @@ class ComputedCountryForm(OverrideCountryMixIn, ComputedFieldsMixIn):
 
 
 class ModelSimpleFlowTests(BaseRegisterTests, TestCase):
-    # url_name = None
     expected_form = None
     viewClass = RegisterModelSimpleFlowView(form_class=expected_form)
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
 
 
 class ModelActivateFlowTests(BaseRegisterTests, TestCase):
-    # url_name = None
     expected_form = None
     viewClass = RegisterModelActivateFlowView(form_class=expected_form)
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
 
 
 class SimpleFlowTests(BaseRegisterTests, TestCase):
-    # url_name = None
     expected_form = None
     viewClass = RegisterSimpleFlowView(form_class=expected_form)
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
 
 
 class ModifyUserTests(BaseRegisterTests, TestCase):
-    # url_name = None
     expected_form = None
     viewClass = ModifyUser(form_class=expected_form)
     user_type = 'user'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
@@ -124,7 +118,6 @@ class ModifyUserTests(BaseRegisterTests, TestCase):
 
 
 class ActivateFlowTests(BaseRegisterTests, TestCase):
-    # url_name = None
     expected_form = None
     viewClass = RegisterActivateFlowView(form_class=expected_form)
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
