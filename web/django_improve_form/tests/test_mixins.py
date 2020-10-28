@@ -523,18 +523,71 @@ class ComputedTests(FormTests, TestCase):
         """When _clean_computed_fields raises ValidationError, it creates expected compute_errors & form errors. """
         pass
 
-    @skip("Not Implemented")
+    def test_cleaned_data_modified_by_clean_computed_fields(self):
+        """A computed field's custom compute method is called when appropriate in the _clean_computed_fields method. """
+        name = 'test_field'
+        field = self.form.computed_fields.get(name)  # getattr(self.form, name)
+        value = self.form.compute_test_field()
+        value = field.clean(value)
+        expected = self.form.test_func(value)
+        if isinstance(self.form.computed_fields, (list, tuple)):
+            self.form.computed_fields = self.form.get_computed_fields([name])
+        self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # ensure cleaned_data is present
+        original = self.form.cleaned_data.get(name, None)
+        compute_errors = self.form._clean_computed_fields()
+        actual = self.form.cleaned_data.get(name, '')
+
+        self.assertFalse(compute_errors)
+        self.assertNotEqual(original, actual)
+        self.assertEqual(expected, actual)
+
     def test_field_compute_method_called_in_clean_computed_fields(self):
         """A computed field's custom compute method is called when appropriate in the _clean_computed_fields method. """
-        # expected_compute_value = 'UNCLEANED_COMPUTED'
-        pass
+        expected = 'compute_confirmed'
+        self.form.test_value = expected
+        # modified = self.form.test_func(expected)
+        def pass_through(value): return value
+        original_func = deepcopy(self.form.test_func)
+        self.form.test_func = pass_through
+        name = 'test_field'
+        if isinstance(self.form.computed_fields, (list, tuple)):
+            self.form.computed_fields = self.form.get_computed_fields([name])
+        self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # ensure cleaned_data is present
+        compute_errors = self.form._clean_computed_fields()
+        actual = self.form.cleaned_data.get(name, None)
 
-    @skip("Not Implemented")
+        self.assertFalse(compute_errors)
+        self.assertEqual(expected, actual)
+
+        self.form.test_func = original_func
+        # restored = self.form.test_func(expected)
+        # self.assertEqual(modified, restored)
+
     def test_field_clean_method_called_in_clean_computed_fields(self):
         """A computed field's custom clean method is called when appropriate in the _clean_computed_fields method. """
-        # expected_compute_value = 'UNCLEANED_COMPUTED'
-        # expected_clean_value = 'cleaned_computed'
-        pass
+        expected = 'clean_confirmed'
+        original_func = deepcopy(self.form.test_func)
+        def replace_value(value): return expected
+        self.form.test_func = replace_value
+        name = 'test_field'
+        if isinstance(self.form.computed_fields, (list, tuple)):
+            self.form.computed_fields = self.form.get_computed_fields([name])
+        field = self.form.computed_fields.get(name)  # getattr(self.form, name)
+        # initial_value = self.get_initial_for_field(field, name)
+        value = getattr(self.form, 'compute_%s' % name)()
+        value = field.clean(value)
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update({name: value})  # make sure the original cleaned_data for the field is set.
+        self.form.cleaned_data = cleaned_data  # ensure cleaned_data is present
+        compute_errors = self.form._clean_computed_fields()
+        actual = self.form.cleaned_data.get(name, None)
+
+        self.assertFalse(compute_errors)
+        self.assertEqual(expected, actual)
+        self.assertNotEqual(expected, value)
+        self.assertNotEqual(expected, self.form.test_value)
+
+        self.form.test_func = original_func
 
     @skip("Not Implemented")
     def test_populates_cleaned_data_in_clean_computed_fields(self):
