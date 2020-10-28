@@ -49,9 +49,9 @@ class FocusMixIn:
         return found_name
 
     def _html_output(self, *args, **kwargs):
-        print("************************** Autofocus FOR _HTML_OUTPUT *************************************")
+        # print("************************** Autofocus FOR _HTML_OUTPUT *************************************")
         content = super()._html_output(*args, **kwargs)
-        print("--------- GIVE FOCUS ----------------")
+        # print("--------- GIVE FOCUS ----------------")
         self.named_focus = self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
         return content
 
@@ -73,16 +73,16 @@ class FocusMixIn:
             print("NO DATA PRESENT")
         print("----------------------- self.fields ------------------------------")
         pprint(self.fields)
-        print("--------------------- computed fields ----------------------------")
-        pprint(self.computed_fields)
+        # print("--------------------- computed fields ----------------------------")
+        # pprint(self.computed_fields)
         print("------------------------------------------------------------------")
         return mark_safe(display_data)
 
-    def test_field_order(self, data):
-        """Deprecated. Log printing the dict, array, or tuple in the order they are currently stored. """
-        log_lines = [(key, value) for key, value in data.items()] if isinstance(data, dict) else data
-        for line in log_lines:
-            pprint(line)
+    # def test_field_order(self, data):
+    #     """Deprecated. Log printing the dict, array, or tuple in the order they are currently stored. """
+    #     log_lines = [(key, value) for key, value in data.items()] if isinstance(data, dict) else data
+    #     for line in log_lines:
+    #         pprint(line)
 
     def _html_tag(self, tag, contents, attr_string=''):
         """Wraps 'contents' in an HTML element with an open and closed 'tag', applying the 'attr_string' attributes. """
@@ -179,14 +179,14 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
     # computed_fields = {}
 
     def __init__(self, *args, **kwargs):
-        print("======================= ComputedFieldsMixIn.__init__ =================================")
+        # print("======================= ComputedFieldsMixIn.__init__ =================================")
         kwargs = self.setup_critical_fields(**kwargs)
         computed_field_names = kwargs.pop('computed_fields', [])
         # computed_field_names = self.get_computed_field_names(computed_field_names, self.base_fields)
         super().__init__(*args, **kwargs)
         computed_field_names.extend(kwargs.pop('computed_fields', []))  # TODO: ? Is this even possible?
         self.computed_fields = self.get_computed_fields(computed_field_names)
-        print("--------------------- FINISH ComputedFieldsMixIn.__init --------------------")
+        # print("--------------------- FINISH ComputedFieldsMixIn.__init --------------------")
 
     def get_computed_field_names(self, field_names, fields):
         """Modify fields by adding expected fields. Return an updated computed_field_names list. """
@@ -218,7 +218,7 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
         if not hasattr(self, 'cleaned_data'):
             raise ImproperlyConfigured(_("This method can only be evaluated after 'cleaned_data' has been populated. "))
         if any(field not in self.cleaned_data for field in field_names):
-            if hasattr(self, '_errors') and any(field in self._errors for field in field_names):
+            if getattr(self, '_errors', None) and any(field in self._errors for field in field_names):
                 return None  # Waiting to compute value until source fields have valid inputs.
             err = "This computed value can only be evaluated after fields it depends on have been cleaned. "
             err += "The field order must have the computed field after fields used for its value. "
@@ -234,14 +234,14 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
     def _clean_computed_fields(self):
         """Mimics _clean_fields for computed_fields. Calls compute_<fieldname> and clean_<fieldname> if present. """
         compute_errors = ErrorDict()
-        print("=================== ComputedFieldsMixIn._clean_computed_fields ============================")
-        pprint(self.critical_fields)
+        # print("=================== ComputedFieldsMixIn._clean_computed_fields ============================")
+        # pprint(self.critical_fields)
         critical = {getattr(self, label): label for label, opts in self.critical_fields.items() if opts.get('computed')}
         for name, field in self.computed_fields.items():
             compute_name = critical.get(name, name)
             compute_func = getattr(self, 'compute_%s' % compute_name, None)
             value = self.get_initial_for_field(field, name)
-            value = value if not compute_func else compute_func()    # calls methods like compute_name_for_user
+            value = value if not compute_func else compute_func()  # calls methods like compute_name_for_user
             try:
                 value = field.clean(value)
                 self.cleaned_data[name] = value
@@ -289,7 +289,7 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
     }
 
     def __init__(self, *args, **kwargs):
-        print("======================= ComputedUsernameMixIn(ComputedFieldsMixIn).__init__ ==========================")
+        # print("======================= ComputedUsernameMixIn(ComputedFieldsMixIn).__init__ ==========================")
         user_model = self.user_model = self.get_form_user_model()
         name_for_email = user_model.get_email_field_name()
         name_for_user = user_model.USERNAME_FIELD
@@ -309,7 +309,7 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         #     if self.name_for_user in self.data:
         #         self.assign_focus_field(name=name_for_email)
         self.confirm_required_fields()
-        print("--------------------- FINISH ComputedUsernameMixIn(ComputedFieldsMixIn).__init__ --------------------")
+        # print("--------------------- FINISH ComputedUsernameMixIn(ComputedFieldsMixIn).__init__ --------------------")
 
     def get_form_user_model(self):
         """Use the model of the ModelForm if it has what is needed. Otherwise assign to the User model. """
@@ -687,7 +687,7 @@ class FormOverrideMixIn:
         return fields
 
     def _html_output(self, *args, **kwargs):
-        print("************************** OVERRIDES FOR _HTML_OUTPUT *************************************")
+        # print("************************** OVERRIDES FOR _HTML_OUTPUT *************************************")
         self.fields = self.prep_fields()
         return super()._html_output(*args, **kwargs)
 
@@ -715,7 +715,7 @@ class OverrideCountryMixIn(FormOverrideMixIn):
         }
 
     def __init__(self, *args, **kwargs):
-        print("================= OverrideCountryMixIn(FormOverrideMixIn).__init__ ============================")
+        # print("================= OverrideCountryMixIn(FormOverrideMixIn).__init__ ============================")
         country_name = self.country_field_name
         country_field = self.base_fields.get(country_name, None)
         address_display_version = 'local'
@@ -745,17 +745,17 @@ class OverrideCountryMixIn(FormOverrideMixIn):
             elif computed_field_names:
                 self.remove_field_names = getattr(self, 'remove_field_names', [])
                 self.remove_field_names.extend(computed_field_names)
-            print("-------------------------------------------------------------")
+            # print("-------------------------------------------------------------")
         # else: Either this form does not have an address, or they don't what the switch functionality.
         log = f"Displayed - {display}. "
         log += "Indicated, and will show, foreign addres. " if country_flag else "will show local address. "
-        print(log)
+        # print(log)
         super().__init__(*args, **kwargs)
         name = 'country_display'
         value = self.data.get(name, None)
         if value and address_display_version != value:
             self.set_alt_data(name=name, field=self.fields[name], value=address_display_version)
-        print("------------- FINISH OverrideCountryMixIn(FormOverrideMixIn).__init__ FINISH ------------------")
+        # print("------------- FINISH OverrideCountryMixIn(FormOverrideMixIn).__init__ FINISH ------------------")
 
     def condition_alt_country(self):
         """Returns a boolean if the alt_field_info['alt_country'] field info should be applied. """
@@ -766,7 +766,7 @@ class OverrideCountryMixIn(FormOverrideMixIn):
 
     def prep_country_fields(self, opts, field_rows, remaining_fields, *args, **kwargs):
         """Used either in prep_fields or make_fieldsets for row containing country switch and field (if present). """
-        print("==================== OverrideCountryMixIn.prep_country_fields ==========================")
+        # print("==================== OverrideCountryMixIn.prep_country_fields ==========================")
         if not self.country_optional:
             return (opts, field_rows, remaining_fields, *args, kwargs)
         field_rows = field_rows or []
@@ -882,7 +882,7 @@ class FormFieldsetMixIn:
 
     def make_fieldsets(self, *fs_args, **kwargs):
         """Updates the dictionaries of each fieldset with 'rows' of field dicts, and a flattend 'field_names' list. """
-        print("======================= FormFieldsetMixIn.make_fieldsets =================================")
+        # print("======================= FormFieldsetMixIn.make_fieldsets =================================")
         if hasattr(self, 'prep_fields'):
             self.fields = self.prep_fields()
         if hasattr(self, 'assign_focus_field'):
@@ -940,7 +940,7 @@ class FormFieldsetMixIn:
             fieldsets.pop(index)
         max_position += 1
         if len(remaining_fields):
-            pprint(remaining_fields)
+            # pprint(remaining_fields)
             raise ImproperlyConfigured(_("Some unassigned fields, perhaps some added during make_fieldset. "))
         lookup = {'end': max_position + 2, 'remaining': max_position + 1, None: max_position}
         fieldsets = [(k, v) for k, v in sorted(fieldsets,
@@ -1021,7 +1021,7 @@ class FormFieldsetMixIn:
     def _html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
                      help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
         """Overriding BaseForm._html_output. Output HTML. Used by as_table(), as_ul(), as_p(), etc. """
-        print("************************** FormFieldsMixIn _html_output *************************************")
+        # print("************************** FormFieldsMixIn _html_output *************************************")
         help_tag = 'span'
         allow_colspan = not strict_columns and as_type == 'table'
         adjust_label_width = getattr(self, 'adjust_label_width', True) and hasattr(self, 'determine_label_width')
@@ -1139,7 +1139,7 @@ class FormFieldsetMixIn:
                     output.append(last_row)
             else:  # If there aren't any rows in the output, just append the hidden fields.
                 output.append(str_hidden)
-        print("---------- RETURN CONTENT FROM FormFieldsetMixIn -------------------------")
+        # print("---------- RETURN CONTENT FROM FormFieldsetMixIn -------------------------")
         return mark_safe('\n'.join(output))
 
     def as_table(self):
