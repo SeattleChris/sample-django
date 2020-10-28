@@ -391,15 +391,26 @@ class CriticalTests(FormTests, TestCase):
 class ComputedTests(FormTests, TestCase):
     form_class = ComputedForm
 
-    @skip("Not Implemented")
     def test_use_existing_computed_field_dict(self):
         """The get_computed_field_names method should include the names when computed_fields is already determined. """
-        pass
+        if isinstance(self.form.computed_fields, list):
+            self.form.computed_fields = self.form.get_computed_fields(self.form.computed_fields)
+        self.form.fields.update(self.form.computed_fields)  # only names in fields included in get_computed_field_names.
+        result_names = self.form.get_computed_field_names([], self.form.fields)
 
-    @skip("Not Implemented")
+        self.assertIsInstance(self.form.computed_fields, dict)
+        self.assertIn('compute_field', result_names)
+
     def test_raise_on_corrupt_computed_fields(self):
         """The computed_field_names method raises ImproperlyConfigured when computed_fields is an unexpected type. """
-        pass
+        initial = self.form.computed_fields
+        self.form.computed_fields = 'This is a broken value'
+        with self.assertRaises(ImproperlyConfigured):
+            self.form.get_computed_field_names([], self.form.fields)
+        self.form.computed_fields = None
+        with self.assertRaises(ImproperlyConfigured):
+            self.form.get_computed_field_names([], self.form.fields)
+        self.form.computed_fields = initial
 
     @skip("Not Implemented")
     def test_construct_values_skips_already_caught_errors(self):

@@ -39,6 +39,9 @@ class CriticalForm(CriticalFieldMixIn, Form):
 
 class ComputedForm(ComputedFieldsMixIn, Form):
     generic_field = CharField()
+    compute_field = CharField(initial='original_value')
+    name_for_compute = None
+    computed_fields = ['compute_field']
 
 
 class OverrideForm(FormOverrideMixIn, Form):
