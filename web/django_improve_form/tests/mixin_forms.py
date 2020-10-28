@@ -4,7 +4,7 @@ from django.test import TestCase  # , Client, override_settings, modify_settings
 from django.contrib.auth import get_user_model
 # from .helper_general import AnonymousUser, MockUser  # MockRequest, UserModel, MockStaffUser, MockSuperUser, APP_NAME
 # from django.conf import settings
-from django.forms import CharField, Form  # , ModelForm, BaseModelForm, ModelFormMetaclass
+from django.forms import Form, CharField, HiddenInput  # , ModelForm, BaseModelForm, ModelFormMetaclass
 from django.contrib.auth.forms import UserCreationForm  # , UserChangeForm
 from ..mixins import (
     FocusMixIn, CriticalFieldMixIn, ComputedFieldsMixIn, FormOverrideMixIn, FormFieldsetMixIn,
@@ -23,6 +23,7 @@ from django_registration import validators
 
 
 class FocusForm(FocusMixIn, Form):
+    hide_field = CharField(widget=HiddenInput(), initial='hide_data')
     generic_field = CharField()
 
 

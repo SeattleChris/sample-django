@@ -253,10 +253,21 @@ class FormTests:
 class FocusTests(FormTests, TestCase):
     form_class = FocusForm
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_focus_not_on_hidden(self):
         """Focus is never assigned to a hidden or disabled field when targeted. """
-        pass
+        # hidden = self.form.hidden_fields()
+        # target = hidden[0]
+        target = 'hide_field'
+        field = self.form.fields.get(target, None)
+        result_name = self.form.assign_focus_field(target)
+        focused = self.find_focus_field()
+
+        self.assertTrue(isinstance(getattr(field, 'widget', None), (HiddenInput, MultipleHiddenInput, )))
+        self.assertIn(target, self.form.fields)
+        self.assertEqual(1, len(focused))
+        self.assertNotEqual(target, focused[0])
+        self.assertNotEqual(target, result_name)
 
     @skip("Not Implemented")
     def test_remove_previous_focus(self):
