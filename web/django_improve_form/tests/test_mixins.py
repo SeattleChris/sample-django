@@ -1,11 +1,10 @@
 from django.test import TestCase  # , Client, override_settings, modify_settings, TransactionTestCase, RequestFactory
 from unittest import skip
 from django.core.exceptions import ImproperlyConfigured, ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
-from django.forms.utils import ErrorDict  # , ErrorList
-from django.forms.utils import pretty_name
+from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
+from django.forms.widgets import HiddenInput, MultipleHiddenInput
 from django.contrib.auth import get_user_model
 from django_registration import validators
-from django.forms.widgets import HiddenInput, MultipleHiddenInput
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
@@ -324,11 +323,8 @@ class CriticalTests(FormTests, TestCase):
         self.assertEqual(name, actual_name)
         self.assertEqual(expected_field, actual_field)
 
-    def get_generic_name(self):
-        name = 'generic_field'
-        if name not in self.form.fields:
-            return ''
-        return name
+    def get_generic_name(self, name='generic_field'):
+        return name if name in self.form.fields else ''
 
     def test_callable_name_get_critical_field(self):
         """It should work on the returned value if a name in names is a callable. """
@@ -382,8 +378,8 @@ class CriticalTests(FormTests, TestCase):
 
     def test_validators_attach(self):
         """Confirm that the custom validator on this Form is called and applies the expected validator. """
-        expected = validators.validate_confusables
         field_name = 'generic_field'
+        expected = validators.validate_confusables
         field = self.form.fields.get(field_name, None)
         all_validators = field.validators if field else []
         self.assertIn(expected, all_validators)
@@ -415,7 +411,6 @@ class ComputedTests(FormTests, TestCase):
 
     def test_construct_values_raises_for_missing_fields(self):
         """Raises ImproperlyConfigured for missing cleaned_data on targeted field_names in constructing values. """
-        # with self.assertRaises(ImproperlyConfigured):
         message = "There must me one or more field names to compute a value. "
         with self.assertRaisesMessage(ImproperlyConfigured, message):
             self.form.construct_value_from_values()
@@ -437,8 +432,7 @@ class ComputedTests(FormTests, TestCase):
         """Return None from construct_value_from_values method if the relevant fields already have recorded errors. """
         constructor_fields = ('first', 'second', 'last', )
         values = ['FirstValue', 'SecondValue', 'LastValue']
-        # expected = '_'.join(ea for ea in values if ea).casefold()
-        expected = None
+        expected = None  # Normal is: '_'.join(ea for ea in values if ea).casefold()
         cleaned_data = getattr(self.form, 'cleaned_data', {})
         cleaned_data.update(dict(zip(constructor_fields[:-1], values[:-1])))
         self.form.cleaned_data = cleaned_data
@@ -491,7 +485,7 @@ class ComputedTests(FormTests, TestCase):
     def test_construct_values_no_join_artifact_if_empty_value(self):
         """Raises ImproperlyConfigured for missing cleaned_data on targeted field_names in constructing values. """
         constructor_fields = ('first', 'second', 'last', )
-        values = ['first_value', 'second_value', 'last_value']
+        values = ['FirstValue', 'SecondValue', 'LastValue']
         values[1] = ''
         expected = '_'.join(ea for ea in values if ea).casefold()
         cleaned_data = getattr(self.form, 'cleaned_data', {})
@@ -501,7 +495,7 @@ class ComputedTests(FormTests, TestCase):
 
         self.assertEqual('', self.form.cleaned_data['second'])
         self.assertEqual(expected, actual)
-        self.assertEqual('first_value_last_value', actual)
+        self.assertEqual('firstvalue_lastvalue', actual)
 
     def test_construct_values_calls_passed_normalize_function(self):
         """When a function is passed for normalize, it is used in constructing values. """
@@ -518,11 +512,6 @@ class ComputedTests(FormTests, TestCase):
 
         self.assertEqual(expected.lower(), lower)
         self.assertEqual(expected.upper(), upper)
-
-    @skip("Not Implemented")
-    def test_validation_errors_assigned_in_clean_computed_fields(self):
-        """When _clean_computed_fields raises ValidationError, it creates expected compute_errors & form errors. """
-        pass
 
     def test_cleaned_data_modified_by_clean_computed_fields(self):
         """A computed field's custom compute method is called when appropriate in the _clean_computed_fields method. """
@@ -544,13 +533,13 @@ class ComputedTests(FormTests, TestCase):
 
     def test_field_compute_method_called_in_clean_computed_fields(self):
         """A computed field's custom compute method is called when appropriate in the _clean_computed_fields method. """
+        name = 'test_field'
         expected = 'compute_confirmed'
         self.form.test_value = expected
-        # modified = self.form.test_func(expected)
-        def pass_through(value): return value
+        modified = self.form.test_func(expected)
         original_func = deepcopy(self.form.test_func)
+        def pass_through(value): return value
         self.form.test_func = pass_through
-        name = 'test_field'
         if isinstance(self.form.computed_fields, (list, tuple)):
             self.form.computed_fields = self.form.get_computed_fields([name])
         self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # ensure cleaned_data is present
@@ -561,16 +550,16 @@ class ComputedTests(FormTests, TestCase):
         self.assertEqual(expected, actual)
 
         self.form.test_func = original_func
-        # restored = self.form.test_func(expected)
-        # self.assertEqual(modified, restored)
+        restored = self.form.test_func(expected)
+        self.assertEqual(modified, restored)
 
     def test_field_clean_method_called_in_clean_computed_fields(self):
         """A computed field's custom clean method is called when appropriate in the _clean_computed_fields method. """
+        name = 'test_field'
         expected = 'clean_confirmed'
         original_func = deepcopy(self.form.test_func)
         def replace_value(value): return expected
         self.form.test_func = replace_value
-        name = 'test_field'
         if isinstance(self.form.computed_fields, (list, tuple)):
             self.form.computed_fields = self.form.get_computed_fields([name])
         field = self.form.computed_fields.get(name)  # getattr(self.form, name)
@@ -595,13 +584,11 @@ class ComputedTests(FormTests, TestCase):
         name = 'test_field'
         message = "This is the test error on test_field. "
         response = ValidationError(message)
-        # expected = ErrorDict({name: ValidationError(message)})
         expected = ErrorDict({name: response})
         expected_errors = {NON_FIELD_ERRORS: self.form.error_class(error_class='nonfield')}
         expected_errors[NON_FIELD_ERRORS].append(message)
         original_errors = deepcopy(self.form._errors)
         original_func = deepcopy(self.form.test_func)
-        # def make_error(value): raise ValidationError(message)
         def make_error(value): raise response
         self.form.test_func = make_error
         if isinstance(self.form.computed_fields, (list, tuple)):
@@ -610,7 +597,6 @@ class ComputedTests(FormTests, TestCase):
         actual = self.form._clean_computed_fields()
         result_errors = self.form._errors
 
-        # self.assertEqual(str(expected), str(actual))
         self.assertDictEqual(expected, actual)
         self.assertNotEqual(original_errors, result_errors)
         self.assertEqual(expected_errors, result_errors)
