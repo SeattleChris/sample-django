@@ -282,10 +282,25 @@ class FocusTests(FormTests, TestCase):
         self.assertNotEqual(target, focused[0])
         self.assertNotEqual(target, result_name)
 
-    @skip("Not Implemented")
     def test_remove_previous_focus(self):
         """All fields that previously had focus should have it removed when giving focus to another field. """
-        pass
+        target_1 = 'generic_field'
+        result_1 = self.form.assign_focus_field(target_1)
+        focused_1 = self.find_focus_field()
+
+        target_2 = 'another_field'
+        result_2 = self.form.assign_focus_field(target_2)
+        focused_2 = self.find_focus_field()
+
+        self.assertNotEqual(target_1, target_2)
+        self.assertIn(target_1, self.form.fields)
+        self.assertEqual(1, len(focused_1))
+        self.assertEqual(target_1, focused_1[0])
+        self.assertEqual(target_1, result_1)
+        self.assertIn(target_2, self.form.fields)
+        self.assertEqual(1, len(focused_2))
+        self.assertEqual(target_2, focused_2[0])
+        self.assertEqual(target_2, result_2)
 
 
 class CriticalTests(FormTests, TestCase):
