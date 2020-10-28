@@ -257,7 +257,7 @@ class FocusTests(FormTests, TestCase):
     form_class = FocusForm
 
     def test_focus_not_on_hidden(self):
-        """Focus is never assigned to a hidden or disabled field when targeted. """
+        """Focus is never assigned to a hidden field when targeted. """
         target = 'hide_field'
         field = self.form.fields.get(target, None)
         result_name = self.form.assign_focus_field(target)
@@ -270,13 +270,13 @@ class FocusTests(FormTests, TestCase):
         self.assertNotEqual(target, result_name)
 
     def test_focus_not_on_disabled(self):
-        """Focus is never assigned to a hidden or disabled field when targeted. """
-        target = 'hide_field'
+        """Focus is never assigned to a disabled field when targeted. """
+        target = 'disable_field'
         field = self.form.fields.get(target, None)
         result_name = self.form.assign_focus_field(target)
         focused = self.find_focus_field()
 
-        self.assertTrue(isinstance(getattr(field, 'widget', None), (HiddenInput, MultipleHiddenInput, )))
+        self.assertTrue(field.disabled)
         self.assertIn(target, self.form.fields)
         self.assertEqual(1, len(focused))
         self.assertNotEqual(target, focused[0])
