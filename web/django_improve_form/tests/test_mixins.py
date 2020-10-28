@@ -399,7 +399,7 @@ class ComputedTests(FormTests, TestCase):
         result_names = self.form.get_computed_field_names([], self.form.fields)
 
         self.assertIsInstance(self.form.computed_fields, dict)
-        self.assertIn('compute_field', result_names)
+        self.assertIn('test_field', result_names)
 
     def test_raise_on_corrupt_computed_fields(self):
         """The computed_field_names method raises ImproperlyConfigured when computed_fields is an unexpected type. """
@@ -447,7 +447,6 @@ class ComputedTests(FormTests, TestCase):
         self.assertIsNone(actual)
         self.assertEqual(expected, actual)
 
-    # @skip("Not Implemented")
     def test_construct_values_raises_missing_cleaned_no_error(self):
         """Return None from construct_value_from_values method if the relevant fields already have recorded errors. """
         constructor_fields = ('first', 'second', 'last', )
@@ -525,8 +524,16 @@ class ComputedTests(FormTests, TestCase):
         pass
 
     @skip("Not Implemented")
-    def test_populates_cleaned_data_in_clean_computed_fields(self):
-        """A field's custom clean meethod is called when appropriate in the _clean_computed_fields method. """
+    def test_field_compute_method_called_in_clean_computed_fields(self):
+        """A computed field's custom compute method is called when appropriate in the _clean_computed_fields method. """
+        # expected_compute_value = 'UNCLEANED_COMPUTED'
+        pass
+
+    @skip("Not Implemented")
+    def test_field_clean_method_called_in_clean_computed_fields(self):
+        """A computed field's custom clean method is called when appropriate in the _clean_computed_fields method. """
+        # expected_compute_value = 'UNCLEANED_COMPUTED'
+        # expected_clean_value = 'cleaned_computed'
         pass
 
     @skip("Not Implemented")

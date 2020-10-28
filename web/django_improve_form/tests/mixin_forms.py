@@ -41,11 +41,19 @@ class ComputedForm(ComputedFieldsMixIn, Form):
     first = CharField(initial='first_value')
     second = CharField(initial='second_value')
     generic_field = CharField()
-    compute_field = CharField(initial='original_value')
+    test_field = CharField(initial='original_value')
     last = CharField(initial='last_value')
 
-    # name_for_compute = None
-    computed_fields = ['compute_field']
+    computed_fields = ['test_field']
+
+    def compute_test_field(self):
+        """Returns the pre-cleaned value for test_field. """
+        return 'UNCLEANED_COMPUTED'
+
+    def clean_test_field(self):
+        """Returns a cleaned value for test_field. """
+        value = self.cleaned_data.get('test_field', None)
+        return value[2:].lower()
 
 
 class OverrideForm(FormOverrideMixIn, Form):

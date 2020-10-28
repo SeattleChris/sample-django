@@ -241,7 +241,7 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
             compute_name = critical.get(name, name)
             compute_func = getattr(self, 'compute_%s' % compute_name, None)
             value = self.get_initial_for_field(field, name)
-            value = value if not compute_func else compute_func()    # calls methods like compute_name_for_user
+            value = value if not compute_func else compute_func()  # calls methods like compute_name_for_user
             try:
                 value = field.clean(value)
                 self.cleaned_data[name] = value
