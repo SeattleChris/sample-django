@@ -529,6 +529,7 @@ class ComputedTests(FormTests, TestCase):
 
         self.assertFalse(compute_errors)
         self.assertNotEqual(original, actual)
+        self.assertNotEqual(original, expected)
         self.assertEqual(expected, actual)
 
     def test_field_compute_method_called_in_clean_computed_fields(self):
@@ -603,11 +604,6 @@ class ComputedTests(FormTests, TestCase):
 
         self.form.test_func = original_func
         self.form._errors = original_errors
-
-    @skip("Not Implemented")
-    def test_populates_cleaned_data_in_clean_computed_fields(self):
-        """The cleaned_data is populated for a field without errors in _clean_computed_fields method. """
-        pass
 
     @skip("Not Implemented")
     def test_validation_error_for_compute_error(self):
