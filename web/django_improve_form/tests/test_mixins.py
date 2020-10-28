@@ -6,6 +6,7 @@ from django.forms.utils import pretty_name
 # from django.conf import settings
 from django.contrib.auth import get_user_model
 from django_registration import validators
+from django.forms.widgets import HiddenInput, MultipleHiddenInput
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
@@ -46,6 +47,7 @@ names_text = '' + \
     '%(name_length)sid="id_last_name">%(end_tag)s\n'
 TOS_TXT = '%(start_tag)s<label for="id_tos_field">I have read and agree to the Terms of Service:</label>' + \
     '%(label_end)s<input type="checkbox" name="tos_field" required id="id_tos_field">%(end_tag)s\n'
+HIDDEN_TXT = '<input type="hidden" name="%(name)s" value="%(initial)s" id="id_%(name)s">'
 DEFAULT_TXT = '%(start_tag)s<label for="id_%(name)s">%(pretty)s:</label>%(label_end)s' + \
     '<input type="text" name="%(name)s"%(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
 REPLACE_TEXT = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
@@ -135,12 +137,27 @@ class FormTests:
             replace_text[name_for_user] = replace_text.pop('username')
             order = ['first_name', 'last_name', 'username', 'password1', 'password2', 'email']
             self.form.order_fields(order)
-        for name in self.form.fields:
+        hidden_list = []
+        for name, field in self.form.fields.items():
+            if isinstance(field.widget, (HiddenInput, MultipleHiddenInput, )):
+                hide_re = {'name': name, 'initial': field.initial}
+                txt = HIDDEN_TXT % hide_re
+                hidden_list.append(txt)
+                continue
+            # TODO: What about disabled fields?
             default_re = DEFAULT_RE.copy()
             default_re.update({'name': name, 'pretty': pretty_name(name), 'attrs': '%(attrs)s'})
             default_re['required'] = REQUIRED if field.required else ''
             txt = replace_text.get(name, DEFAULT_TXT) % default_re
             form_list.append(txt)
+        str_hidden = ''.join(hidden_list)
+        if len(form_list) > 0:
+            last_row = form_list[-1]
+            default_re = DEFAULT_RE.copy()
+            default_re.update({'attrs': '%(attrs)s', 'end_tag': str_hidden + '%(end_tag)s'})
+            form_list[-1] = last_row % default_re
+        else:
+            form_list.append(str_hidden)
         expected = ''.join(form_list) % setup
         return expected.strip()
 
