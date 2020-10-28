@@ -18,7 +18,8 @@ NAME_LENGTH = 'maxlength="150" '
 USER_ATTRS = 'autocapitalize="none" autocomplete="username" '
 FOCUS = 'autofocus '
 REQUIRED = 'required '
-DEFAULT_RE = {ea: '%(' + ea + ')s' for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'name_pretty']}
+DEFAULT_RE = {ea: f"%({ea})s" for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'pretty', 'attrs']}
+# TODO: ? required ?
 USERNAME_TXT = '' + \
     '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" ' + \
     '%(name_length)s%(user_attrs)s%(focus)srequired id="id_username">' + \
@@ -45,12 +46,14 @@ names_text = '' + \
     '%(name_length)sid="id_last_name">%(end_tag)s\n'
 TOS_TXT = '%(start_tag)s<label for="id_tos_field">I have read and agree to the Terms of Service:</label>' + \
     '%(label_end)s<input type="checkbox" name="tos_field" required id="id_tos_field">%(end_tag)s\n'
-DEFAULT_TXT = '%(start_tag)s<label for="id_%(name)s">%(name_pretty)s:</label>%(label_end)s' + \
+DEFAULT_TXT = '%(start_tag)s<label for="id_%(name)s">%(pretty)s:</label>%(label_end)s' + \
     '<input type="text" name="%(name)s"%(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
 REPLACE_TEXT = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
 REPLACE_TEXT['email'] = EMAIL_TXT
 for name in ('first_name', 'last_name'):
-    REPLACE_TEXT[name] = DEFAULT_TXT % dict(attrs=' ' + NAME_LENGTH, required='', **DEFAULT_RE)  # TODO: ? required ?
+    name_re = DEFAULT_RE.copy()
+    name_re.update(attrs=' ' + NAME_LENGTH, required='')
+    REPLACE_TEXT[name] = DEFAULT_TXT % name_re
 
 
 class FormTests:
@@ -134,8 +137,8 @@ class FormTests:
             self.form.order_fields(order)
         for name in self.form.fields:
             default_re = DEFAULT_RE.copy()
-            default_re.update({'name': name, 'name_pretty': pretty_name(name), 'attrs': '%(attrs)s'})
-            default_re['required'] = REQUIRED if self.form.fields[name].required else ''
+            default_re.update({'name': name, 'pretty': pretty_name(name), 'attrs': '%(attrs)s'})
+            default_re['required'] = REQUIRED if field.required else ''
             txt = replace_text.get(name, DEFAULT_TXT) % default_re
             form_list.append(txt)
         expected = ''.join(form_list) % setup
@@ -153,9 +156,9 @@ class FormTests:
             print(f"//////////////////////////////// {form_class} AS_TABLE /////////////////////////////////////")
             if issubclass(self.form_class, ComputedUsernameMixIn):
                 print("*** is sub class of ComputedUsernameMixIn ***")
-            print(output)
-            print("------------------------------------------------------------------------------------------")
             print(expected)
+            print("------------------------------------------------------------------------------------------")
+            print(output)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
