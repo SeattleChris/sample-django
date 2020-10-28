@@ -223,7 +223,7 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
             err = "This computed value can only be evaluated after fields it depends on have been cleaned. "
             err += "The field order must have the computed field after fields used for its value. "
             raise ImproperlyConfigured(_(err))
-        names = (self.cleaned_data[key].strip() for key in field_names if key in self.cleaned_data)
+        names = (self.cleaned_data[key].strip() for key in field_names if self.cleaned_data[key].strip())
         result_value = joiner.join(names).casefold()
         if callable(normalize):
             result_value = normalize(result_value)

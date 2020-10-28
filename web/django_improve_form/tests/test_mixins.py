@@ -415,27 +415,96 @@ class ComputedTests(FormTests, TestCase):
     @skip("Not Implemented")
     def test_construct_values_skips_already_caught_errors(self):
         """Return None from construct_value_from_values method if the relevant fields already have recorded errors. """
-        pass
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['FirstValue', 'SecondValue', 'LastValue']
+        # expected = '_'.join(ea for ea in values if ea).casefold()
+        expected = None
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields[:-1], values[:-1])))
+        self.form.cleaned_data = cleaned_data
+        self.form.add_error('last', 'An error for testing')
+        result = self.form.construct_value_from_values(constructor_fields)
 
-    @skip("Not Implemented")
+        self.assertIsNone(result)
+        self.assertEqual(expected, result)
+
     def test_construct_values_raises_for_missing_fields(self):
         """Raises ImproperlyConfigured for missing cleaned_data on targeted field_names in constructing values. """
-        pass
+        # with self.assertRaises(ImproperlyConfigured):
+        message = "There must me one or more field names to compute a value. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.construct_value_from_values()
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.construct_value_from_values('')
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.construct_value_from_values([])
 
-    @skip("Not Implemented")
-    def test_construct_values_calls_passed_normalize_function(self):
-        """When a function is passed for normalize, it is used in constructing values. """
-        pass
+    def test_construct_values_raises_for_missing_cleaned_data(self):
+        """Raises ImproperlyConfigured for missing cleaned_data on targeted field_names in constructing values. """
+        constructor_fields = ('first', 'second', 'last', )
+        if hasattr(self.form, 'cleaned_data'):
+            del self.form.cleaned_data
+        message = "This method can only be evaluated after 'cleaned_data' has been populated. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.construct_value_from_values(constructor_fields)
 
-    @skip("Not Implemented")
-    def test_construct_values_raises_on_invalid_normalize(self):
-        """The normalize parameter can be None or a callback function, otherwise raise ImproperlyConfigured. """
-        pass
-
-    @skip("Not Implemented")
     def test_construct_values_as_expected(self):
         """Get the expected response when given valid inputs when constructing values. """
-        pass
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['FirstValue', 'SecondValue', 'LastValue']
+        expected = '_**_'.join(ea for ea in values if ea).casefold()
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields, values)))
+        self.form.cleaned_data = cleaned_data
+        actual = self.form.construct_value_from_values(constructor_fields, '_**_')
+        simple = self.form.construct_value_from_values(constructor_fields)
+
+        self.assertEqual(expected, actual)
+        self.assertEqual('firstvalue_**_secondvalue_**_lastvalue', actual)
+        self.assertEqual('_'.join(values).casefold(), simple)
+
+    def test_construct_values_no_join_artifact_if_empty_value(self):
+        """Raises ImproperlyConfigured for missing cleaned_data on targeted field_names in constructing values. """
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['first_value', 'second_value', 'last_value']
+        values[1] = ''
+        expected = '_'.join(ea for ea in values if ea).casefold()
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields, values)))
+        self.form.cleaned_data = cleaned_data
+        actual = self.form.construct_value_from_values(constructor_fields)
+
+        self.assertEqual('', self.form.cleaned_data['second'])
+        self.assertEqual(expected, actual)
+        self.assertEqual('first_value_last_value', actual)
+
+    def test_construct_values_calls_passed_normalize_function(self):
+        """When a function is passed for normalize, it is used in constructing values. """
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['FiRsT_FaLue', 'sEcOnd_vAlUE', 'LaST_VaLue']
+        expected = '_'.join(ea for ea in values if ea).casefold()
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields, values)))
+        self.form.cleaned_data = cleaned_data
+        def normal_lower(val): return val.lower()
+        def normal_upper(val): return val.upper()
+        lower = self.form.construct_value_from_values(constructor_fields, normalize=normal_lower)
+        upper = self.form.construct_value_from_values(constructor_fields, normalize=normal_upper)
+
+        self.assertEqual(expected.lower(), lower)
+        self.assertEqual(expected.upper(), upper)
+
+    def test_construct_values_raises_on_invalid_normalize(self):
+        """The normalize parameter can be None or a callback function, otherwise raise ImproperlyConfigured. """
+        constructor_fields = ('first', 'second', 'last', )
+        values = ['first_value', 'second_value', 'last_value']
+        cleaned_data = getattr(self.form, 'cleaned_data', {})
+        cleaned_data.update(dict(zip(constructor_fields, values)))
+        self.form.cleaned_data = cleaned_data
+        normalize = 'not a valid normalize function'
+        message = "The normalize parameter must be a callable or None. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.construct_value_from_values(constructor_fields, normalize=normalize)
 
     @skip("Not Implemented")
     def test_validation_errors_assigned_in_clean_computed_fields(self):

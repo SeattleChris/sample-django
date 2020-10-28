@@ -38,9 +38,13 @@ class CriticalForm(CriticalFieldMixIn, Form):
 
 
 class ComputedForm(ComputedFieldsMixIn, Form):
+    first = CharField(initial='first_value')
+    second = CharField(initial='second_value')
     generic_field = CharField()
     compute_field = CharField(initial='original_value')
-    name_for_compute = None
+    last = CharField(initial='last_value')
+
+    # name_for_compute = None
     computed_fields = ['compute_field']
 
 
