@@ -218,7 +218,7 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
         if not hasattr(self, 'cleaned_data'):
             raise ImproperlyConfigured(_("This method can only be evaluated after 'cleaned_data' has been populated. "))
         if any(field not in self.cleaned_data for field in field_names):
-            if hasattr(self, '_errors') and any(field in self._errors for field in field_names):
+            if getattr(self, '_errors', None) and any(field in self._errors for field in field_names):
                 return None  # Waiting to compute value until source fields have valid inputs.
             err = "This computed value can only be evaluated after fields it depends on have been cleaned. "
             err += "The field order must have the computed field after fields used for its value. "
