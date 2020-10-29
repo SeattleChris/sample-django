@@ -8,7 +8,7 @@ from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
-from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
+from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn, FormOverrideMixIn
 from copy import deepcopy
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
@@ -125,6 +125,14 @@ class FormTests:
         user = type_lookup[user_type](**user_setup)
         return user
 
+    def get_override_attrs(self, name, field):
+        """For the given named field, get the attrs as determined by the current FormOverrideMixIn settings. """
+        result = ''
+        if field.initial:
+            result = f' value="{field.initial}"'
+        result += '%(attrs)s'
+        return result
+
     def get_expected_format(self, setup):
         replace_text = REPLACE_TEXT.copy()
         form_list = []
@@ -144,11 +152,14 @@ class FormTests:
                 continue
             default_re = DEFAULT_RE.copy()
             default_re.update({'name': name, 'pretty': pretty_name(name), 'attrs': '%(attrs)s'})
-            if field.initial:
-                default_re['attrs'] += f'value="{field.initial}" '
             default_re['required'] = REQUIRED if field.required else ''
             if field.disabled:
                 default_re['required'] += 'disabled '
+            if issubclass(self.form.__class__, FormOverrideMixIn):
+                default_re['attrs'] = self.get_override_attrs(name, field)
+            elif field.initial:
+                default_re['attrs'] += f'value="{field.initial}" '
+                # default_re['attrs'] = f'value="{field.initial}" ' + default_re['attrs']
             txt = replace_text.get(name, DEFAULT_TXT) % default_re
             form_list.append(txt)
         str_hidden = ''.join(hidden_list)
@@ -599,46 +610,36 @@ class ComputedTests(FormTests, TestCase):
         self.form._errors = original_errors
 
     def test_validation_errors_assigned_in_clean_computed_fields(self):
-        """When _clean_computed_fields raises ValidationError, it creates expected compute_errors & form errors. """
+        """Test output of _clean_computed_fields. Should be an ErrorDict with computed field name(s) as key(s). """
         name = 'test_field'
         message = "This is the test error on test_field. "
         response = ValidationError(message)
-        expected = ErrorDict({name: response})
-        expected_errors = {NON_FIELD_ERRORS: self.form.error_class(error_class='nonfield')}
-        expected_errors[NON_FIELD_ERRORS].append(message)
-        original_errors = deepcopy(self.form._errors)
+        expected_compute_errors = ErrorDict({name: response})  # similar to return of _clean_computed_fields
         original_func = deepcopy(self.form.test_func)
         def make_error(value): raise response
         self.form.test_func = make_error
         if isinstance(self.form.computed_fields, (list, tuple)):
             self.form.computed_fields = self.form.get_computed_fields([name])
-        if self.form._errors is None:
-            self.form._errors = ErrorDict()  # mimic full_clean: _error is an ErrorDict
         self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # mimic full_clean: cleaned_data is present
-        actual = self.form._clean_computed_fields()
-        result_errors = self.form._errors
+        actual_compute_errors = self.form._clean_computed_fields()
 
-        self.assertDictEqual(expected, actual)
-        self.assertNotEqual(original_errors, result_errors)
-        self.assertEqual(expected_errors, result_errors)
+        self.assertDictEqual(expected_compute_errors, actual_compute_errors)
 
         self.form.test_func = original_func
-        self.form._errors = original_errors
 
-    # @skip("Not Implemented")
     def test_validation_error_for_compute_error(self):
-        """The Form's clean method calls and raises ValidationError for errors from _clean_computed_fields method. """
+        """The Form's clean method calls _clean_computed_fields method and response populates Form._errors. """
         name = 'test_field'
         message = "This is the test error on test_field. "
         response = ValidationError(message)
-        expected_compute_errors = ErrorDict({name: response})  # similar to return of _clean_computed_fields
-
+        # expected_compute_errors = ErrorDict({name: response})  # similar to return of _clean_computed_fields
         original_errors = deepcopy(self.form._errors)
         expected_errors = ErrorDict()  # similar to Form.full_clean
-        expected_errors[NON_FIELD_ERRORS] = self.form.error_class(error_class='nonfield')  # first add_error(None, err)
-        expected_errors[NON_FIELD_ERRORS].append(response)  # similar to add_error(None, message) in _clean_computed...
+        expected_errors[name] = self.form.error_class()
+        expected_errors[name].append(response)  # similar to add_error(None, message) in _clean_computed...
         clean_message_on_compute_errors = "Error occurred with the computed fields. "
         clean_error_on_compute_errors = ValidationError(clean_message_on_compute_errors)
+        expected_errors[NON_FIELD_ERRORS] = self.form.error_class(error_class='nonfield')  # first add_error(None, err)
         expected_errors[NON_FIELD_ERRORS].append(clean_error_on_compute_errors)  # similar to add_error(None, string)
 
         original_func = deepcopy(self.form.test_func)
@@ -650,31 +651,10 @@ class ComputedTests(FormTests, TestCase):
             self.form._errors = ErrorDict()  # mimic full_clean: _error is an ErrorDict
         original_cleaned_data = getattr(self.form, 'cleaned_data', None)
         self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # mimic full_clean: cleaned_data is present
+        self.form._clean_form()  # adds to Form._error if ValidationError raised by Form.clean.
 
-        with self.assertRaises(ValidationError) as result:
-            self.form.clean()
-        print("////////////////////////////////////////////////////////////////////////////////////////////")
-        print(expected_compute_errors)
-        print("******************* expected_errors and actual **************************************")
-        print(expected_errors)
-        print("---------------------------------------------------------")
-        print(self.form._errors)
-        print("******************* actual raised error_list **************************************")
-        # expected = expected_errors[NON_FIELD_ERRORS]
-        # print("---------------------------------------------------------")
-        # print(dir(result))
-        # print(result.exception)
-        # print(result.expected)
-        actual = result.exception.error_list
-        print(actual)
-        # expected = expected_errors[NON_FIELD_ERRORS]
-
-        # self.assertDictEqual(expected, actual)
-        # self.assertEqual(expected, actual)
         self.assertNotEqual(original_errors, self.form._errors)
         self.assertEqual(expected_errors, self.form._errors)
-        # self.assertEqual({}, original_cleaned_data)
-        self.assertTrue(False)
 
         if original_cleaned_data is None:
             del self.form.cleaned_data
