@@ -599,7 +599,7 @@ class ComputedTests(FormTests, TestCase):
         self.form._errors = original_errors
 
     def test_validation_errors_assigned_in_clean_computed_fields(self):
-        """When _clean_computed_fields raises ValidationError, it creates expected compute_errors & form errors. """
+        """Test output of _clean_computed_fields. Should be an ErrorDict with computed field name(s) as key(s). """
         name = 'test_field'
         message = "This is the test error on test_field. "
         response = ValidationError(message)
@@ -617,7 +617,7 @@ class ComputedTests(FormTests, TestCase):
         self.form.test_func = original_func
 
     def test_validation_error_for_compute_error(self):
-        """The Form's clean method calls and raises ValidationError for errors from _clean_computed_fields method. """
+        """The Form's clean method calls _clean_computed_fields method and response populates Form._errors. """
         name = 'test_field'
         message = "This is the test error on test_field. "
         response = ValidationError(message)
@@ -640,29 +640,10 @@ class ComputedTests(FormTests, TestCase):
             self.form._errors = ErrorDict()  # mimic full_clean: _error is an ErrorDict
         original_cleaned_data = getattr(self.form, 'cleaned_data', None)
         self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # mimic full_clean: cleaned_data is present
-        self.form._clean_form()
-        # print("////////////////////////////////////////////////////////////////////////////////////////////")
-        # print(expected_compute_errors)
-        # print("******************* expected_errors and actual **************************************")
-        # print(expected_errors)
-        # print("---------------------------------------------------------")
-        # print(self.form._errors)
-        # print("---------------------------------------------------------")
-        # print("******************* actual raised error_list **************************************")
-        # expected = expected_errors[NON_FIELD_ERRORS]
-        # print("---------------------------------------------------------")
-        # print(dir(result))
-        # print(result.exception)
-        # print(result.expected)
-        # actual = result.exception.error_list
-        # print(actual)
-        # expected = expected_errors[NON_FIELD_ERRORS]
+        self.form._clean_form()  # adds to Form._error if ValidationError raised by Form.clean.
 
-        # self.assertDictEqual(expected, actual)
-        # self.assertEqual(expected, actual)
         self.assertNotEqual(original_errors, self.form._errors)
         self.assertEqual(expected_errors, self.form._errors)
-        # self.assertEqual({}, original_cleaned_data)
 
         if original_cleaned_data is None:
             del self.form.cleaned_data
