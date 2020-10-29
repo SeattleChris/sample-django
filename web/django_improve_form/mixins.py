@@ -234,15 +234,12 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
     def _clean_computed_fields(self):
         """Mimics _clean_fields for computed_fields. Calls compute_<fieldname> and clean_<fieldname> if present. """
         compute_errors = ErrorDict()
-        # print("=================== ComputedFieldsMixIn._clean_computed_fields ============================")
-        # pprint(self.critical_fields)
         critical = {getattr(self, label): label for label, opts in self.critical_fields.items() if opts.get('computed')}
         for name, field in self.computed_fields.items():
             compute_name = critical.get(name, name)
             compute_func = getattr(self, 'compute_%s' % compute_name, None)
             value = self.get_initial_for_field(field, name)
             value = value if not compute_func else compute_func()  # calls methods like compute_name_for_user
-            # self.fields[name] = field
             try:
                 value = field.clean(value)
                 self.cleaned_data[name] = value
@@ -250,32 +247,16 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
                     value = getattr(self, 'clean_%s' % name)()
                     self.cleaned_data[name] = value
             except ValidationError as e:
-                compute_errors[name] = e
-                # self.add_error(None, e)
+                compute_errors[name] = e  # do not also need: # self.add_error(None, e)
         return compute_errors
 
     def clean(self):
-        print("============================ ComputedFieldsMixIn.clean =========================")
+        # print("============================ ComputedFieldsMixIn.clean =========================")
         compute_errors = self._clean_computed_fields()
-        print(self.cleaned_data)
-        print("---------------- compute_errors -----------------------------------------")
-        print(compute_errors)
-        print("---------------- _errors current ----------------------------------------")
-        print(self._errors)
-        print("---------------- fields after update ------------------------------------")
         self.fields.update(self.computed_fields)
-        print(self.fields)
         if compute_errors:
-            print("---------------- _errors after updating with compute errors --------------------------------")
-            self.add_error(None, compute_errors)
-            print(self._errors)
-            print("---------------- cleaned_computed_data & cleaned_data --------------------------------------")
-            cleaned_compute_data = {name: self.cleaned_data.pop(name, None) for name in self.computed_fields}
-            print(cleaned_compute_data)
-            print(self.cleaned_data)
-            print("---------------- -------------------- -----------------------------------------")
+            self.add_error(None, compute_errors)  # add_error deletes key:value for field names in compute_error
             raise ValidationError(_("Error occurred with the computed fields. "))
-        print("------------------- No Compute Errors -----------------------------------------")
         cleaned_data = super().clean()  # return self.cleaned_data, also sets boolean for unique validation.
         return cleaned_data
 
