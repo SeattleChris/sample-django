@@ -547,7 +547,7 @@ class FormOverrideMixIn:
             initial = self.get_initial_for_field(field, name)
             data_name = self.add_prefix(name)
             data_val = field.widget.value_from_datadict(self.data, self.files, data_name)
-            if not field.has_changed(initial, data_val):
+            if not field.has_changed(initial, data_val) and data_val != value:
                 self.initial[name] = value  # Only useful if current method called before self.initial used in __init__
                 new_data[data_name] = value
         if new_data:
