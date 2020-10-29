@@ -866,6 +866,18 @@ class OverrideTests(FormTests, TestCase):
         self.form.data = original_form_data
 
     @skip("Not Implemented")
+    def test_good_practice_attrs(self):
+        """Need feature tests. Already has coverage through other processes. """
+        # FormOverrideMixIn.good_practice_attrs
+        pass
+
+    @skip("Not Implemented")
+    def test_get_overrides(self):
+        """Need feature tests. Already has coverage through other processes. """
+        # FormOverrideMixIn.get_overrides
+        pass
+
+    @skip("Not Implemented")
     def test_update_condition_true(self):
         """For a field name condition_<name> method returning true, updates the result as expected. """
         # get_alt_field_info
