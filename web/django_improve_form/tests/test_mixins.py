@@ -436,11 +436,16 @@ class ComputedTests(FormTests, TestCase):
         cleaned_data = getattr(self.form, 'cleaned_data', {})
         cleaned_data.update(dict(zip(constructor_fields[:-1], values[:-1])))
         self.form.cleaned_data = cleaned_data
+        original_errors = deepcopy(self.form._errors)
+        if self.form._errors is None:
+            self.form._errors = ErrorDict()  # mimic full_clean: _error is an ErrorDict
         self.form.add_error('last', 'An error for testing')
         actual = self.form.construct_value_from_values(constructor_fields)
 
         self.assertIsNone(actual)
         self.assertEqual(expected, actual)
+
+        self.form._errors = original_errors
 
     def test_construct_values_raises_missing_cleaned_no_error(self):
         """Return None from construct_value_from_values method if the relevant fields already have recorded errors. """
@@ -516,13 +521,16 @@ class ComputedTests(FormTests, TestCase):
     def test_cleaned_data_modified_by_clean_computed_fields(self):
         """A computed field's custom compute method is called when appropriate in the _clean_computed_fields method. """
         name = 'test_field'
-        field = self.form.computed_fields.get(name)  # getattr(self.form, name)
+        field = self.form.computed_fields.get(name)  # getattr(self.form, name) for BoundField instance for Field.
         value = self.form.compute_test_field()
         value = field.clean(value)
         expected = self.form.test_func(value)
         if isinstance(self.form.computed_fields, (list, tuple)):
             self.form.computed_fields = self.form.get_computed_fields([name])
-        self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # ensure cleaned_data is present
+        original_errors = deepcopy(self.form._errors)
+        if self.form._errors is None:
+            self.form._errors = ErrorDict()  # mimic full_clean: _error is an ErrorDict
+        self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # mimic full_clean: cleaned_data is present
         original = self.form.cleaned_data.get(name, None)
         compute_errors = self.form._clean_computed_fields()
         actual = self.form.cleaned_data.get(name, '')
@@ -531,6 +539,8 @@ class ComputedTests(FormTests, TestCase):
         self.assertNotEqual(original, actual)
         self.assertNotEqual(original, expected)
         self.assertEqual(expected, actual)
+
+        self.form._errors = original_errors
 
     def test_field_compute_method_called_in_clean_computed_fields(self):
         """A computed field's custom compute method is called when appropriate in the _clean_computed_fields method. """
@@ -543,7 +553,10 @@ class ComputedTests(FormTests, TestCase):
         self.form.test_func = pass_through
         if isinstance(self.form.computed_fields, (list, tuple)):
             self.form.computed_fields = self.form.get_computed_fields([name])
-        self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # ensure cleaned_data is present
+        original_errors = deepcopy(self.form._errors)
+        if self.form._errors is None:
+            self.form._errors = ErrorDict()  # mimic full_clean: _error is an ErrorDict
+        self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # mimic full_clean: cleaned_data is present
         compute_errors = self.form._clean_computed_fields()
         actual = self.form.cleaned_data.get(name, None)
 
@@ -553,6 +566,7 @@ class ComputedTests(FormTests, TestCase):
         self.form.test_func = original_func
         restored = self.form.test_func(expected)
         self.assertEqual(modified, restored)
+        self.form._errors = original_errors
 
     def test_field_clean_method_called_in_clean_computed_fields(self):
         """A computed field's custom clean method is called when appropriate in the _clean_computed_fields method. """
@@ -567,9 +581,12 @@ class ComputedTests(FormTests, TestCase):
         # initial_value = self.get_initial_for_field(field, name)
         value = getattr(self.form, 'compute_%s' % name)()
         value = field.clean(value)
+        original_errors = deepcopy(self.form._errors)
+        if self.form._errors is None:
+            self.form._errors = ErrorDict()  # mimic full_clean: _error is an ErrorDict
         cleaned_data = getattr(self.form, 'cleaned_data', {})
         cleaned_data.update({name: value})  # make sure the original cleaned_data for the field is set.
-        self.form.cleaned_data = cleaned_data  # ensure cleaned_data is present
+        self.form.cleaned_data = cleaned_data  # ensure cleaned_data is present (mimic full_clean)
         compute_errors = self.form._clean_computed_fields()
         actual = self.form.cleaned_data.get(name, None)
 
@@ -579,6 +596,7 @@ class ComputedTests(FormTests, TestCase):
         self.assertNotEqual(expected, self.form.test_value)
 
         self.form.test_func = original_func
+        self.form._errors = original_errors
 
     def test_validation_errors_assigned_in_clean_computed_fields(self):
         """When _clean_computed_fields raises ValidationError, it creates expected compute_errors & form errors. """
@@ -594,7 +612,9 @@ class ComputedTests(FormTests, TestCase):
         self.form.test_func = make_error
         if isinstance(self.form.computed_fields, (list, tuple)):
             self.form.computed_fields = self.form.get_computed_fields([name])
-        self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # ensure cleaned_data is present
+        if self.form._errors is None:
+            self.form._errors = ErrorDict()  # mimic full_clean: _error is an ErrorDict
+        self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # mimic full_clean: cleaned_data is present
         actual = self.form._clean_computed_fields()
         result_errors = self.form._errors
 
@@ -611,58 +631,127 @@ class ComputedTests(FormTests, TestCase):
         name = 'test_field'
         message = "This is the test error on test_field. "
         response = ValidationError(message)
-        expected = ErrorDict({name: response})
-        expected_errors = {NON_FIELD_ERRORS: self.form.error_class(error_class='nonfield')}
-        expected_errors[NON_FIELD_ERRORS].append(message)
-        compute_error_message = "Error occurred with the computed fields. "
-        expected_errors[NON_FIELD_ERRORS].append(compute_error_message)
+        expected_compute_errors = ErrorDict({name: response})  # similar to return of _clean_computed_fields
 
         original_errors = deepcopy(self.form._errors)
+        expected_errors = ErrorDict()  # similar to Form.full_clean
+        expected_errors[NON_FIELD_ERRORS] = self.form.error_class(error_class='nonfield')  # first add_error(None, err)
+        expected_errors[NON_FIELD_ERRORS].append(response)  # similar to add_error(None, message) in _clean_computed...
+        clean_message_on_compute_errors = "Error occurred with the computed fields. "
+        clean_error_on_compute_errors = ValidationError(clean_message_on_compute_errors)
+        expected_errors[NON_FIELD_ERRORS].append(clean_error_on_compute_errors)  # similar to add_error(None, string)
+
         original_func = deepcopy(self.form.test_func)
         def make_error(value): raise response
         self.form.test_func = make_error
         if isinstance(self.form.computed_fields, (list, tuple)):
             self.form.computed_fields = self.form.get_computed_fields([name])
-        self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # ensure cleaned_data is present
-        original_cleaned_data = self.form.cleaned_data
+        if self.form._errors is None:
+            self.form._errors = ErrorDict()  # mimic full_clean: _error is an ErrorDict
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.cleaned_data = getattr(self.form, 'cleaned_data', {})  # mimic full_clean: cleaned_data is present
 
         with self.assertRaises(ValidationError) as result:
             self.form.clean()
-        result_errors = self.form._errors
         print("////////////////////////////////////////////////////////////////////////////////////////////")
+        print(expected_compute_errors)
+        print("******************* expected_errors and actual **************************************")
         print(expected_errors)
         print("---------------------------------------------------------")
-        print(result_errors)
+        print(self.form._errors)
+        print("******************* actual raised error_list **************************************")
+        # expected = expected_errors[NON_FIELD_ERRORS]
+        # print("---------------------------------------------------------")
         # print(dir(result))
         # print(result.exception)
         # print(result.expected)
         actual = result.exception.error_list
+        print(actual)
         # expected = expected_errors[NON_FIELD_ERRORS]
 
         # self.assertDictEqual(expected, actual)
-        self.assertEqual(expected, actual)
-        self.assertNotEqual(original_errors, result_errors)
-        # self.assertEqual(expected_errors, result_errors)
-        self.assertEqual({}, original_cleaned_data)
+        # self.assertEqual(expected, actual)
+        self.assertNotEqual(original_errors, self.form._errors)
+        self.assertEqual(expected_errors, self.form._errors)
+        # self.assertEqual({}, original_cleaned_data)
         self.assertTrue(False)
 
-        self.form.test_func = original_func
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+        else:
+            self.form.cleaned_data = original_cleaned_data
         self.form._errors = original_errors
+        self.form.test_func = original_func
 
-    @skip("Not Implemented")
     def test_cleaned_data_for_compute_error(self):
         """The cleaned_data is removed of data for computed_fields if there is an error from _clean_computed_fields. """
-        pass
+        name = 'test_field'
+        message = "This is the test error on test_field. "
+        original_errors = deepcopy(self.form._errors)
+        response = ValidationError(message)
+        original_func = deepcopy(self.form.test_func)
+        def make_error(value): raise response
+        self.form.test_func = make_error
+        if isinstance(self.form.computed_fields, (list, tuple)):
+            self.form.computed_fields = self.form.get_computed_fields([name])
+        computed_names = list(self.form.computed_fields.keys())
+        field_names = list(self.form.fields.keys())
+        field_data = {f_name: f"input_{f_name}_{i}" for i, f_name in enumerate(field_names)}
+        if self.form._errors is None:
+            self.form._errors = ErrorDict()  # mimic full_clean: _error is an ErrorDict
+        original_cleaned_data = deepcopy(getattr(self.form, 'cleaned_data', None))
+        populated_cleaned_data = deepcopy(original_cleaned_data or {})
+        populated_cleaned_data.update(field_data)
+        populated_cleaned_data.update({name: f"value_{f_name}_{i}" for i, f_name in enumerate(computed_names)})
+        self.form.cleaned_data = populated_cleaned_data.copy()  # ensure cleaned_data is present (mimic full_clean)
 
-    @skip("Not Implemented")
+        with self.assertRaises(ValidationError):
+            self.form.clean()
+        final_cleaned_data = self.form.cleaned_data
+
+        self.assertIn(name, computed_names)
+        self.assertNotIn(name, field_names)
+        self.assertIn(name, populated_cleaned_data)
+        self.assertNotIn(name, final_cleaned_data)
+        self.assertNotEqual(original_cleaned_data, final_cleaned_data)
+        self.assertNotEqual(populated_cleaned_data, final_cleaned_data)
+
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+        else:
+            self.form.cleaned_data = original_cleaned_data
+        self.form._errors = original_errors
+        self.form.test_func = original_func
+
     def test_cleaned_data_for_compute_success(self):
-        """The cleaned_data has data for computed_fields when there are no errors from _clean_computed_fields. """
-        pass
+        """The Form's clean process populates cleaned_data with computed_fields data when there are no errors. """
+        name = 'test_field'
+        if isinstance(self.form.computed_fields, (list, tuple)):
+            self.form.computed_fields = self.form.get_computed_fields([name])
+        computed_names = list(self.form.computed_fields.keys())
+        field_names = list(self.form.fields.keys())
+        field_data = {f_name: f"input_{f_name}_{i}" for i, f_name in enumerate(field_names)}
+        field_data.update({name: f"value_{f_name}_{i}" for i, f_name in enumerate(computed_names)})
+        original_errors = deepcopy(self.form._errors)
+        if self.form._errors is None:
+            self.form._errors = ErrorDict()  # mimic full_clean: _error is an ErrorDict
+        original_cleaned_data = deepcopy(getattr(self.form, 'cleaned_data', None))
+        populated_cleaned_data = deepcopy(original_cleaned_data or {})
+        populated_cleaned_data.update(field_data)
+        self.form.cleaned_data = populated_cleaned_data.copy()  # ensure cleaned_data is present (mimic full_clean)
+        final_cleaned_data = self.form.clean()
 
-    @skip("Not Implemented")
-    def test_expected_cleaned_data_for_compute(self):
-        """When successful, the Form's clean method returns the expected cleaned_data for all fields. """
-        pass
+        self.assertIn(name, computed_names)
+        self.assertNotIn(name, field_names)
+        self.assertIn(name, populated_cleaned_data)
+        self.assertIn(name, final_cleaned_data)
+        self.assertNotEqual(original_cleaned_data, final_cleaned_data)
+
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+        else:
+            self.form.cleaned_data = original_cleaned_data
+        self.form._errors = original_errors
 
 
 class OverrideTests(FormTests, TestCase):

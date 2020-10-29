@@ -242,6 +242,7 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
             compute_func = getattr(self, 'compute_%s' % compute_name, None)
             value = self.get_initial_for_field(field, name)
             value = value if not compute_func else compute_func()  # calls methods like compute_name_for_user
+            # self.fields[name] = field
             try:
                 value = field.clean(value)
                 self.cleaned_data[name] = value
@@ -258,6 +259,8 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
         compute_errors = self._clean_computed_fields()
         print("---------------- compute_errors -----------------------------------------")
         print(compute_errors)
+        print("---------------- _errors current -----------------------------------------")
+        print(self._errors)
         if compute_errors:
             print("---------------- cleaned_computed_data -----------------------------------------")
             cleaned_compute_data = {name: self.cleaned_data.pop(name, None) for name in self.computed_fields}
