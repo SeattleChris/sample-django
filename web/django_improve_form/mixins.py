@@ -251,21 +251,31 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
                     self.cleaned_data[name] = value
             except ValidationError as e:
                 compute_errors[name] = e
-                self.add_error(None, e)
+                # self.add_error(None, e)
         return compute_errors
 
     def clean(self):
         print("============================ ComputedFieldsMixIn.clean =========================")
         compute_errors = self._clean_computed_fields()
+        print(self.cleaned_data)
         print("---------------- compute_errors -----------------------------------------")
         print(compute_errors)
-        print("---------------- _errors current -----------------------------------------")
+        print("---------------- _errors current ----------------------------------------")
         print(self._errors)
+        print("---------------- fields after update ------------------------------------")
+        self.fields.update(self.computed_fields)
+        print(self.fields)
         if compute_errors:
-            print("---------------- cleaned_computed_data -----------------------------------------")
+            print("---------------- _errors after updating with compute errors --------------------------------")
+            self.add_error(None, compute_errors)
+            print(self._errors)
+            print("---------------- cleaned_computed_data & cleaned_data --------------------------------------")
             cleaned_compute_data = {name: self.cleaned_data.pop(name, None) for name in self.computed_fields}
             print(cleaned_compute_data)
+            print(self.cleaned_data)
+            print("---------------- -------------------- -----------------------------------------")
             raise ValidationError(_("Error occurred with the computed fields. "))
+        print("------------------- No Compute Errors -----------------------------------------")
         cleaned_data = super().clean()  # return self.cleaned_data, also sets boolean for unique validation.
         return cleaned_data
 
