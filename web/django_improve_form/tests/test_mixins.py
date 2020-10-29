@@ -8,7 +8,7 @@ from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
-from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
+from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn, FormOverrideMixIn
 from copy import deepcopy
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
@@ -125,6 +125,14 @@ class FormTests:
         user = type_lookup[user_type](**user_setup)
         return user
 
+    def get_override_attrs(self, name, field):
+        """For the given named field, get the attrs as determined by the current FormOverrideMixIn settings. """
+        result = ''
+        if field.initial:
+            result = f' value="{field.initial}"'
+        result += '%(attrs)s'
+        return result
+
     def get_expected_format(self, setup):
         replace_text = REPLACE_TEXT.copy()
         form_list = []
@@ -144,11 +152,14 @@ class FormTests:
                 continue
             default_re = DEFAULT_RE.copy()
             default_re.update({'name': name, 'pretty': pretty_name(name), 'attrs': '%(attrs)s'})
-            if field.initial:
-                default_re['attrs'] += f'value="{field.initial}" '
             default_re['required'] = REQUIRED if field.required else ''
             if field.disabled:
                 default_re['required'] += 'disabled '
+            if issubclass(self.form.__class__, FormOverrideMixIn):
+                default_re['attrs'] = self.get_override_attrs(name, field)
+            elif field.initial:
+                default_re['attrs'] += f'value="{field.initial}" '
+                # default_re['attrs'] = f'value="{field.initial}" ' + default_re['attrs']
             txt = replace_text.get(name, DEFAULT_TXT) % default_re
             form_list.append(txt)
         str_hidden = ''.join(hidden_list)
