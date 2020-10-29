@@ -818,15 +818,52 @@ class OverrideTests(FormTests, TestCase):
         if has_updates:
             self.form.data = original_form_data
 
-    @skip("Not Implemented")
     def test_set_alt_data_mutable(self):
         """After running set_alt_data, the Form's data attribute should have _mutable = False. """
-        pass
+        alt_values = {name: f"alt_value_{name}" for name in self.form.fields}
+        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
 
-    @skip("Not Implemented")
+        original_form_data = self.form.data
+        test_form_data = original_form_data.copy()
+        test_form_data.update(self.test_initial)
+        test_form_data._mutable = False
+        self.form.data = test_form_data
+
+        def data_is_initial(name, field): return not field.has_changed(self.test_initial[name], self.form.data[name])
+        expect_updates = any(data_is_initial(name, field) for name, field in self.form.fields.items())
+        result = self.form.set_alt_data(test_input)
+        had_updates = any(not data_is_initial(name, field) for name, field in self.form.fields.items())
+
+        self.assertTrue(expect_updates)
+        self.assertTrue(had_updates)
+        self.assertFalse(getattr(self.form.data, '_mutable', True))
+        self.assertDictEqual(alt_values, result)
+
+        if had_updates:
+            self.form.data = original_form_data
+
     def test_set_alt_data_unchanged(self):
         """If all fields are not changed, then the Form's data is not overwritten. """
-        pass
+        test_input = {name: (field, self.test_initial[name]) for name, field in self.form.fields.items()}
+
+        original_form_data = self.form.data
+        test_form_data = original_form_data.copy()
+        test_form_data.update(self.test_initial)
+        test_form_data._mutable = False
+        self.form.data = test_form_data
+
+        def data_is_initial(name, field): return not field.has_changed(self.test_initial[name], self.form.data[name])
+        expect_updates = any(data_is_initial(name, field) for name, field in self.form.fields.items())
+        result = self.form.set_alt_data(test_input)
+        had_updates = any(not data_is_initial(name, field) for name, field in self.form.fields.items())
+
+        self.assertTrue(expect_updates)
+        self.assertFalse(had_updates)
+        self.assertEqual({}, result)
+        self.assertEqual(test_form_data, self.form.data)
+        self.assertIs(test_form_data, self.form.data)
+
+        self.form.data = original_form_data
 
     @skip("Not Implemented")
     def test_update_condition_true(self):
