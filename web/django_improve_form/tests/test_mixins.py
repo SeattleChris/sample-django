@@ -785,25 +785,38 @@ class OverrideTests(FormTests, TestCase):
         self.assertTrue(use_alt_value)
 
         if use_alt_value:
-            original_form_data._mutable = False
             self.form.data = original_form_data
 
-    @skip("Not Implemented")
     def test_set_alt_data_collection(self):
         """Get expected results when passing data but not any for name, field, value. """
         names = list(self.test_data.keys())[1:-1]
-        data_values, is_updated, alt_data = {}, {}, {}
-        for name, field in self.fields.items():
+        data_values, is_updated = {}, {}
+        for name, field in self.form.fields.items():
             initial = self.test_initial[name]
             data_values[name] = self.test_data[name] if name in names else initial
-            is_updated[name] = not field.is_changed(initial, data_values[name])
+            is_updated[name] = not field.has_changed(initial, data_values[name])
+        alt_values = {name: f"alt_value_{name}" for name in self.form.fields if is_updated[name]}
+        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
+        has_updates = any(is_updated.values())
 
         original_form_data = self.form.data
         test_form_data = original_form_data.copy()
         test_form_data.update(data_values)
+        expected_data = test_form_data.copy()
+        if alt_values:
+            expected_data.update(alt_values)
         test_form_data._mutable = False
         self.form.data = test_form_data
-        pass
+
+        result = self.form.set_alt_data(test_input)
+        actual_data = self.form.data
+
+        self.assertDictEqual(alt_values, result)
+        self.assertTrue(has_updates)
+        self.assertDictEqual(expected_data, actual_data)
+
+        if has_updates:
+            self.form.data = original_form_data
 
     @skip("Not Implemented")
     def test_set_alt_data_mutable(self):
