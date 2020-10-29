@@ -59,7 +59,10 @@ class ComputedForm(ComputedFieldsMixIn, Form):
 
 
 class OverrideForm(FormOverrideMixIn, Form):
+    first = CharField(initial='first_value')
+    second = CharField(initial='second_value')
     generic_field = CharField(initial='original_value')
+    last = CharField(initial='last_value')
 
 
 class FormFieldsetForm(FormFieldsetMixIn, Form):
