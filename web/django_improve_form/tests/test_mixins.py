@@ -997,7 +997,7 @@ class OverrideTests(FormTests, TestCase):
         self.assertIs(fields, result)
 
     def test_handle_removals_missing_remove_field_names(self):
-        """Raises ImproperlyConfigured. Should not be called in ComputedFieldsMixIn, or property was set. """
+        """Raises ImproperlyConfigured. Should not be called in ComputedFieldsMixIn, otherwise property was set. """
         original_fields = self.form.fields
         fields = original_fields.copy()
         if hasattr(self.form, 'remove_field_names'):
@@ -1039,13 +1039,13 @@ class OverrideTests(FormTests, TestCase):
         self.assertIs(fields, result)
 
     def test_handle_removals_named_fields_not_in_data(self):
-        """Fields whose name is in remove_field_names, but not data, are removed from fields. """
+        """Fields whose name is in remove_field_names, but not named in form data, are removed from fields. """
         original_fields = self.form.fields
         fields = original_fields.copy()
         remove_names = ['second', 'last']
         original_data = self.form.data
         data = original_data.copy()
-        data.appendlist('last', 'test_data_last')
+        data.appendlist(remove_names[1], 'test_data_last')
         data._mutable = False
         self.form.data = data
         expected_fields = {name: field for name, field in fields.items() if name != remove_names[0]}
@@ -1071,7 +1071,7 @@ class OverrideTests(FormTests, TestCase):
         original_fields = self.form.fields
         fields = original_fields.copy()
         remove_names = ['second', 'last']
-        self.form.removed_fields = {name: fields.pop(name, None) for name in remove_names}
+        self.form.removed_fields = {name: fields.pop(name) for name in remove_names if name in fields}
         self.form.remove_field_names = []
         expected_fields = dict(**fields, **self.form.removed_fields)
         test_data = original_data.copy()
@@ -1092,11 +1092,6 @@ class OverrideTests(FormTests, TestCase):
     def test_handle_removals_add_only_if_not_in_remove(self):
         """False goal, adding takes precedence. Adding only triggered because a value is inserted in form data. """
         self.assertFalse(False)
-
-    @skip("Not Implemented")
-    def test_handle_removals_remove_if_not_in_add(self):
-        """A field that may otherwise be removed is not removed if it also is currently setup to be added. """
-        pass
 
     @skip("Not Implemented")
     def test_prep_overrides(self):
