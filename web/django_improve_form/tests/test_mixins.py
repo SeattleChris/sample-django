@@ -996,8 +996,8 @@ class OverrideTests(FormTests, TestCase):
         self.assertDictEqual(original_fields, result)
         self.assertIs(fields, result)
 
-    def test_removed_expected_in_handle_removals(self):
-        """Fields whose name is in remove_field_names, but not data, are removed from fields. """
+    def test_handle_removals_removed_named_fields(self):
+        """Fields whose name is in remove_field_names are removed from fields (with no form data). """
         original_fields = self.form.fields
         fields = original_fields.copy()
         remove_names = ['second', 'last']
@@ -1011,6 +1011,29 @@ class OverrideTests(FormTests, TestCase):
         self.assertEqual(0, len(self.form.remove_field_names))
         self.assertDictEqual(expected_fields, result)
         self.assertIs(fields, result)
+
+    def test_removed_only_expected_in_handle_removals(self):
+        """Fields whose name is in remove_field_names, but not data, are removed from fields. """
+        original_fields = self.form.fields
+        fields = original_fields.copy()
+        remove_names = ['second', 'last']
+        original_data = self.form.data
+        data = original_data.copy()
+        data.appendlist('last', 'test_data_last')
+        data._mutable = False
+        self.form.data = data
+        expected_fields = {name: field for name, field in fields.items() if name != remove_names[0]}
+        self.form.removed_fields = {}
+        self.form.remove_field_names = remove_names
+        result = self.form.handle_removals(fields)
+
+        self.assertEqual(len(original_fields), len(result) + len(remove_names) - 1)
+        self.assertEqual(len(remove_names) - 1, len(self.form.removed_fields))
+        self.assertEqual(1, len(self.form.remove_field_names))
+        self.assertDictEqual(expected_fields, result)
+        self.assertIs(fields, result)
+
+        self.form.data = original_data
 
     def test_add_expected_removed_fields(self):
         """Needed fields currently in removed_fields are added to the Form's fields. """
