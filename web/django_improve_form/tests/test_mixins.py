@@ -982,11 +982,19 @@ class OverrideTests(FormTests, TestCase):
         # FormOverrideMixIn.handle_modifiers
         pass
 
-    @skip("Not Implemented")
     def test_unchanged_handle_removals(self):
-        """Unchanged fields if 'remove_field_names' and 'removed_fields' evaluate as False. """
-        # handle_removals
-        pass
+        """Unchanged fields if 'remove_field_names' and 'removed_fields' are empty. """
+        original_fields = self.form.fields
+        fields = original_fields.copy()
+        self.form.removed_fields = {}
+        self.form.remove_field_names = []
+        result = self.form.handle_removals(fields)
+
+        self.assertEqual(len(original_fields), len(result))
+        self.assertEqual(0, len(self.form.removed_fields))
+        self.assertEqual(0, len(self.form.remove_field_names))
+        self.assertDictEqual(original_fields, result)
+        self.assertIs(fields, result)
 
     @skip("Not Implemented")
     def test_add_expected_removed_fields(self):
