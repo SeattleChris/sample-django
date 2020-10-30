@@ -677,7 +677,7 @@ class FormOverrideMixIn:
                     field.widget.attrs[width_attr_name] = str(min(possible_size))
             if name in alt_field_info:
                 for prop, value in alt_field_info[name].items():
-                    if prop in ('initial', 'default', 'value'):
+                    if prop == 'initial':
                         new_data[name] = (field, value, )
                     setattr(field, prop, value)
         if new_data:
@@ -704,8 +704,7 @@ class OverrideCountryMixIn(FormOverrideMixIn):
             'billing_country_area': {
                     'label': _("Territory, or Province"),
                     'help_text': '',
-                    'initial': '',
-                    'default': '', },
+                    'initial': '', },  # 'default' and 'value' are not valid.
             'billing_postcode': {
                     'label': _("Postal Code"),
                     'help_text': '', },
