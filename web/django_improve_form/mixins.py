@@ -547,7 +547,7 @@ class FormOverrideMixIn:
             initial = self.get_initial_for_field(field, name)
             data_name = self.add_prefix(name)
             data_val = field.widget.value_from_datadict(self.data, self.files, data_name)
-            if not field.has_changed(initial, data_val):
+            if not field.has_changed(initial, data_val) and data_val != value:
                 self.initial[name] = value  # Only useful if current method called before self.initial used in __init__
                 new_data[data_name] = value
         if new_data:
@@ -614,7 +614,8 @@ class FormOverrideMixIn:
         self.removed_fields = getattr(self, 'removed_fields', {})
         data = set(getattr(self, 'data', {}).keys())
         needed_names = data - set(fields.keys())
-        add_fields = {name: self.removed_fields.pop(name) for name in self.removed_fields if name in needed_names}
+        names_in_removed = list(self.removed_fields.keys())
+        add_fields = {name: self.removed_fields.pop(name) for name in names_in_removed if name in needed_names}
         remove_names = set(self.remove_field_names) - data
         removed_fields = {name: fields.pop(name) for name in remove_names if name in fields}
         self.remove_field_names = [name for name in self.remove_field_names if name not in removed_fields]

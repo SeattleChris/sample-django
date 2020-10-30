@@ -59,7 +59,18 @@ class ComputedForm(ComputedFieldsMixIn, Form):
 
 
 class OverrideForm(FormOverrideMixIn, Form):
+    first = CharField(initial='first_value')
+    second = CharField(initial='second_value')
     generic_field = CharField(initial='original_value')
+    last = CharField(initial='last_value')
+
+    test_condition_response = False
+    # def test_condition_response(self): return bool('')
+
+    def condition_alt_test_feature(self):
+        """Methods with condition_<label> return Boolean for when to apply alt_field_info[label] attrs.  """
+        # logic for determining if the alternative attrs should be applied.
+        return self.test_condition_response
 
 
 class FormFieldsetForm(FormFieldsetMixIn, Form):

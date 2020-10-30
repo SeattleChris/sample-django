@@ -4,11 +4,12 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError, NON_FI
 from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
 from django.forms.widgets import HiddenInput, MultipleHiddenInput
 from django.contrib.auth import get_user_model
+from django.utils.datastructures import MultiValueDict
 from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
-from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn, FormOverrideMixIn
+from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
 from copy import deepcopy
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
@@ -127,6 +128,7 @@ class FormTests:
 
     def get_override_attrs(self, name, field):
         """For the given named field, get the attrs as determined by the current FormOverrideMixIn settings. """
+        # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
         result = ''
         if field.initial:
             result = f' value="{field.initial}"'
@@ -736,56 +738,351 @@ class ComputedTests(FormTests, TestCase):
 
 class OverrideTests(FormTests, TestCase):
     form_class = OverrideForm
+    alt_field_info = {
+        'alt_test_feature': {
+            'first': {
+                    'label': "Alt First Label",
+                    'help_text': '',
+                    'initial': 'alt_first_initial',
+                    'default': '', },
+            'last': {
+                    'label': "",
+                    'initial': 'alt_last_initial',
+                    'help_text': '', },
+            },
+        'alt_test_no_method': {
+            'second': {
+                    'label': "Alt Second Label",
+                    'help_text': '',
+                    'initial': 'alt_second_initial',
+                    'default': '', },
+            'generic_field': {
+                    'label': "",
+                    'initial': 'alt_generic_field_initial',
+                    'help_text': '', },
+            },
+        }
 
-    @skip("Not Implemented")
+    def setUp(self):
+        super().setUp()
+        f = self.form.fields
+        test_initial = {'first': f['first'].initial, 'second': f['second'].initial, 'last': f['last'].initial}
+        test_initial['generic_field'] = f['generic_field'].initial
+        test_data = MultiValueDict()
+        test_data.update({name: f"test_value_{name}" for name in test_initial})
+        self.test_initial = test_initial
+        self.test_data = test_data
+
     def test_set_alt_data_single(self):
         """Get expected results when passing name, field, value, but not data. """
-        pass
+        name, value = 'generic_field', 'alt_data_value'
+        field = self.form.fields.get(name, None)
+        self.assertIsNotNone(field, "Unable to find the expected field in current fields. ")
+        test_data = self.test_data.copy()
+        expected_data = test_data.copy()
+        expected_data.update({name: value})
 
-    @skip("Not Implemented")
+        original_form_data = self.form.data
+        test_form_data = original_form_data.copy()
+        test_form_data.update(self.test_data)
+        test_form_data.update({name: self.test_initial[name]})
+        test_form_data._mutable = False
+        self.form.data = test_form_data
+        initial = self.form.get_initial_for_field(field, name)
+        data_name = self.form.add_prefix(name)
+        data_val = field.widget.value_from_datadict(self.form.data, self.form.files, data_name)
+        # print("\n===================== TEST SET ALT DATA SINGLE ===============================")
+        use_alt_value = not field.has_changed(initial, data_val)
+        expected_value = value if use_alt_value else test_form_data.get(name)
+        expected_result = {name: value} if use_alt_value else {}
+        result = self.form.set_alt_data(data=None, name=name, field=field, value=value)
+        actual_value = self.form.data[name]
+
+        self.assertEqual(self.test_initial[name], initial)
+        self.assertEqual(test_form_data[name], data_val)
+        self.assertEqual(expected_value, actual_value)
+        self.assertEqual(expected_result, result)
+        for key in self.form.data:
+            # print(expected_data[key], self.form.data[key])
+            self.assertEqual(expected_data[key], self.form.data[key])
+        self.assertEqual(len(expected_data), len(self.form.data))
+        self.assertTrue(use_alt_value)
+
+        if use_alt_value:
+            self.form.data = original_form_data
+
     def test_set_alt_data_collection(self):
         """Get expected results when passing data but not any for name, field, value. """
-        pass
+        names = list(self.test_data.keys())[1:-1]
+        data_values, is_updated = {}, {}
+        for name, field in self.form.fields.items():
+            initial = self.test_initial[name]
+            data_values[name] = self.test_data[name] if name in names else initial
+            is_updated[name] = not field.has_changed(initial, data_values[name])
+        alt_values = {name: f"alt_value_{name}" for name in self.form.fields if is_updated[name]}
+        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
+        has_updates = any(is_updated.values())
 
-    @skip("Not Implemented")
+        original_form_data = self.form.data
+        test_form_data = original_form_data.copy()
+        test_form_data.update(data_values)
+        expected_data = test_form_data.copy()
+        if alt_values:
+            expected_data.update(alt_values)
+        test_form_data._mutable = False
+        self.form.data = test_form_data
+
+        result = self.form.set_alt_data(test_input)
+        actual_data = self.form.data
+
+        self.assertDictEqual(alt_values, result)
+        self.assertTrue(has_updates)
+        self.assertDictEqual(expected_data, actual_data)
+
+        if has_updates:
+            self.form.data = original_form_data
+
     def test_set_alt_data_mutable(self):
         """After running set_alt_data, the Form's data attribute should have _mutable = False. """
-        pass
+        alt_values = {name: f"alt_value_{name}" for name in self.form.fields}
+        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
 
-    @skip("Not Implemented")
+        original_form_data = self.form.data
+        test_form_data = original_form_data.copy()
+        test_form_data.update(self.test_initial)
+        test_form_data._mutable = False
+        self.form.data = test_form_data
+
+        def data_is_initial(name, field): return not field.has_changed(self.test_initial[name], self.form.data[name])
+        expect_updates = any(data_is_initial(name, field) for name, field in self.form.fields.items())
+        result = self.form.set_alt_data(test_input)
+        had_updates = any(not data_is_initial(name, field) for name, field in self.form.fields.items())
+
+        self.assertTrue(expect_updates)
+        self.assertTrue(had_updates)
+        self.assertFalse(getattr(self.form.data, '_mutable', True))
+        self.assertDictEqual(alt_values, result)
+
+        if had_updates:
+            self.form.data = original_form_data
+
     def test_set_alt_data_unchanged(self):
         """If all fields are not changed, then the Form's data is not overwritten. """
+        test_input = {name: (field, self.test_initial[name]) for name, field in self.form.fields.items()}
+
+        original_form_data = self.form.data
+        test_form_data = original_form_data.copy()
+        test_form_data.update(self.test_initial)
+        test_form_data._mutable = False
+        self.form.data = test_form_data
+
+        def data_is_initial(name, field): return not field.has_changed(self.test_initial[name], self.form.data[name])
+        expect_updates = any(data_is_initial(name, field) for name, field in self.form.fields.items())
+        result = self.form.set_alt_data(test_input)
+        had_updates = any(not data_is_initial(name, field) for name, field in self.form.fields.items())
+
+        self.assertTrue(expect_updates)
+        self.assertFalse(had_updates)
+        self.assertEqual({}, result)
+        self.assertEqual(test_form_data, self.form.data)
+        self.assertIs(test_form_data, self.form.data)
+
+        self.form.data = original_form_data
+
+    @skip("Not Implemented")
+    def test_good_practice_attrs(self):
+        """Need feature tests. Already has coverage through other processes. """
+        # FormOverrideMixIn.good_practice_attrs
         pass
 
     @skip("Not Implemented")
+    def test_get_overrides(self):
+        """Need feature tests. Already has coverage through other processes. """
+        # FormOverrideMixIn.get_overrides
+        pass
+
     def test_update_condition_true(self):
         """For a field name condition_<name> method returning true, updates the result as expected. """
-        # get_alt_field_info
-        pass
+        original_alt_info = getattr(self.form, 'alt_field_info', None)
+        expected_label = 'alt_test_feature'
+        test_method = getattr(self.form, 'condition_' + expected_label, None)
+        alt_info = getattr(self, 'alt_field_info', None)
+        expected = alt_info.get(expected_label, None)
+        self.form.alt_field_info = alt_info
+        self.form.test_condition_response = True
+        actual = self.form.get_alt_field_info()
 
-    @skip("Not Implemented")
+        self.assertIsNotNone(alt_info)
+        self.assertIsNotNone(test_method)
+        self.assertTrue(test_method())
+        self.assertIsNotNone(expected)
+        self.assertIn(expected_label, alt_info)
+        self.assertEqual(expected, actual)
+
+        self.form.test_condition_response = False
+        self.form.alt_field_info = original_alt_info
+        if original_alt_info is None:
+            del self.form.alt_field_info
+
     def test_update_condition_false(self):
         """For a field name condition_<name> method returning False, does NOT update the result. """
-        # get_alt_field_info
+        original_alt_info = getattr(self.form, 'alt_field_info', None)
+        expected_label = 'alt_test_feature'
+        test_method = getattr(self.form, 'condition_' + expected_label, None)
+        alt_info = getattr(self, 'alt_field_info', None)
+        expected = {}
+        self.form.alt_field_info = alt_info
+        self.form.test_condition_response = False
+        actual = self.form.get_alt_field_info()
+
+        self.assertIsNotNone(alt_info)
+        self.assertIsNotNone(test_method)
+        self.assertFalse(test_method())
+        self.assertIsNotNone(expected)
+        self.assertIn(expected_label, alt_info)
+        self.assertEqual(expected, actual)
+
+        self.form.test_condition_response = False
+        self.form.alt_field_info = original_alt_info
+        if original_alt_info is None:
+            del self.form.alt_field_info
+
+    def test_update_condition_not_defined(self):
+        """If a condition_<name> method is not defined, then assume False and do NOT update the result. """
+        original_alt_info = getattr(self.form, 'alt_field_info', None)
+        expected_label = 'alt_test_no_method'
+        label_for_used_attrs = 'alt_test_feature'
+        test_method = getattr(self.form, 'condition_' + expected_label, None)
+        alt_info = getattr(self, 'alt_field_info', None)
+        expected = alt_info.get(label_for_used_attrs, None)
+        self.form.alt_field_info = alt_info
+        self.form.test_condition_response = True
+        actual = self.form.get_alt_field_info()
+
+        self.assertIsNotNone(alt_info)
+        self.assertIsNone(test_method)
+        self.assertIsNotNone(expected)
+        self.assertIn(expected_label, alt_info)
+        self.assertEqual(expected, actual)
+
+        self.form.test_condition_response = False
+        self.form.alt_field_info = original_alt_info
+        if original_alt_info is None:
+            del self.form.alt_field_info
+
+    @skip("Not Implemented")
+    def test_get_flat_fields_setting(self):
+        """Need feature tests. Already has coverage through other processes. """
+        # FormOverrideMixIn.get_flat_fields_setting
         pass
 
     @skip("Not Implemented")
+    def test_handle_modifiers(self):
+        """Need feature tests. Already has coverage through other processes. """
+        # FormOverrideMixIn.handle_modifiers
+        pass
+
     def test_unchanged_handle_removals(self):
-        """Unchanged fields if 'remove_field_names' and 'removed_fields' evaluate as False. """
-        # handle_removals
-        pass
+        """Unchanged fields if 'remove_field_names' and 'removed_fields' are empty. """
+        original_fields = self.form.fields
+        fields = original_fields.copy()
+        self.form.removed_fields = {}
+        self.form.remove_field_names = []
+        result = self.form.handle_removals(fields)
 
-    @skip("Not Implemented")
-    def test_add_expected_removed_fields(self):
-        """Needed fields currently in removed_fields are added to the Form's fields. """
-        # handle_removals
-        pass
+        self.assertEqual(len(original_fields), len(result))
+        self.assertEqual(0, len(self.form.removed_fields))
+        self.assertEqual(0, len(self.form.remove_field_names))
+        self.assertDictEqual(original_fields, result)
+        self.assertIs(fields, result)
 
-    @skip("Not Implemented")
-    def test_removed_expected_in_handle_removals(self):
+    def test_handle_removals_removed_named_fields(self):
+        """Fields whose name is in remove_field_names are removed from fields (with no form data). """
+        original_fields = self.form.fields
+        fields = original_fields.copy()
+        remove_names = ['second', 'last']
+        expected_fields = {name: field for name, field in fields.items() if name not in remove_names}
+        self.form.removed_fields = {}
+        self.form.remove_field_names = remove_names
+        result = self.form.handle_removals(fields)
+
+        self.assertEqual(len(original_fields), len(result) + len(remove_names))
+        self.assertEqual(len(remove_names), len(self.form.removed_fields))
+        self.assertEqual(0, len(self.form.remove_field_names))
+        self.assertDictEqual(expected_fields, result)
+        self.assertIs(fields, result)
+
+    def test_removed_only_expected_in_handle_removals(self):
         """Fields whose name is in remove_field_names, but not data, are removed from fields. """
-        # handle_removals
-        pass
+        original_fields = self.form.fields
+        fields = original_fields.copy()
+        remove_names = ['second', 'last']
+        original_data = self.form.data
+        data = original_data.copy()
+        data.appendlist('last', 'test_data_last')
+        data._mutable = False
+        self.form.data = data
+        expected_fields = {name: field for name, field in fields.items() if name != remove_names[0]}
+        self.form.removed_fields = {}
+        self.form.remove_field_names = remove_names
+        result = self.form.handle_removals(fields)
+
+        self.assertEqual(len(original_fields), len(result) + len(remove_names) - 1)
+        self.assertEqual(len(remove_names) - 1, len(self.form.removed_fields))
+        self.assertEqual(1, len(self.form.remove_field_names))
+        self.assertDictEqual(expected_fields, result)
+        self.assertIs(fields, result)
+
+        self.form.data = original_data
+
+    @skip("Not Implemented")
+    def test_handle_removals_add_if_named_in_attribute(self):
+        """Needed fields currently in remove_field_names are added to the Form's fields (with no form data). """
+        # original_data = self.form.data
+        original_fields = self.form.fields
+        fields = original_fields.copy()
+        remove_names = ['second', 'last']
+        self.form.removed_fields = {name: fields.pop(name, None) for name in remove_names}
+        self.form.remove_field_names = []
+        expected_fields = dict(**fields, **self.form.removed_fields)
+        # test_data = original_data.copy()
+        # test_data.update({name: f"value_{name}" for name in remove_names})
+        # test_data._mutable = False
+        # self.form.data = test_data
+        result = self.form.handle_removals(fields)
+
+        self.assertEqual(len(original_fields), len(result))
+        self.assertEqual(0, len(self.form.removed_fields))
+        self.assertEqual(0, len(self.form.remove_field_names))
+        self.assertDictEqual(expected_fields, result)
+        self.assertDictEqual(original_fields, result)
+        self.assertIs(fields, result)
+
+        # self.data = original_data
+
+    def test_handle_removals_add_if_named_in_data(self):
+        """Needed fields currently in removed_fields are added to the Form's fields. """
+        original_data = self.form.data
+        original_fields = self.form.fields
+        fields = original_fields.copy()
+        remove_names = ['second', 'last']
+        self.form.removed_fields = {name: fields.pop(name, None) for name in remove_names}
+        self.form.remove_field_names = []
+        expected_fields = dict(**fields, **self.form.removed_fields)
+        test_data = original_data.copy()
+        test_data.update({name: f"value_{name}" for name in remove_names})
+        test_data._mutable = False
+        self.form.data = test_data
+        result = self.form.handle_removals(fields)
+
+        self.assertEqual(len(original_fields), len(result))
+        self.assertEqual(0, len(self.form.removed_fields))
+        self.assertEqual(0, len(self.form.remove_field_names))
+        self.assertDictEqual(expected_fields, result)
+        self.assertDictEqual(original_fields, result)
+        self.assertIs(fields, result)
+
+        self.data = original_data
 
     @skip("Not Implemented")
     def test_handle_removals_add_if_not_in_remove(self):
