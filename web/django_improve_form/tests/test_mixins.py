@@ -743,10 +743,10 @@ class OverrideTests(FormTests, TestCase):
             'first': {
                     'label': "Alt First Label",
                     'help_text': '',
-                    'initial': 'alt_first_initial',
-                    'default': '', },
+                    # 'default': '',
+                    'initial': 'alt_first_initial', },
             'last': {
-                    'label': "",
+                    'label': None,
                     'initial': 'alt_last_initial',
                     'help_text': '', },
             },
@@ -754,10 +754,10 @@ class OverrideTests(FormTests, TestCase):
             'second': {
                     'label': "Alt Second Label",
                     'help_text': '',
-                    'initial': 'alt_second_initial',
-                    'default': '', },
+                    # 'default': '',
+                    'initial': 'alt_second_initial', },
             'generic_field': {
-                    'label': "",
+                    'label': None,
                     'initial': 'alt_generic_field_initial',
                     'help_text': '', },
             },
@@ -1113,10 +1113,68 @@ class OverrideTests(FormTests, TestCase):
         """Does not apply measurements if it is not an appropriate form input type. """
         pass
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_prep_field_properties(self):
         """If field name is in alt_field_info, the field properties are modified as expected (field.<thing>). """
-        pass
+        # from pprint import pprint
+        original_data = self.form.data
+        test_data = original_data.copy()
+        # modify values in data
+        test_data._mutable = False
+        self.form.data = test_data
+        original_fields = self.form.fields
+        test_fields = original_fields.copy()
+        # modify fields
+        self.form.fields = test_fields
+        test_fields_info = {name: field.__dict__.copy() for name, field in test_fields.items()}
+        original_get_overrides = self.form.get_overrides
+        def skip_overrides(): return {}
+        self.form.get_overrides = skip_overrides
+        original_alt_field_info = getattr(self.form, 'alt_field_info', None)
+        self.form.alt_field_info = self.alt_field_info
+        self.form.test_condition_response = True
+        expected_fields_info = test_fields_info.copy()
+        print("======================== test_prep_field_properties ============================")
+        # {'alt_test_feature': {
+        #     'first': {
+        #             'label': "Alt First Label",
+        #             'help_text': '',
+        #             'initial': 'alt_first_initial',
+        #             'default': '', },
+        #     'last': {
+        #             'label': "",
+        #             'initial': 'alt_last_initial',
+        #             'help_text': '', },
+        #     }}
+        result_fields = self.form.prep_fields()
+        result_fields_info = {name: field.__dict__.copy() for name, field in result_fields.items()}
+
+        modified_info = self.alt_field_info['alt_test_feature']
+        first_label = modified_info['first']['label']
+        first_initial = modified_info['first']['initial']
+        last_initial = modified_info['last']['initial']
+        for name, opts in modified_info.items():
+            expected_fields_info[name].update(opts)
+        # tests
+        self.assertEqual(first_label, result_fields['first'].label)
+        self.assertEqual(first_initial, result_fields['first'].initial)
+        self.assertEqual(last_initial, result_fields['last'].initial)
+        for key, val in expected_fields_info.items():
+            # print(key, "\n")
+            # pprint(val)
+            # print("--------------------------------------------------------------------------------")
+            # pprint(result_fields_info[key])
+            # print("********************************************************************************")
+            self.assertEqual(val, result_fields_info[key])
+        # self.assertDictEqual(expected_fields_info, result_fields_info)
+        # tear-down: reset back to original state.
+        self.form.test_condition_response = False
+        self.form.alt_field_info = original_alt_field_info
+        if original_alt_field_info is None:
+            del self.form.alt_field_info
+        self.form.fields = original_fields
+        self.form.data = original_data
+        self.form.get_overrides = original_get_overrides
 
     @skip("Not Implemented")
     def test_prep_new_data(self):
