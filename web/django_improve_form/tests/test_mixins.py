@@ -996,7 +996,33 @@ class OverrideTests(FormTests, TestCase):
         self.assertDictEqual(original_fields, result)
         self.assertIs(fields, result)
 
-    def test_handle_removals_removed_named_fields(self):
+    def test_handle_removals_missing_remove_field_names(self):
+        """Raises ImproperlyConfigured. Should not be called in ComputedFieldsMixIn, or property was set. """
+        original_fields = self.form.fields
+        fields = original_fields.copy()
+        if hasattr(self.form, 'remove_field_names'):
+            del self.form.remove_field_names
+
+        with self.assertRaises(ImproperlyConfigured):
+            self.form.handle_removals(fields)
+
+    def test_handle_removals_missing_removed_fields(self):
+        """Unchanged fields. Form does not have removed_fields property initially, but it is added. """
+        original_fields = self.form.fields
+        fields = original_fields.copy()
+        self.form.remove_field_names = []
+        if hasattr(self.form, 'removed_fields'):
+            del self.form.removed_fields
+        result = self.form.handle_removals(fields)
+
+        self.assertTrue(hasattr(self.form, 'removed_fields'))
+        self.assertEqual(len(original_fields), len(result))
+        self.assertEqual(0, len(self.form.removed_fields))
+        self.assertEqual(0, len(self.form.remove_field_names))
+        self.assertDictEqual(original_fields, result)
+        self.assertIs(fields, result)
+
+    def test_handle_removals_remove_field_names(self):
         """Fields whose name is in remove_field_names are removed from fields (with no form data). """
         original_fields = self.form.fields
         fields = original_fields.copy()
