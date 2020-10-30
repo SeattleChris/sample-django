@@ -738,6 +738,30 @@ class ComputedTests(FormTests, TestCase):
 
 class OverrideTests(FormTests, TestCase):
     form_class = OverrideForm
+    alt_field_info = {
+        'alt_test_feature': {
+            'first': {
+                    'label': "Alt First Label",
+                    'help_text': '',
+                    'initial': 'alt_first_initial',
+                    'default': '', },
+            'last': {
+                    'label': "",
+                    'initial': 'alt_last_initial',
+                    'help_text': '', },
+            },
+        'alt_test_no_method': {
+            'second': {
+                    'label': "Alt Second Label",
+                    'help_text': '',
+                    'initial': 'alt_second_initial',
+                    'default': '', },
+            'generic_field': {
+                    'label': "",
+                    'initial': 'alt_generic_field_initial',
+                    'help_text': '', },
+            },
+        }
 
     def setUp(self):
         super().setUp()
@@ -877,15 +901,38 @@ class OverrideTests(FormTests, TestCase):
         # FormOverrideMixIn.get_overrides
         pass
 
-    @skip("Not Implemented")
     def test_update_condition_true(self):
         """For a field name condition_<name> method returning true, updates the result as expected. """
-        # get_alt_field_info
-        pass
+        original_alt_info = getattr(self.form, 'alt_field_info', None)
+        expected_label = 'alt_test_feature'
+        test_method = getattr(self.form, 'condition_' + expected_label, None)
+        alt_info = getattr(self, 'alt_field_info', None)
+        expected = alt_info.get(expected_label, None)
+        self.form.alt_field_info = alt_info
+        self.form.test_condition_response = True
+        actual = self.form.get_alt_field_info()
+
+        self.assertIsNotNone(alt_info)
+        self.assertIsNotNone(test_method)
+        self.assertTrue(test_method())
+        self.assertIsNotNone(expected)
+        self.assertIn(expected_label, alt_info)
+        self.assertEqual(expected, actual)
+
+        self.form.test_condition_response = False
+        self.form.alt_field_info = original_alt_info
+        if original_alt_info is None:
+            del self.form.alt_field_info
 
     @skip("Not Implemented")
     def test_update_condition_false(self):
         """For a field name condition_<name> method returning False, does NOT update the result. """
+        # get_alt_field_info
+        pass
+
+    @skip("Not Implemented")
+    def test_update_condition_not_defined(self):
+        """If a condition_<name> method is not defined, then assume False and do NOT update the result. """
         # get_alt_field_info
         pass
 
