@@ -1035,7 +1035,32 @@ class OverrideTests(FormTests, TestCase):
 
         self.form.data = original_data
 
-    def test_add_expected_removed_fields(self):
+    @skip("Not Implemented")
+    def test_handle_removals_add_if_named_in_attribute(self):
+        """Needed fields currently in remove_field_names are added to the Form's fields (with no form data). """
+        # original_data = self.form.data
+        original_fields = self.form.fields
+        fields = original_fields.copy()
+        remove_names = ['second', 'last']
+        self.form.removed_fields = {name: fields.pop(name, None) for name in remove_names}
+        self.form.remove_field_names = []
+        expected_fields = dict(**fields, **self.form.removed_fields)
+        # test_data = original_data.copy()
+        # test_data.update({name: f"value_{name}" for name in remove_names})
+        # test_data._mutable = False
+        # self.form.data = test_data
+        result = self.form.handle_removals(fields)
+
+        self.assertEqual(len(original_fields), len(result))
+        self.assertEqual(0, len(self.form.removed_fields))
+        self.assertEqual(0, len(self.form.remove_field_names))
+        self.assertDictEqual(expected_fields, result)
+        self.assertDictEqual(original_fields, result)
+        self.assertIs(fields, result)
+
+        # self.data = original_data
+
+    def test_handle_removals_add_if_named_in_data(self):
         """Needed fields currently in removed_fields are added to the Form's fields. """
         original_data = self.form.data
         original_fields = self.form.fields
@@ -1056,6 +1081,8 @@ class OverrideTests(FormTests, TestCase):
         self.assertDictEqual(expected_fields, result)
         self.assertDictEqual(original_fields, result)
         self.assertIs(fields, result)
+
+        self.data = original_data
 
     @skip("Not Implemented")
     def test_handle_removals_add_if_not_in_remove(self):
