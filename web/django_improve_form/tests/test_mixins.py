@@ -1097,10 +1097,69 @@ class OverrideTests(FormTests, TestCase):
         """False goal, adding takes precedence. Adding only triggered because a value is inserted in form data. """
         self.assertFalse(False)
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_prep_overrides(self):
         """Applies overrides of field widget attrs if name is in overrides. """
-        pass
+        from pprint import pprint
+        original_data = self.form.data
+        test_data = original_data.copy()
+        # modify values in data
+        test_data._mutable = False
+        self.form.data = test_data
+        original_fields = self.form.fields
+        test_fields = original_fields.copy()
+        # modify fields
+        self.form.fields = test_fields
+        test_attrs = {name: field.widget.attrs.copy() for name, field in test_fields.items()}
+        original_get_overrides = self.form.get_overrides
+        def replace_overrides(): return self.formfield_attrs_overrides
+        self.form.get_overrides = replace_overrides
+        original_alt_field_info = getattr(self.form, 'alt_field_info', None)
+        self.form.alt_field_info = {}
+        # self.form.test_condition_response = True
+        expected_attrs = test_attrs.copy()
+        print("======================== test_prep_overrides ============================")
+        # formfield_attrs_overrides = {
+        #     '_default_': {'size': 15, 'cols': 20, 'rows': 4, },
+        #     'first': {'maxlength': 191, 'size': 20, },
+        #     'second': {'maxlength': 2, },  # 'size': 2,
+        #     'last': {'maxlength': 2, 'size': 5, },
+        #     }
+        result_fields = self.form.prep_fields()
+        result_attrs = {name: field.widget.attrs.copy() for name, field in result_fields.items()}
+
+        modified_info = self.formfield_attrs_overrides.copy()
+        first_maxlength = modified_info['first']['maxlength']
+        first_size = modified_info['first']['size']
+        second_maxlength = modified_info['second']['maxlength']
+        last_maxlength = modified_info['last']['maxlength']
+        last_size = modified_info['last']['size']
+        DEFAULT = modified_info.pop('_default_')
+        for name, opts in modified_info.items():
+            expected_attrs[name].update(opts)
+            # field.widget.attrs.update(overrides[name])
+        # tests
+        self.assertEqual(first_maxlength, result_fields['first'].widget.attrs.get('maxlength', None))
+        # self.assertEqual(first_size, result_fields['first'].widget.attrs.get('size', None))
+        self.assertEqual(second_maxlength, result_fields['second'].widget.attrs.get('maxlength', None))
+        self.assertEqual(last_maxlength, result_fields['last'].widget.attrs.get('maxlength', None))
+        # self.assertEqual(last_size, result_fields['last'].widget.attrs.get('size', None))
+        for key, val in expected_attrs.items():
+            print(key, "\n")
+            pprint(val)
+            print("--------------------------------------------------------------------------------")
+            pprint(result_attrs[key])
+            print("********************************************************************************")
+            self.assertEqual(val, result_attrs[key])
+        self.assertDictEqual(expected_attrs, result_attrs)
+        # tear-down: reset back to original state.
+        # self.form.test_condition_response = False
+        self.form.alt_field_info = original_alt_field_info
+        if original_alt_field_info is None:
+            del self.form.alt_field_info
+        self.form.fields = original_fields
+        self.form.data = original_data
+        self.form.get_overrides = original_get_overrides
 
     @skip("Not Implemented")
     def test_prep_textarea(self):
@@ -1120,7 +1179,7 @@ class OverrideTests(FormTests, TestCase):
     # @skip("Not Implemented")
     def test_prep_field_properties(self):
         """If field name is in alt_field_info, the field properties are modified as expected (field.<thing>). """
-        from pprint import pprint
+        # from pprint import pprint
         original_data = self.form.data
         test_data = original_data.copy()
         # modify values in data
@@ -1138,7 +1197,7 @@ class OverrideTests(FormTests, TestCase):
         self.form.alt_field_info = self.alt_field_info
         self.form.test_condition_response = True
         expected_fields_info = test_fields_info.copy()
-        print("======================== test_prep_field_properties ============================")
+        # print("======================== test_prep_field_properties ============================")
         # {'alt_test_feature': {
         #     'first': {
         #             'label': "Alt First Label",
@@ -1163,11 +1222,11 @@ class OverrideTests(FormTests, TestCase):
         self.assertEqual(first_initial, result_fields['first'].initial)
         self.assertEqual(last_initial, result_fields['last'].initial)
         for key, val in expected_fields_info.items():
-            print(key, "\n")
-            pprint(val)
-            print("--------------------------------------------------------------------------------")
-            pprint(result_fields_info[key])
-            print("********************************************************************************")
+            # print(key, "\n")
+            # pprint(val)
+            # print("--------------------------------------------------------------------------------")
+            # pprint(result_fields_info[key])
+            # print("********************************************************************************")
             self.assertEqual(val, result_fields_info[key])
         self.assertDictEqual(expected_fields_info, result_fields_info)
         # tear-down: reset back to original state.
