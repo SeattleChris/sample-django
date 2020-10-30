@@ -743,7 +743,6 @@ class OverrideTests(FormTests, TestCase):
             'first': {
                     'label': "Alt First Label",
                     'help_text': '',
-                    # 'default': '',
                     'initial': 'alt_first_initial', },
             'last': {
                     'label': None,
@@ -754,13 +753,18 @@ class OverrideTests(FormTests, TestCase):
             'second': {
                     'label': "Alt Second Label",
                     'help_text': '',
-                    # 'default': '',
                     'initial': 'alt_second_initial', },
             'generic_field': {
                     'label': None,
                     'initial': 'alt_generic_field_initial',
                     'help_text': '', },
             },
+        }
+    formfield_attrs_overrides = {
+        '_default_': {'size': 15, 'cols': 20, 'rows': 4, },
+        'first': {'maxlength': '191', 'size': '20', },
+        'second': {'maxlength': '2', 'size': '2', },  # 'size': '2',
+        'last': {'maxlength': '2', 'size': '5', },
         }
 
     def setUp(self):
@@ -1116,7 +1120,7 @@ class OverrideTests(FormTests, TestCase):
     # @skip("Not Implemented")
     def test_prep_field_properties(self):
         """If field name is in alt_field_info, the field properties are modified as expected (field.<thing>). """
-        # from pprint import pprint
+        from pprint import pprint
         original_data = self.form.data
         test_data = original_data.copy()
         # modify values in data
@@ -1139,10 +1143,9 @@ class OverrideTests(FormTests, TestCase):
         #     'first': {
         #             'label': "Alt First Label",
         #             'help_text': '',
-        #             'initial': 'alt_first_initial',
-        #             'default': '', },
+        #             'initial': 'alt_first_initial', },
         #     'last': {
-        #             'label': "",
+        #             'label': None,
         #             'initial': 'alt_last_initial',
         #             'help_text': '', },
         #     }}
@@ -1160,13 +1163,13 @@ class OverrideTests(FormTests, TestCase):
         self.assertEqual(first_initial, result_fields['first'].initial)
         self.assertEqual(last_initial, result_fields['last'].initial)
         for key, val in expected_fields_info.items():
-            # print(key, "\n")
-            # pprint(val)
-            # print("--------------------------------------------------------------------------------")
-            # pprint(result_fields_info[key])
-            # print("********************************************************************************")
+            print(key, "\n")
+            pprint(val)
+            print("--------------------------------------------------------------------------------")
+            pprint(result_fields_info[key])
+            print("********************************************************************************")
             self.assertEqual(val, result_fields_info[key])
-        # self.assertDictEqual(expected_fields_info, result_fields_info)
+        self.assertDictEqual(expected_fields_info, result_fields_info)
         # tear-down: reset back to original state.
         self.form.test_condition_response = False
         self.form.alt_field_info = original_alt_field_info
