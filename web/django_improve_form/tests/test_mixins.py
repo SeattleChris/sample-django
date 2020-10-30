@@ -971,6 +971,18 @@ class OverrideTests(FormTests, TestCase):
             del self.form.alt_field_info
 
     @skip("Not Implemented")
+    def test_get_flat_fields_setting(self):
+        """Need feature tests. Already has coverage through other processes. """
+        # FormOverrideMixIn.get_flat_fields_setting
+        pass
+
+    @skip("Not Implemented")
+    def test_handle_modifiers(self):
+        """Need feature tests. Already has coverage through other processes. """
+        # FormOverrideMixIn.handle_modifiers
+        pass
+
+    @skip("Not Implemented")
     def test_unchanged_handle_removals(self):
         """Unchanged fields if 'remove_field_names' and 'removed_fields' evaluate as False. """
         # handle_removals
