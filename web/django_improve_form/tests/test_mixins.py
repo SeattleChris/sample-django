@@ -2,7 +2,11 @@ from django.test import TestCase  # , Client, override_settings, modify_settings
 from unittest import skip
 from django.core.exceptions import ImproperlyConfigured, ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
 from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
-from django.forms.widgets import HiddenInput, MultipleHiddenInput
+# from django.forms.widgets import HiddenInput, MultipleHiddenInput
+# from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea
+# from django.forms.fields import CharField
+from django.forms import (CharField, HiddenInput, MultipleHiddenInput,
+                          RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea)
 from django.contrib.auth import get_user_model
 from django.utils.datastructures import MultiValueDict
 from django_registration import validators
@@ -1103,21 +1107,50 @@ class OverrideTests(FormTests, TestCase):
         from pprint import pprint
         original_data = self.form.data
         test_data = original_data.copy()
-        # modify values in data
         test_data._mutable = False
-        self.form.data = test_data
+        self.form.data = test_data  # copied only to allow tear-down reverting to original.
         original_fields = self.form.fields
         test_fields = original_fields.copy()
-        # modify fields
-        self.form.fields = test_fields
-        test_attrs = {name: field.widget.attrs.copy() for name, field in test_fields.items()}
+        self.form.fields = test_fields  # copied to allow tear-down reverting to original.
         original_get_overrides = self.form.get_overrides
         def replace_overrides(): return self.formfield_attrs_overrides
         self.form.get_overrides = replace_overrides
         original_alt_field_info = getattr(self.form, 'alt_field_info', None)
         self.form.alt_field_info = {}
-        # self.form.test_condition_response = True
-        expected_attrs = test_attrs.copy()
+        overrides = self.formfield_attrs_overrides.copy()
+        DEFAULT = overrides.pop('_default_')
+        expected_attrs = {}
+        for name, field in test_fields.items():
+            attrs = field.widget.attrs.copy()
+            if isinstance(field.widget, (RadioSelect, CheckboxSelectMultiple, CheckboxInput, )):
+                pass  # update if similar section in prep_fields is updated.
+            attrs.update(overrides.get(name, {}))
+            # TODO: setup structure for using default or defined version for all CharFields.
+            if overrides.get(name, {}).get('no_size_override', False):
+                expected_attrs[name] = attrs
+                continue  # None of the following size overrides are applied for this field.
+            if isinstance(field.widget, Textarea):
+                width_attr_name = 'cols'
+                default = DEFAULT.get('cols', None)
+                display_size = attrs.get('cols', None)
+                if 'rows' in DEFAULT:
+                    height = attrs.get('rows', None)
+                    height = min((DEFAULT['rows'], int(height))) if height else DEFAULT['rows']
+                    attrs['rows'] = str(height)
+                if default:  # For textarea, we always override. The others depend on different conditions.
+                    display_size = min((display_size, default))
+            elif issubclass(field.__class__, CharField):
+                width_attr_name = 'size'  # 'size' is only valid for input types: email, password, tel, text
+                default = DEFAULT.get('size', None)  # Cannot use float("inf") as an int.
+                display_size = attrs.get('size', None)
+            else:  # This field does not have a size setting.
+                width_attr_name, default, display_size = None, None, None
+            input_size = attrs.get('maxlength', None)
+            possible_size = [int(ea) for ea in (display_size or default, input_size) if ea]
+            # attrs['size'] = str(int(min(float(display_size), float(input_size))))  # Can't use float("inf") as an int.
+            if possible_size and width_attr_name:
+                attrs[width_attr_name] = str(min(possible_size))
+            expected_attrs[name] = attrs
         print("======================== test_prep_overrides ============================")
         # formfield_attrs_overrides = {
         #     '_default_': {'size': 15, 'cols': 20, 'rows': 4, },
@@ -1128,22 +1161,17 @@ class OverrideTests(FormTests, TestCase):
         result_fields = self.form.prep_fields()
         result_attrs = {name: field.widget.attrs.copy() for name, field in result_fields.items()}
 
-        modified_info = self.formfield_attrs_overrides.copy()
-        first_maxlength = modified_info['first']['maxlength']
-        first_size = modified_info['first']['size']
-        second_maxlength = modified_info['second']['maxlength']
-        last_maxlength = modified_info['last']['maxlength']
-        last_size = modified_info['last']['size']
-        DEFAULT = modified_info.pop('_default_')
-        for name, opts in modified_info.items():
-            expected_attrs[name].update(opts)
-            # field.widget.attrs.update(overrides[name])
+        first_maxlength = expected_attrs['first']['maxlength']  # overrides['first']['maxlength']
+        first_size = expected_attrs['first']['size']  # overrides['first']['size']
+        second_maxlength = expected_attrs['second']['maxlength']  # overrides['second']['maxlength']
+        last_maxlength = expected_attrs['last']['maxlength']  # overrides['last']['maxlength']
+        last_size = expected_attrs['last']['size']  # overrides['last']['size']
         # tests
         self.assertEqual(first_maxlength, result_fields['first'].widget.attrs.get('maxlength', None))
-        # self.assertEqual(first_size, result_fields['first'].widget.attrs.get('size', None))
+        self.assertEqual(first_size, result_fields['first'].widget.attrs.get('size', None))
         self.assertEqual(second_maxlength, result_fields['second'].widget.attrs.get('maxlength', None))
         self.assertEqual(last_maxlength, result_fields['last'].widget.attrs.get('maxlength', None))
-        # self.assertEqual(last_size, result_fields['last'].widget.attrs.get('size', None))
+        self.assertEqual(last_size, result_fields['last'].widget.attrs.get('size', None))
         for key, val in expected_attrs.items():
             print(key, "\n")
             pprint(val)
@@ -1153,7 +1181,6 @@ class OverrideTests(FormTests, TestCase):
             self.assertEqual(val, result_attrs[key])
         self.assertDictEqual(expected_attrs, result_attrs)
         # tear-down: reset back to original state.
-        # self.form.test_condition_response = False
         self.form.alt_field_info = original_alt_field_info
         if original_alt_field_info is None:
             del self.form.alt_field_info
