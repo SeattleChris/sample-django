@@ -3,7 +3,9 @@ from django.test import TestCase  # , Client, override_settings, modify_settings
 # from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 # from .helper_general import AnonymousUser, MockUser  # MockRequest, UserModel, MockStaffUser, MockSuperUser, APP_NAME
-from django.forms import Form, CharField, HiddenInput  # , ModelForm, BaseModelForm, ModelFormMetaclass
+from django.forms import (Form, CharField, EmailField, BooleanField, ChoiceField, MultipleChoiceField,
+                          HiddenInput, Textarea, RadioSelect, CheckboxSelectMultiple, CheckboxInput)
+# , ModelForm, BaseModelForm, ModelFormMetaclass
 from django.contrib.auth.forms import UserCreationForm  # , UserChangeForm
 from ..mixins import (
     FocusMixIn, CriticalFieldMixIn, ComputedFieldsMixIn, FormOverrideMixIn, FormFieldsetMixIn,
@@ -59,13 +61,26 @@ class ComputedForm(ComputedFieldsMixIn, Form):
 
 
 class OverrideForm(FormOverrideMixIn, Form):
+    single_choices = [('A', 'Option A'), ('B', 'Option B'), ('C', 'Option C'), ]
+    multi_choices = [('A', 'Include A'), ('B', 'Include B'), ('C', 'Include C'), ]
+
     first = CharField(initial='first_value')
     second = CharField(initial='second_value')
     generic_field = CharField(initial='original_value')
+    large_comment = CharField(widget=Textarea(attrs={"rows": 10, "cols": 40}))
+    small_comment = CharField(widget=Textarea(attrs={"rows": 2, "cols": 10}))
+    simple_comment = CharField(widget=Textarea())
+    hide_field = CharField(widget=HiddenInput(), initial='hide_data')
+    bool_field = BooleanField(required=False)  # single checkbox
+    single_select = ChoiceField(choices=single_choices)  # default widget select
+    multi_select = MultipleChoiceField(choices=multi_choices)  # SelectMultiple
+    radio_select = ChoiceField(choices=single_choices, widget=RadioSelect)
+    single_check = ChoiceField(choices=single_choices, widget=CheckboxInput)
+    multi_check = MultipleChoiceField(choices=multi_choices, widget=CheckboxSelectMultiple)
+    email_test = EmailField()  # like CharField, can have: max_length, min_length, and empty_value
     last = CharField(initial='last_value')
 
     test_condition_response = False
-    # def test_condition_response(self): return bool('')
 
     def condition_alt_test_feature(self):
         """Methods with condition_<label> return Boolean for when to apply alt_field_info[label] attrs.  """
