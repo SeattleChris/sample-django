@@ -534,6 +534,8 @@ class FormOverrideMixIn:
 
     def __init__(self, *args, **kwargs):
         # print("======================= FormOverrideMixIn.__init__ =================================")
+        if not issubclass(self.__class__, ComputedFieldsMixIn):
+            self.remove_field_names = getattr(self, 'remove_field_names', [])
         super().__init__(*args, **kwargs)
         # print("--------------------- FINISH FormOverrideMixIn.__init__ --------------------")
 
@@ -608,15 +610,16 @@ class FormOverrideMixIn:
 
     def handle_removals(self, fields):
         """Manages field removals (including adding). Only used when a 'ComputedFieldsMixIn' variant is not present. """
-        if not hasattr(self, 'remove_field_names') and not hasattr(self, 'removed_fields'):
-            return fields
-        assert not issubclass(self.__class__, ComputedFieldsMixIn), "When Computed, do not use remove_field_names. "
-        self.removed_fields = getattr(self, 'removed_fields', {})
-        data = set(getattr(self, 'data', {}).keys())
-        needed_names = data - set(fields.keys())
-        names_in_removed = list(self.removed_fields.keys())
-        add_fields = {name: self.removed_fields.pop(name) for name in names_in_removed if name in needed_names}
-        remove_names = set(self.remove_field_names) - data
+        if issubclass(self.__class__, ComputedFieldsMixIn) or not hasattr(self, 'remove_field_names'):
+            message = "FormOverrideMixIn.handle_removals should only be called after setting 'remove_field_names' and "
+            message += "if the Form class does not have 'ComputedFieldsMixIn' or extensions of it. "
+            raise ImproperlyConfigured(_(message))
+        if not hasattr(self, 'removed_fields'):
+            self.removed_fields = {}
+        data_names = set(getattr(self, 'data', {}).keys())
+        needed_names = data_names - set(fields.keys())
+        add_fields = {name: self.removed_fields.pop(name) for name in needed_names if name in self.removed_fields}
+        remove_names = set(self.remove_field_names) - data_names
         removed_fields = {name: fields.pop(name) for name in remove_names if name in fields}
         self.remove_field_names = [name for name in self.remove_field_names if name not in removed_fields]
 
