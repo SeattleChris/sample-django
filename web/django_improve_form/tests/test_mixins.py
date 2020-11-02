@@ -867,24 +867,23 @@ class OverrideTests(FormTests, TestCase):
 
     def test_set_alt_data_unchanged(self):
         """If all fields are not changed, then the Form's data is not overwritten. """
-        test_input = {name: (field, self.test_initial[name]) for name, field in self.form.fields.items()}
-
         original_form_data = self.form.data
-        test_form_data = original_form_data.copy()
-        test_form_data.update(self.test_initial)
-        test_form_data._mutable = False
-        self.form.data = test_form_data
+        test_data = self.test_data.copy()
+        test_data._mutable = False
+        self.form.data = test_data
+        initial_data = test_data.copy()
 
-        def data_is_initial(name, field): return not field.has_changed(self.test_initial[name], self.form.data[name])
-        expect_updates = any(data_is_initial(name, field) for name, field in self.form.fields.items())
+        alt_values = {name: f"alt_value_{name}" for name in self.test_initial}
+        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
+        expect_updates = any(self.data_is_initial(name) for name in initial_data)
         result = self.form.set_alt_data(test_input)
-        had_updates = any(not data_is_initial(name, field) for name, field in self.form.fields.items())
+        had_updates = any(self.form.data[name] != value for name, value in initial_data.items())
 
-        self.assertTrue(expect_updates)
+        self.assertFalse(expect_updates)
         self.assertFalse(had_updates)
-        self.assertEqual({}, result)
-        self.assertEqual(test_form_data, self.form.data)
-        self.assertIs(test_form_data, self.form.data)
+        self.assertDictEqual({}, result)
+        self.assertDictEqual(initial_data, self.form.data)
+        self.assertIs(test_data, self.form.data)
 
         self.form.data = original_form_data
 
