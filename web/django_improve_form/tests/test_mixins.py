@@ -846,24 +846,56 @@ class OverrideTests(FormTests, TestCase):
         field = self.form.fields[name]
         return not field.has_changed(self.test_initial.get(name), self.form.data.get(name))
 
+    def test_set_alt_data_mutable(self):
+        """After running set_alt_data that triggers changes, the Form's data attribute should have _mutable = False. """
+        # from pprint import pprint
+        original_test_initial = self.test_initial
         original_form_data = self.form.data
-        test_form_data = original_form_data.copy()
-        test_form_data.update(self.test_initial)
-        test_form_data._mutable = False
-        self.form.data = test_form_data
+        initial = self.test_initial
+        test_data = self.test_data.copy()
+        test_data.update({name: initial[name] for name in list(initial.keys())[1:-1]})  # two fields for alt_values
+        test_data._mutable = False
+        self.form.data = test_data
+        initial_data = test_data.copy()
 
-        def data_is_initial(name, field): return not field.has_changed(self.test_initial[name], self.form.data[name])
-        expect_updates = any(data_is_initial(name, field) for name, field in self.form.fields.items())
+        alt_values = {name: f"alt_value_{name}" for name in initial}  # some, but not all, will be used.
+        unchanged_fields = {name: val for name, val in test_data.items() if val == initial[name]}
+        expected_result = {name: alt_values[name] for name in unchanged_fields}
+        expected_data = test_data.copy()
+        expected_data.update(expected_result)
+
+        expect_updates = any(self.data_is_initial(name) for name in initial_data)
+        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
         result = self.form.set_alt_data(test_input)
-        had_updates = any(not data_is_initial(name, field) for name, field in self.form.fields.items())
-
+        had_updates = any(value != self.form.data[name] for name, value in initial_data.items())
+        # print("====================== test_set_alt_data_mutable =======================")
+        # pprint(expected_result)
+        # print("--------------------------------------------------")
+        # pprint(result)
+        # print("--------------------------------------------------")
+        # pprint(expected_data)
+        # print("--------------------------------------------------")
+        # pprint(self.form.data)
+        # print("------------------END SECTION---------------------------")
+        # pprint(initial)
+        # print("--------------------------------------------------")
+        # pprint(test_data)
+        # print("========================= SET ALT DATA ==========================================")
+        for name, val in expected_data.items():
+            # print(name, " :  ", initial[name], "\n")
+            # print(val)
+            # print("-----------------------------------------------")
+            # print(self.form.data[name])
+            # print("***********************************************")
+            self.assertEqual(val, self.form.data[name])
         self.assertTrue(expect_updates)
         self.assertTrue(had_updates)
         self.assertFalse(getattr(self.form.data, '_mutable', True))
-        self.assertDictEqual(alt_values, result)
+        self.assertDictEqual(expected_result, result)
+        self.assertDictEqual(expected_data, self.form.data)
 
-        if had_updates:
-            self.form.data = original_form_data
+        self.form.data = original_form_data
+        self.test_initial = original_test_initial
 
     def test_set_alt_data_unchanged(self):
         """If all fields are not changed, then the Form's data is not overwritten. """
