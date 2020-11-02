@@ -1148,7 +1148,9 @@ class OverrideTests(FormTests, TestCase):
                 pass  # update if similar section in prep_fields is updated.
             attrs.update(overrides.get(name, {}))
             # TODO: setup structure for using default or defined version for all CharFields.
-            if overrides.get(name, {}).get('no_size_override', False):
+            no_resize = overrides.get(name, {}).pop('no_size_override', False)
+            no_resize = True if isinstance(field.widget, (HiddenInput, MultipleHiddenInput)) else no_resize
+            if no_resize:
                 expected_attrs[name] = attrs
                 continue  # None of the following size overrides are applied for this field.
             if isinstance(field.widget, Textarea):
