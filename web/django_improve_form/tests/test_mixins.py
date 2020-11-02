@@ -773,9 +773,9 @@ class OverrideTests(FormTests, TestCase):
 
     def setUp(self):
         super().setUp()
-        f = self.form.fields
-        test_initial = {'first': f['first'].initial, 'second': f['second'].initial, 'last': f['last'].initial}
-        test_initial['generic_field'] = f['generic_field'].initial
+        fd = self.form.fields
+        test_initial = {'first': fd['first'].initial, 'second': fd['second'].initial, 'last': fd['last'].initial}
+        test_initial['generic_field'] = fd['generic_field'].initial
         test_data = MultiValueDict()
         test_data.update({name: f"test_value_{name}" for name in test_initial})
         self.test_initial = test_initial
@@ -842,10 +842,9 @@ class OverrideTests(FormTests, TestCase):
 
         self.form.data = original_form_data
 
-    def test_set_alt_data_mutable(self):
-        """After running set_alt_data, the Form's data attribute should have _mutable = False. """
-        alt_values = {name: f"alt_value_{name}" for name in self.form.fields}
-        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
+    def data_is_initial(self, name):
+        field = self.form.fields[name]
+        return not field.has_changed(self.test_initial.get(name), self.form.data.get(name))
 
         original_form_data = self.form.data
         test_form_data = original_form_data.copy()
