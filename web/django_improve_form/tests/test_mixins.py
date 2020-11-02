@@ -53,6 +53,18 @@ HIDDEN_TXT = '<input type="hidden" name="%(name)s" value="%(initial)s" id="id_%(
 START_LABEL = '%(start_tag)s<label for="id_%(name)s">%(pretty)s:</label>%(label_end)s'
 DEFAULT_TXT = START_LABEL + \
     '<input type="%(input_type)s" name="%(name)s"%(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
+SELECT_TXT = START_LABEL + \
+    '<select name="%(name)s" %(required)sid="id_%(name)s"%(multiple)s>\n%(options)s</select>%(end_tag)s\n'
+OPTION_TXT = '  <option value="%(val)s">%(display_choice)s</option>\n\n'
+CHECK_TXT = '%(start_tag)s<label>%(pretty)s:</label>%(label_end)s<ul id="id_%(name)s">\n%(options)s</ul>%(end_tag)s\n'
+RADIO_TXT = START_LABEL + \
+    '<ul id="id_%(name)s">\n%(options)s</ul>%(end_tag)s\n'
+OTHER_OPTION_TXT = '    <li><label for="id_%(name)s_%(num)s"><input type="%(input_type)s" name="%(name)s" ' + \
+    'value="%(val)s" %(required)sid="id_%(name)s_%(num)s">\n %(display_choice)s</label>\n\n</li>\n'
+BOOL_TXT = START_LABEL + \
+    '<input type="checkbox" name="%(name)s" %(required)sid="id_%(name)s">%(end_tag)s\n'  #
+AREA_TXT = START_LABEL + \
+    '<textarea name="%(name)s" cols="20" rows="4" %(required)sid="id_%(name)s">\n%(initial)s</textarea>%(end_tag)s\n'
 REPLACE_TEXT = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
 REPLACE_TEXT['email'] = EMAIL_TXT
 for name in ('first_name', 'last_name'):
@@ -160,13 +172,52 @@ class FormTests:
             cur_replace.update({'name': name, 'pretty': pretty_name(name), 'attrs': '%(attrs)s'})
             cur_replace['required'] = REQUIRED if field.required else ''
             if field.disabled:
-                default_re['required'] += 'disabled '
+                cur_replace['required'] += 'disabled '
+
+            if isinstance(field, EmailField) and name not in replace_text:
+                cur_replace['input_type'] = 'email'
+                # replace_text[name] = EMAIL_TXT
+            if isinstance(field.widget, Textarea):
+                cur_replace['initial'] = getattr(field, 'initial', None) or ''
+                replace_text[name] = AREA_TXT
+            elif isinstance(field.widget, (CheckboxSelectMultiple, RadioSelect)):
+                input_type = 'radio' if isinstance(field.widget, RadioSelect) else 'checkbox'
+                required = REQUIRED if field.required else ''
+                if isinstance(field.widget, CheckboxSelectMultiple):
+                    required = ''
+                options_re = {'name': name, 'required': required, 'input_type': input_type}
+                option_list = []
+                for num, each in enumerate(field.choices):
+                    val, display = each
+                    opt_replace = options_re.copy()
+                    opt_replace.update({'num': str(num), 'val': str(val), 'display_choice': str(display)})
+                    option = OTHER_OPTION_TXT % opt_replace
+                    option_list.append(option)
+                cur_replace['options'] = ''.join(option_list)
+                # if isinstance(field.widget, CheckboxSelectMultiple):
+                #     cur_replace['required'] = ''
+                replace_text[name] = RADIO_TXT if isinstance(field.widget, RadioSelect) else CHECK_TXT
+            elif isinstance(field, BooleanField) or isinstance(field.widget, CheckboxInput):
+                replace_text[name] = BOOL_TXT
+            elif isinstance(field.widget, (Select, SelectMultiple)):
+                option_list = []
+                for num, each in enumerate(field.choices):
+                    val, display = each
+                    option = OPTION_TXT % {'val': val, 'display_choice': display}
+                    option_list.append(option)
+                cur_replace['options'] = ''.join(option_list)
+                cur_replace['multiple'] = ' multiple'
+                if not isinstance(field.widget, SelectMultiple):
+                    cur_replace['multiple'] = ''
+                    cur_replace['required'] = ''
+                replace_text[name] = SELECT_TXT
+
             if issubclass(self.form.__class__, FormOverrideMixIn):
-                default_re['attrs'] = self.get_override_attrs(name, field)
-            elif field.initial:
-                default_re['attrs'] += f'value="{field.initial}" '
-                # default_re['attrs'] = f'value="{field.initial}" ' + default_re['attrs']
-            txt = replace_text.get(name, DEFAULT_TXT) % default_re
+                cur_replace['attrs'] = self.get_override_attrs(name, field)
+            elif field.initial and not isinstance(field.widget, Textarea):
+                cur_replace['attrs'] += f'value="{field.initial}" '
+                # cur_replace['attrs'] = f'value="{field.initial}" ' + cur_replace['attrs']
+            txt = replace_text.get(name, DEFAULT_TXT) % cur_replace
             form_list.append(txt)
         str_hidden = ''.join(hidden_list)
         if len(form_list) > 0:
