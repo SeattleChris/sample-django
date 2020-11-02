@@ -786,32 +786,29 @@ class OverrideTests(FormTests, TestCase):
         name, value = 'generic_field', 'alt_data_value'
         field = self.form.fields.get(name, None)
         self.assertIsNotNone(field, "Unable to find the expected field in current fields. ")
+
+        original_form_data = self.form.data
         test_data = self.test_data.copy()
+        test_data.update({name: self.test_initial[name]})
+        test_data._mutable = False
+        self.form.data = test_data
+        initial_data = test_data.copy()
         expected_data = test_data.copy()
         expected_data.update({name: value})
 
-        original_form_data = self.form.data
-        test_form_data = original_form_data.copy()
-        test_form_data.update(self.test_data)
-        test_form_data.update({name: self.test_initial[name]})
-        test_form_data._mutable = False
-        self.form.data = test_form_data
-        initial = self.form.get_initial_for_field(field, name)
+        initial_val = self.form.get_initial_for_field(field, name)
         data_name = self.form.add_prefix(name)
         data_val = field.widget.value_from_datadict(self.form.data, self.form.files, data_name)
-        # print("\n===================== TEST SET ALT DATA SINGLE ===============================")
-        use_alt_value = not field.has_changed(initial, data_val)
-        expected_value = value if use_alt_value else test_form_data.get(name)
+        use_alt_value = not field.has_changed(initial_val, data_val)
+        expected_value = value if use_alt_value else initial_data.get(name)
         expected_result = {name: value} if use_alt_value else {}
         result = self.form.set_alt_data(data=None, name=name, field=field, value=value)
-        actual_value = self.form.data[name]
 
-        self.assertEqual(self.test_initial[name], initial)
-        self.assertEqual(test_form_data[name], data_val)
-        self.assertEqual(expected_value, actual_value)
-        self.assertEqual(expected_result, result)
-        for key in self.form.data:
-            # print(expected_data[key], self.form.data[key])
+        self.assertEqual(self.test_initial[name], initial_val)
+        self.assertEqual(initial_data[name], data_val)
+        self.assertEqual(expected_value, self.form.data[name])
+        self.assertDictEqual(expected_result, result)
+        for key in initial_data:
             self.assertEqual(expected_data[key], self.form.data[key])
         self.assertEqual(len(expected_data), len(self.form.data))
         self.assertTrue(use_alt_value)
