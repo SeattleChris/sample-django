@@ -813,39 +813,34 @@ class OverrideTests(FormTests, TestCase):
         self.assertEqual(len(expected_data), len(self.form.data))
         self.assertTrue(use_alt_value)
 
-        if use_alt_value:
-            self.form.data = original_form_data
+        self.form.data = original_form_data
 
     def test_set_alt_data_collection(self):
         """Get expected results when passing data but not any for name, field, value. """
         names = list(self.test_data.keys())[1:-1]
-        data_values, is_updated = {}, {}
-        for name, field in self.form.fields.items():
-            initial = self.test_initial[name]
-            data_values[name] = self.test_data[name] if name in names else initial
-            is_updated[name] = not field.has_changed(initial, data_values[name])
-        alt_values = {name: f"alt_value_{name}" for name in self.form.fields if is_updated[name]}
-        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
-        has_updates = any(is_updated.values())
+        alt_values = {name: f"alt_value_{name}" for name in self.test_initial}  # some, but not all, will be used.
 
         original_form_data = self.form.data
-        test_form_data = original_form_data.copy()
-        test_form_data.update(data_values)
-        expected_data = test_form_data.copy()
-        if alt_values:
-            expected_data.update(alt_values)
-        test_form_data._mutable = False
-        self.form.data = test_form_data
+        test_data = self.test_data.copy()
+        test_data.update({name: val for name, val in self.test_initial.items() if name not in names})
+        test_data._mutable = False
+        self.form.data = test_data
+        initial_data = test_data.copy()
+        expected_result = {name: val for name, val in alt_values.items() if name not in names}
+        expected_data = test_data.copy()
+        expected_data.update(expected_result)
 
+        expect_updates = any(self.data_is_initial(name) for name in initial_data)
+        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
         result = self.form.set_alt_data(test_input)
-        actual_data = self.form.data
 
-        self.assertDictEqual(alt_values, result)
-        self.assertTrue(has_updates)
-        self.assertDictEqual(expected_data, actual_data)
+        self.assertDictEqual(expected_result, result)
+        self.assertDictEqual(expected_data, self.form.data)
+        self.assertNotEqual(initial_data, self.form.data)
+        self.assertTrue(expect_updates)
+        self.assertIsNot(test_data, self.form.data)
 
-        if has_updates:
-            self.form.data = original_form_data
+        self.form.data = original_form_data
 
     def test_set_alt_data_mutable(self):
         """After running set_alt_data, the Form's data attribute should have _mutable = False. """
