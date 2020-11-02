@@ -179,6 +179,25 @@ class FormTests:
         expected = ''.join(form_list) % setup
         return expected.strip()
 
+    def log_html_diff(self, expected, actual, full=True):
+        exp = expected.split('\n')
+        out = actual.split('\n')
+        line_count = max(len(out), len(exp))
+        exp += [''] * (line_count - len(exp))
+        out += [''] * (line_count - len(out))
+        tail = "\n------------------------------------------------------------------------------------------"
+        conflicts = []
+        for a, b in zip(exp, out):
+            matching = a == b
+            if full:
+                conflicts.append((a, b, str(matching), tail))
+            elif not matching:
+                conflicts.append((a, b, str(matching), tail))
+        for row in conflicts:
+            print('\n'.join(row))
+        return conflicts
+
+    # @skip("Not Implemented")
     def test_as_table(self):
         """All forms should return HTML table rows when .as_table is called. """
         output = self.form.as_table().strip()
