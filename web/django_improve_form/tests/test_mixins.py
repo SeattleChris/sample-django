@@ -21,6 +21,7 @@ NAME_LENGTH = 'maxlength="150" '
 USER_ATTRS = 'autocapitalize="none" autocomplete="username" '
 FOCUS = 'autofocus '  # TODO: Deal with HTML output for a field (besides username) that has 'autofocus' on a field?
 REQUIRED = 'required '
+MULTIPLE = ' multiple'
 DEFAULT_RE = {ea: f"%({ea})s" for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'pretty', 'attrs']}
 DEFAULT_RE['input_type'] = 'text'  # TODO: ? required ?
 USERNAME_TXT = '' + \
@@ -64,13 +65,13 @@ OTHER_OPTION_TXT = '    <li><label for="id_%(name)s_%(num)s"><input type="%(inpu
 BOOL_TXT = START_LABEL + \
     '<input type="checkbox" name="%(name)s" %(required)sid="id_%(name)s">%(end_tag)s\n'  #
 AREA_TXT = START_LABEL + \
-    '<textarea name="%(name)s" cols="20" rows="4" %(required)sid="id_%(name)s">\n%(initial)s</textarea>%(end_tag)s\n'
-REPLACE_TEXT = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
-REPLACE_TEXT['email'] = EMAIL_TXT
+    '<textarea name="%(name)s" %(attrs)s%(required)sid="id_%(name)s">\n%(initial)s</textarea>%(end_tag)s\n'
+FIELD_FORMATS = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
+FIELD_FORMATS['email'] = EMAIL_TXT
 for name in ('first_name', 'last_name'):
     name_re = DEFAULT_RE.copy()
     name_re.update(attrs=' ' + NAME_LENGTH, required='')
-    REPLACE_TEXT[name] = DEFAULT_TXT % name_re
+    FIELD_FORMATS[name] = DEFAULT_TXT % name_re
 
 
 class FormTests:
@@ -152,13 +153,13 @@ class FormTests:
         return result
 
     def get_expected_format(self, setup):
-        replace_text = REPLACE_TEXT.copy()
+        field_formats = FIELD_FORMATS.copy()
         form_list = []
         if issubclass(self.form_class, ComputedUsernameMixIn):
             name_for_email = self.form.name_for_email or 'email'
             name_for_user = self.form.name_for_user or 'username'
-            replace_text[name_for_email] = replace_text.pop('email')
-            replace_text[name_for_user] = replace_text.pop('username')
+            field_formats[name_for_email] = field_formats.pop('email')
+            field_formats[name_for_user] = field_formats.pop('username')
             order = ['first_name', 'last_name', 'username', 'password1', 'password2', 'email']
             self.form.order_fields(order)
         hidden_list = []
@@ -174,12 +175,11 @@ class FormTests:
             if field.disabled:
                 cur_replace['required'] += 'disabled '
 
-            if isinstance(field, EmailField) and name not in replace_text:
-                cur_replace['input_type'] = 'email'
-                # replace_text[name] = EMAIL_TXT
-            if isinstance(field.widget, Textarea):
+            if isinstance(field, EmailField) and name not in field_formats:
+                cur_replace['input_type'] = 'email'  # replace_text[name] = EMAIL_TXT
+            elif isinstance(field.widget, Textarea):
                 cur_replace['initial'] = getattr(field, 'initial', None) or ''
-                replace_text[name] = AREA_TXT
+                field_formats[name] = AREA_TXT
             elif isinstance(field.widget, (CheckboxSelectMultiple, RadioSelect)):
                 input_type = 'radio' if isinstance(field.widget, RadioSelect) else 'checkbox'
                 required = REQUIRED if field.required else ''
@@ -196,9 +196,9 @@ class FormTests:
                 cur_replace['options'] = ''.join(option_list)
                 # if isinstance(field.widget, CheckboxSelectMultiple):
                 #     cur_replace['required'] = ''
-                replace_text[name] = RADIO_TXT if isinstance(field.widget, RadioSelect) else CHECK_TXT
+                field_formats[name] = RADIO_TXT if isinstance(field.widget, RadioSelect) else CHECK_TXT
             elif isinstance(field, BooleanField) or isinstance(field.widget, CheckboxInput):
-                replace_text[name] = BOOL_TXT
+                field_formats[name] = BOOL_TXT
             elif isinstance(field.widget, (Select, SelectMultiple)):
                 option_list = []
                 for num, each in enumerate(field.choices):
@@ -206,18 +206,18 @@ class FormTests:
                     option = OPTION_TXT % {'val': val, 'display_choice': display}
                     option_list.append(option)
                 cur_replace['options'] = ''.join(option_list)
-                cur_replace['multiple'] = ' multiple'
+                cur_replace['multiple'] = MULTIPLE
                 if not isinstance(field.widget, SelectMultiple):
                     cur_replace['multiple'] = ''
                     cur_replace['required'] = ''
-                replace_text[name] = SELECT_TXT
+                field_formats[name] = SELECT_TXT
 
             if issubclass(self.form.__class__, FormOverrideMixIn):
                 cur_replace['attrs'] = self.get_override_attrs(name, field)
             elif field.initial and not isinstance(field.widget, Textarea):
                 cur_replace['attrs'] += f'value="{field.initial}" '
                 # cur_replace['attrs'] = f'value="{field.initial}" ' + cur_replace['attrs']
-            txt = replace_text.get(name, DEFAULT_TXT) % cur_replace
+            txt = field_formats.get(name, DEFAULT_TXT) % cur_replace
             form_list.append(txt)
         str_hidden = ''.join(hidden_list)
         if len(form_list) > 0:
