@@ -1095,7 +1095,7 @@ class OverrideTests(FormTests, TestCase):
     # @skip("Not Implemented")
     def test_prep_overrides(self):
         """Applies overrides of field widget attrs if name is in overrides. """
-        from pprint import pprint
+        # from pprint import pprint
         original_data = self.form.data
         test_data = original_data.copy()
         test_data._mutable = False
@@ -1129,7 +1129,8 @@ class OverrideTests(FormTests, TestCase):
                     height = min((DEFAULT['rows'], int(height))) if height else DEFAULT['rows']
                     attrs['rows'] = str(height)
                 if default:  # For textarea, we always override. The others depend on different conditions.
-                    display_size = min((display_size, default))
+                    display_size = display_size or default
+                    display_size = min((int(display_size), int(default)))
             elif issubclass(field.__class__, CharField):
                 width_attr_name = 'size'  # 'size' is only valid for input types: email, password, tel, text
                 default = DEFAULT.get('size', None)  # Cannot use float("inf") as an int.
@@ -1142,7 +1143,7 @@ class OverrideTests(FormTests, TestCase):
             if possible_size and width_attr_name:
                 attrs[width_attr_name] = str(min(possible_size))
             expected_attrs[name] = attrs
-        print("======================== test_prep_overrides ============================")
+        # print("======================== test_prep_overrides ============================")
         # formfield_attrs_overrides = {
         #     '_default_': {'size': 15, 'cols': 20, 'rows': 4, },
         #     'first': {'maxlength': 191, 'size': 20, },
@@ -1164,11 +1165,11 @@ class OverrideTests(FormTests, TestCase):
         self.assertEqual(last_maxlength, result_fields['last'].widget.attrs.get('maxlength', None))
         self.assertEqual(last_size, result_fields['last'].widget.attrs.get('size', None))
         for key, val in expected_attrs.items():
-            print(key, "\n")
-            pprint(val)
-            print("--------------------------------------------------------------------------------")
-            pprint(result_attrs[key])
-            print("********************************************************************************")
+            # print(key, "\n")
+            # pprint(val)
+            # print("--------------------------------------------------------------------------------")
+            # pprint(result_attrs[key])
+            # print("********************************************************************************")
             self.assertEqual(val, result_attrs[key])
         self.assertDictEqual(expected_attrs, result_attrs)
         # tear-down: reset back to original state.
