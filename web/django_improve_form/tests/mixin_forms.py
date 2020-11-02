@@ -67,7 +67,7 @@ class OverrideForm(FormOverrideMixIn, Form):
     first = CharField(initial='first_value')
     second = CharField(initial='second_value')
     generic_field = CharField(initial='original_value')
-    large_comment = CharField(widget=Textarea(attrs={"rows": 10, "cols": 40}))
+    large_comment = CharField(initial='initial large comment', widget=Textarea(attrs={"rows": 10, "cols": 40}))
     small_comment = CharField(widget=Textarea(attrs={"rows": 2, "cols": 10}))
     simple_comment = CharField(widget=Textarea())
     hide_field = CharField(widget=HiddenInput(), initial='hide_data')
