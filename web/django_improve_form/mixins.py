@@ -651,7 +651,9 @@ class FormOverrideMixIn:
                 pass
             if name in overrides:
                 field.widget.attrs.update(overrides[name])
-            if not overrides.get(name, {}).get('no_size_override', False):
+            resize_allowed = not overrides.get(name, {}).pop('no_size_override', False)
+            resize_allowed = False if isinstance(field.widget, (HiddenInput, MultipleHiddenInput)) else resize_allowed
+            if resize_allowed:
                 if isinstance(field.widget, Textarea):
                     width_attr_name = 'cols'
                     default = DEFAULT.get('cols', None)
