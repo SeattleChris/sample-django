@@ -5,8 +5,8 @@ from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
 # from django.forms.widgets import HiddenInput, MultipleHiddenInput
 # from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea
 # from django.forms.fields import CharField
-from django.forms import (CharField, HiddenInput, MultipleHiddenInput,
-                          RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea)
+from django.forms import (CharField, BooleanField, EmailField, HiddenInput, MultipleHiddenInput,
+                          RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea, Select, SelectMultiple)
 from django.contrib.auth import get_user_model
 from django.utils.datastructures import MultiValueDict
 from django_registration import validators
@@ -22,7 +22,7 @@ USER_ATTRS = 'autocapitalize="none" autocomplete="username" '
 FOCUS = 'autofocus '  # TODO: Deal with HTML output for a field (besides username) that has 'autofocus' on a field?
 REQUIRED = 'required '
 DEFAULT_RE = {ea: f"%({ea})s" for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'pretty', 'attrs']}
-# TODO: ? required ?
+DEFAULT_RE['input_type'] = 'text'  # TODO: ? required ?
 USERNAME_TXT = '' + \
     '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" ' + \
     '%(name_length)s%(user_attrs)s%(focus)srequired id="id_username">' + \
@@ -50,9 +50,9 @@ names_text = '' + \
 TOS_TXT = '%(start_tag)s<label for="id_tos_field">I have read and agree to the Terms of Service:</label>' + \
     '%(label_end)s<input type="checkbox" name="tos_field" required id="id_tos_field">%(end_tag)s\n'
 HIDDEN_TXT = '<input type="hidden" name="%(name)s" value="%(initial)s" id="id_%(name)s">'
-DISABLED_ATTRS = ' value="%(initial)s" required disabled '
-DEFAULT_TXT = '%(start_tag)s<label for="id_%(name)s">%(pretty)s:</label>%(label_end)s' + \
-    '<input type="text" name="%(name)s"%(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
+START_LABEL = '%(start_tag)s<label for="id_%(name)s">%(pretty)s:</label>%(label_end)s'
+DEFAULT_TXT = START_LABEL + \
+    '<input type="%(input_type)s" name="%(name)s"%(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
 REPLACE_TEXT = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
 REPLACE_TEXT['email'] = EMAIL_TXT
 for name in ('first_name', 'last_name'):
@@ -156,9 +156,9 @@ class FormTests:
                 txt = HIDDEN_TXT % hide_re
                 hidden_list.append(txt)
                 continue
-            default_re = DEFAULT_RE.copy()
-            default_re.update({'name': name, 'pretty': pretty_name(name), 'attrs': '%(attrs)s'})
-            default_re['required'] = REQUIRED if field.required else ''
+            cur_replace = DEFAULT_RE.copy()
+            cur_replace.update({'name': name, 'pretty': pretty_name(name), 'attrs': '%(attrs)s'})
+            cur_replace['required'] = REQUIRED if field.required else ''
             if field.disabled:
                 default_re['required'] += 'disabled '
             if issubclass(self.form.__class__, FormOverrideMixIn):
@@ -210,12 +210,11 @@ class FormTests:
             print(f"//////////////////////////////// {form_class} AS_TABLE /////////////////////////////////////")
             if issubclass(self.form_class, ComputedUsernameMixIn):
                 print("*** is sub class of ComputedUsernameMixIn ***")
-            print(expected)
-            print("------------------------------------------------------------------------------------------")
-            print(output)
+            self.log_html_diff(expected, output, full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
+    # @skip("Not Implemented")
     def test_as_ul(self):
         """All forms should return HTML <li>s when .as_ul is called. """
         output = self.form.as_ul().strip()
@@ -228,12 +227,11 @@ class FormTests:
             print(f"//////////////////////////////// {form_class} AS_UL /////////////////////////////////////")
             if issubclass(self.form_class, ComputedUsernameMixIn):
                 print("*** is sub class of ComputedUsernameMixIn ***")
-            print(output)
-            print("------------------------------------------------------------------------------------------")
-            print(expected)
+            self.log_html_diff(expected, output, full=False)  # , full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
+    # @skip("Not Implemented")
     def test_as_p(self):
         """All forms should return HTML <p>s when .as_p is called. """
         output = self.form.as_p().strip()
@@ -246,9 +244,7 @@ class FormTests:
             print(f"//////////////////////////////// {form_class} AS_P /////////////////////////////////////")
             if issubclass(self.form_class, ComputedUsernameMixIn):
                 print("*** is sub class of ComputedUsernameMixIn ***")
-            print(output)
-            print("------------------------------------------------------------------------------------------")
-            print(expected)
+            self.log_html_diff(expected, output, full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 

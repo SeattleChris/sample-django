@@ -75,7 +75,7 @@ class OverrideForm(FormOverrideMixIn, Form):
     single_select = ChoiceField(choices=single_choices)  # default widget select
     multi_select = MultipleChoiceField(choices=multi_choices)  # SelectMultiple
     radio_select = ChoiceField(choices=single_choices, widget=RadioSelect)
-    single_check = ChoiceField(choices=single_choices, widget=CheckboxInput)
+    single_check = ChoiceField(choices=single_choices, required=False, widget=CheckboxInput)
     multi_check = MultipleChoiceField(choices=multi_choices, widget=CheckboxSelectMultiple)
     email_test = EmailField()  # like CharField, can have: max_length, min_length, and empty_value
     last = CharField(initial='last_value')
