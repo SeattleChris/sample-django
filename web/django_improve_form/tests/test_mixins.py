@@ -2,7 +2,11 @@ from django.test import TestCase  # , Client, override_settings, modify_settings
 from unittest import skip
 from django.core.exceptions import ImproperlyConfigured, ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
 from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
-from django.forms.widgets import HiddenInput, MultipleHiddenInput
+# from django.forms.widgets import HiddenInput, MultipleHiddenInput
+# from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea
+# from django.forms.fields import CharField
+from django.forms import (CharField, HiddenInput, MultipleHiddenInput,
+                          RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea)
 from django.contrib.auth import get_user_model
 from django.utils.datastructures import MultiValueDict
 from django_registration import validators
@@ -743,7 +747,6 @@ class OverrideTests(FormTests, TestCase):
             'first': {
                     'label': "Alt First Label",
                     'help_text': '',
-                    # 'default': '',
                     'initial': 'alt_first_initial', },
             'last': {
                     'label': None,
@@ -754,7 +757,6 @@ class OverrideTests(FormTests, TestCase):
             'second': {
                     'label': "Alt Second Label",
                     'help_text': '',
-                    # 'default': '',
                     'initial': 'alt_second_initial', },
             'generic_field': {
                     'label': None,
@@ -762,12 +764,18 @@ class OverrideTests(FormTests, TestCase):
                     'help_text': '', },
             },
         }
+    formfield_attrs_overrides = {
+        '_default_': {'size': 15, 'cols': 20, 'rows': 4, },
+        'first': {'maxlength': '191', 'size': '20', },
+        'second': {'maxlength': '2', 'size': '2', },  # 'size': '2',
+        'last': {'maxlength': '2', 'size': '5', },
+        }
 
     def setUp(self):
         super().setUp()
-        f = self.form.fields
-        test_initial = {'first': f['first'].initial, 'second': f['second'].initial, 'last': f['last'].initial}
-        test_initial['generic_field'] = f['generic_field'].initial
+        fd = self.form.fields
+        test_initial = {'first': fd['first'].initial, 'second': fd['second'].initial, 'last': fd['last'].initial}
+        test_initial['generic_field'] = fd['generic_field'].initial
         test_data = MultiValueDict()
         test_data.update({name: f"test_value_{name}" for name in test_initial})
         self.test_initial = test_initial
@@ -778,114 +786,136 @@ class OverrideTests(FormTests, TestCase):
         name, value = 'generic_field', 'alt_data_value'
         field = self.form.fields.get(name, None)
         self.assertIsNotNone(field, "Unable to find the expected field in current fields. ")
+
+        original_form_data = self.form.data
         test_data = self.test_data.copy()
+        test_data.update({name: self.test_initial[name]})
+        test_data._mutable = False
+        self.form.data = test_data
+        initial_data = test_data.copy()
         expected_data = test_data.copy()
         expected_data.update({name: value})
 
-        original_form_data = self.form.data
-        test_form_data = original_form_data.copy()
-        test_form_data.update(self.test_data)
-        test_form_data.update({name: self.test_initial[name]})
-        test_form_data._mutable = False
-        self.form.data = test_form_data
-        initial = self.form.get_initial_for_field(field, name)
+        initial_val = self.form.get_initial_for_field(field, name)
         data_name = self.form.add_prefix(name)
         data_val = field.widget.value_from_datadict(self.form.data, self.form.files, data_name)
-        # print("\n===================== TEST SET ALT DATA SINGLE ===============================")
-        use_alt_value = not field.has_changed(initial, data_val)
-        expected_value = value if use_alt_value else test_form_data.get(name)
+        use_alt_value = not field.has_changed(initial_val, data_val)
+        expected_value = value if use_alt_value else initial_data.get(name)
         expected_result = {name: value} if use_alt_value else {}
         result = self.form.set_alt_data(data=None, name=name, field=field, value=value)
-        actual_value = self.form.data[name]
 
-        self.assertEqual(self.test_initial[name], initial)
-        self.assertEqual(test_form_data[name], data_val)
-        self.assertEqual(expected_value, actual_value)
-        self.assertEqual(expected_result, result)
-        for key in self.form.data:
-            # print(expected_data[key], self.form.data[key])
+        self.assertEqual(self.test_initial[name], initial_val)
+        self.assertEqual(initial_data[name], data_val)
+        self.assertEqual(expected_value, self.form.data[name])
+        self.assertDictEqual(expected_result, result)
+        for key in initial_data:
             self.assertEqual(expected_data[key], self.form.data[key])
         self.assertEqual(len(expected_data), len(self.form.data))
         self.assertTrue(use_alt_value)
 
-        if use_alt_value:
-            self.form.data = original_form_data
+        self.form.data = original_form_data
 
     def test_set_alt_data_collection(self):
         """Get expected results when passing data but not any for name, field, value. """
         names = list(self.test_data.keys())[1:-1]
-        data_values, is_updated = {}, {}
-        for name, field in self.form.fields.items():
-            initial = self.test_initial[name]
-            data_values[name] = self.test_data[name] if name in names else initial
-            is_updated[name] = not field.has_changed(initial, data_values[name])
-        alt_values = {name: f"alt_value_{name}" for name in self.form.fields if is_updated[name]}
-        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
-        has_updates = any(is_updated.values())
+        alt_values = {name: f"alt_value_{name}" for name in self.test_initial}  # some, but not all, will be used.
 
         original_form_data = self.form.data
-        test_form_data = original_form_data.copy()
-        test_form_data.update(data_values)
-        expected_data = test_form_data.copy()
-        if alt_values:
-            expected_data.update(alt_values)
-        test_form_data._mutable = False
-        self.form.data = test_form_data
+        test_data = self.test_data.copy()
+        test_data.update({name: val for name, val in self.test_initial.items() if name not in names})
+        test_data._mutable = False
+        self.form.data = test_data
+        initial_data = test_data.copy()
+        expected_result = {name: val for name, val in alt_values.items() if name not in names}
+        expected_data = test_data.copy()
+        expected_data.update(expected_result)
 
+        expect_updates = any(self.data_is_initial(name) for name in initial_data)
+        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
         result = self.form.set_alt_data(test_input)
-        actual_data = self.form.data
 
-        self.assertDictEqual(alt_values, result)
-        self.assertTrue(has_updates)
-        self.assertDictEqual(expected_data, actual_data)
+        self.assertDictEqual(expected_result, result)
+        self.assertDictEqual(expected_data, self.form.data)
+        self.assertNotEqual(initial_data, self.form.data)
+        self.assertTrue(expect_updates)
+        self.assertIsNot(test_data, self.form.data)
 
-        if has_updates:
-            self.form.data = original_form_data
+        self.form.data = original_form_data
+
+    def data_is_initial(self, name):
+        field = self.form.fields[name]
+        return not field.has_changed(self.test_initial.get(name), self.form.data.get(name))
 
     def test_set_alt_data_mutable(self):
-        """After running set_alt_data, the Form's data attribute should have _mutable = False. """
-        alt_values = {name: f"alt_value_{name}" for name in self.form.fields}
-        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
-
+        """After running set_alt_data that triggers changes, the Form's data attribute should have _mutable = False. """
+        # from pprint import pprint
+        original_test_initial = self.test_initial
         original_form_data = self.form.data
-        test_form_data = original_form_data.copy()
-        test_form_data.update(self.test_initial)
-        test_form_data._mutable = False
-        self.form.data = test_form_data
+        initial = self.test_initial
+        test_data = self.test_data.copy()
+        test_data.update({name: initial[name] for name in list(initial.keys())[1:-1]})  # two fields for alt_values
+        test_data._mutable = False
+        self.form.data = test_data
+        initial_data = test_data.copy()
 
-        def data_is_initial(name, field): return not field.has_changed(self.test_initial[name], self.form.data[name])
-        expect_updates = any(data_is_initial(name, field) for name, field in self.form.fields.items())
+        alt_values = {name: f"alt_value_{name}" for name in initial}  # some, but not all, will be used.
+        unchanged_fields = {name: val for name, val in test_data.items() if val == initial[name]}
+        expected_result = {name: alt_values[name] for name in unchanged_fields}
+        expected_data = test_data.copy()
+        expected_data.update(expected_result)
+
+        expect_updates = any(self.data_is_initial(name) for name in initial_data)
+        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
         result = self.form.set_alt_data(test_input)
-        had_updates = any(not data_is_initial(name, field) for name, field in self.form.fields.items())
-
+        had_updates = any(value != self.form.data[name] for name, value in initial_data.items())
+        # print("====================== test_set_alt_data_mutable =======================")
+        # pprint(expected_result)
+        # print("--------------------------------------------------")
+        # pprint(result)
+        # print("--------------------------------------------------")
+        # pprint(expected_data)
+        # print("--------------------------------------------------")
+        # pprint(self.form.data)
+        # print("------------------END SECTION---------------------------")
+        # pprint(initial)
+        # print("--------------------------------------------------")
+        # pprint(test_data)
+        # print("========================= SET ALT DATA ==========================================")
+        for name, val in expected_data.items():
+            # print(name, " :  ", initial[name], "\n")
+            # print(val)
+            # print("-----------------------------------------------")
+            # print(self.form.data[name])
+            # print("***********************************************")
+            self.assertEqual(val, self.form.data[name])
         self.assertTrue(expect_updates)
         self.assertTrue(had_updates)
         self.assertFalse(getattr(self.form.data, '_mutable', True))
-        self.assertDictEqual(alt_values, result)
+        self.assertDictEqual(expected_result, result)
+        self.assertDictEqual(expected_data, self.form.data)
 
-        if had_updates:
-            self.form.data = original_form_data
+        self.form.data = original_form_data
+        self.test_initial = original_test_initial
 
     def test_set_alt_data_unchanged(self):
         """If all fields are not changed, then the Form's data is not overwritten. """
-        test_input = {name: (field, self.test_initial[name]) for name, field in self.form.fields.items()}
-
         original_form_data = self.form.data
-        test_form_data = original_form_data.copy()
-        test_form_data.update(self.test_initial)
-        test_form_data._mutable = False
-        self.form.data = test_form_data
+        test_data = self.test_data.copy()
+        test_data._mutable = False
+        self.form.data = test_data
+        initial_data = test_data.copy()
 
-        def data_is_initial(name, field): return not field.has_changed(self.test_initial[name], self.form.data[name])
-        expect_updates = any(data_is_initial(name, field) for name, field in self.form.fields.items())
+        alt_values = {name: f"alt_value_{name}" for name in self.test_initial}
+        test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
+        expect_updates = any(self.data_is_initial(name) for name in initial_data)
         result = self.form.set_alt_data(test_input)
-        had_updates = any(not data_is_initial(name, field) for name, field in self.form.fields.items())
+        had_updates = any(self.form.data[name] != value for name, value in initial_data.items())
 
-        self.assertTrue(expect_updates)
+        self.assertFalse(expect_updates)
         self.assertFalse(had_updates)
-        self.assertEqual({}, result)
-        self.assertEqual(test_form_data, self.form.data)
-        self.assertIs(test_form_data, self.form.data)
+        self.assertDictEqual({}, result)
+        self.assertDictEqual(initial_data, self.form.data)
+        self.assertIs(test_data, self.form.data)
 
         self.form.data = original_form_data
 
@@ -1093,10 +1123,93 @@ class OverrideTests(FormTests, TestCase):
         """False goal, adding takes precedence. Adding only triggered because a value is inserted in form data. """
         self.assertFalse(False)
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_prep_overrides(self):
         """Applies overrides of field widget attrs if name is in overrides. """
-        pass
+        # from pprint import pprint
+        original_data = self.form.data
+        test_data = original_data.copy()
+        test_data._mutable = False
+        self.form.data = test_data  # copied only to allow tear-down reverting to original.
+        original_fields = self.form.fields
+        test_fields = original_fields.copy()
+        self.form.fields = test_fields  # copied to allow tear-down reverting to original.
+        original_get_overrides = self.form.get_overrides
+        def replace_overrides(): return self.formfield_attrs_overrides
+        self.form.get_overrides = replace_overrides
+        original_alt_field_info = getattr(self.form, 'alt_field_info', None)
+        self.form.alt_field_info = {}
+        overrides = self.formfield_attrs_overrides.copy()
+        DEFAULT = overrides.pop('_default_')
+        expected_attrs = {}
+        for name, field in test_fields.items():
+            attrs = field.widget.attrs.copy()
+            if isinstance(field.widget, (RadioSelect, CheckboxSelectMultiple, CheckboxInput, )):
+                pass  # update if similar section in prep_fields is updated.
+            attrs.update(overrides.get(name, {}))
+            # TODO: setup structure for using default or defined version for all CharFields.
+            if overrides.get(name, {}).get('no_size_override', False):
+                expected_attrs[name] = attrs
+                continue  # None of the following size overrides are applied for this field.
+            if isinstance(field.widget, Textarea):
+                width_attr_name = 'cols'
+                default = DEFAULT.get('cols', None)
+                display_size = attrs.get('cols', None)
+                if 'rows' in DEFAULT:
+                    height = attrs.get('rows', None)
+                    height = min((DEFAULT['rows'], int(height))) if height else DEFAULT['rows']
+                    attrs['rows'] = str(height)
+                if default:  # For textarea, we always override. The others depend on different conditions.
+                    display_size = display_size or default
+                    display_size = min((int(display_size), int(default)))
+            elif issubclass(field.__class__, CharField):
+                width_attr_name = 'size'  # 'size' is only valid for input types: email, password, tel, text
+                default = DEFAULT.get('size', None)  # Cannot use float("inf") as an int.
+                display_size = attrs.get('size', None)
+            else:  # This field does not have a size setting.
+                width_attr_name, default, display_size = None, None, None
+            input_size = attrs.get('maxlength', None)
+            possible_size = [int(ea) for ea in (display_size or default, input_size) if ea]
+            # attrs['size'] = str(int(min(float(display_size), float(input_size))))  # Can't use float("inf") as an int.
+            if possible_size and width_attr_name:
+                attrs[width_attr_name] = str(min(possible_size))
+            expected_attrs[name] = attrs
+        # print("======================== test_prep_overrides ============================")
+        # formfield_attrs_overrides = {
+        #     '_default_': {'size': 15, 'cols': 20, 'rows': 4, },
+        #     'first': {'maxlength': 191, 'size': 20, },
+        #     'second': {'maxlength': 2, },  # 'size': 2,
+        #     'last': {'maxlength': 2, 'size': 5, },
+        #     }
+        result_fields = self.form.prep_fields()
+        result_attrs = {name: field.widget.attrs.copy() for name, field in result_fields.items()}
+
+        first_maxlength = expected_attrs['first']['maxlength']  # overrides['first']['maxlength']
+        first_size = expected_attrs['first']['size']  # overrides['first']['size']
+        second_maxlength = expected_attrs['second']['maxlength']  # overrides['second']['maxlength']
+        last_maxlength = expected_attrs['last']['maxlength']  # overrides['last']['maxlength']
+        last_size = expected_attrs['last']['size']  # overrides['last']['size']
+        # tests
+        self.assertEqual(first_maxlength, result_fields['first'].widget.attrs.get('maxlength', None))
+        self.assertEqual(first_size, result_fields['first'].widget.attrs.get('size', None))
+        self.assertEqual(second_maxlength, result_fields['second'].widget.attrs.get('maxlength', None))
+        self.assertEqual(last_maxlength, result_fields['last'].widget.attrs.get('maxlength', None))
+        self.assertEqual(last_size, result_fields['last'].widget.attrs.get('size', None))
+        for key, val in expected_attrs.items():
+            # print(key, "\n")
+            # pprint(val)
+            # print("--------------------------------------------------------------------------------")
+            # pprint(result_attrs[key])
+            # print("********************************************************************************")
+            self.assertEqual(val, result_attrs[key])
+        self.assertDictEqual(expected_attrs, result_attrs)
+        # tear-down: reset back to original state.
+        self.form.alt_field_info = original_alt_field_info
+        if original_alt_field_info is None:
+            del self.form.alt_field_info
+        self.form.fields = original_fields
+        self.form.data = original_data
+        self.form.get_overrides = original_get_overrides
 
     @skip("Not Implemented")
     def test_prep_textarea(self):
@@ -1134,15 +1247,14 @@ class OverrideTests(FormTests, TestCase):
         self.form.alt_field_info = self.alt_field_info
         self.form.test_condition_response = True
         expected_fields_info = test_fields_info.copy()
-        print("======================== test_prep_field_properties ============================")
+        # print("======================== test_prep_field_properties ============================")
         # {'alt_test_feature': {
         #     'first': {
         #             'label': "Alt First Label",
         #             'help_text': '',
-        #             'initial': 'alt_first_initial',
-        #             'default': '', },
+        #             'initial': 'alt_first_initial', },
         #     'last': {
-        #             'label': "",
+        #             'label': None,
         #             'initial': 'alt_last_initial',
         #             'help_text': '', },
         #     }}
@@ -1166,7 +1278,7 @@ class OverrideTests(FormTests, TestCase):
             # pprint(result_fields_info[key])
             # print("********************************************************************************")
             self.assertEqual(val, result_fields_info[key])
-        # self.assertDictEqual(expected_fields_info, result_fields_info)
+        self.assertDictEqual(expected_fields_info, result_fields_info)
         # tear-down: reset back to original state.
         self.form.test_condition_response = False
         self.form.alt_field_info = original_alt_field_info
