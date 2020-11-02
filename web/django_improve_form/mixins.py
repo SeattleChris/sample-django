@@ -661,7 +661,8 @@ class FormOverrideMixIn:
                         height = min((DEFAULT['rows'], int(height))) if height else DEFAULT['rows']
                         field.widget.attrs['rows'] = str(height)
                     if default:  # For textarea, we always override. The others depend on different conditions.
-                        display_size = min((display_size, default))
+                        display_size = display_size or default
+                        display_size = min((int(display_size), int(default)))
                 elif issubclass(field.__class__, CharField):
                     width_attr_name = 'size'  # 'size' is only valid for input types: email, password, tel, text
                     default = DEFAULT.get('size', None)  # Cannot use float("inf") as an int.
@@ -671,7 +672,7 @@ class FormOverrideMixIn:
                     default = None
                     display_size = None
                 input_size = field.widget.attrs.get('maxlength', None)
-                possible_size = [int(ea) for ea in (display_size or default, input_size) if ea]  # TODO:  use gen?
+                possible_size = [int(ea) for ea in (display_size or default, input_size) if ea]
                 # field.widget.attrs['size'] = str(int(min(float(display_size), float(input_size))))
                 if possible_size and width_attr_name:
                     field.widget.attrs[width_attr_name] = str(min(possible_size))
