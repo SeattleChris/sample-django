@@ -2,9 +2,6 @@ from django.test import TestCase  # , Client, override_settings, modify_settings
 from unittest import skip
 from django.core.exceptions import ImproperlyConfigured, ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
 from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
-# from django.forms.widgets import HiddenInput, MultipleHiddenInput
-# from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea
-# from django.forms.fields import CharField
 from django.forms import (CharField, BooleanField, EmailField, HiddenInput, MultipleHiddenInput,
                           RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea, Select, SelectMultiple)
 from django.contrib.auth import get_user_model
