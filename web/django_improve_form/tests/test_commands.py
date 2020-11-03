@@ -1,5 +1,4 @@
 from django.test import TestCase  # , TransactionTestCase, Client, RequestFactory,
-# from unittest import skip
 from django.core.management import call_command
 from django.urls import resolvers
 from .helper_general import APP_NAME

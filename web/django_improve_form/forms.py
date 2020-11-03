@@ -79,22 +79,6 @@ def make_names(constructors, early, setting, extras, address, model, user_model=
     return names, alt_names, not_found
 
 
-# class RegisterModelFormMetaclass(ModelFormMetaclass):
-#     def __new__(mcs, name, bases, attrs):
-#         print("====================== RegisterModelFormMetaclass.__new__ =======================")
-#         pprint(mcs)
-#         pprint(name)
-#         pprint(bases)
-#         pprint(attrs)
-#         new_class = super().__new__(mcs, name, bases, attrs)
-#         pprint(new_class)
-#         return new_class
-
-
-# class BaseRegisterModelForm(AddressUsernameMixIn, BaseModelForm, metaclass=RegisterModelFormMetaclass):
-#     pass
-
-
 class RegisterModelForm(AddressUsernameMixIn, UserCreationForm):
     """Model Form with configurable computed username. Includes foreign vs local country address feature.  """
 
