@@ -147,7 +147,14 @@ class FormTests:
         """For the given named field, get the attrs as determined by the current FormOverrideMixIn settings. """
         # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
         result = ''
-        if field.initial:
+        # if issubclass(self.form.__class__, FormOverrideMixIn):
+        #     cols = field.widget.attrs.get('cols', None)
+        #     rows = field.widget.attrs.get('rows', None)
+        #     if cols:
+        #         result += f'cols="{cols}" '
+        #     if rows:
+        #         result += f'rows="{rows}" '
+        if field.initial and not isinstance(field.widget, Textarea):
             result = f' value="{field.initial}"'
         result += '%(attrs)s'
         return result
@@ -174,11 +181,25 @@ class FormTests:
             cur_replace['required'] = REQUIRED if field.required else ''
             if field.disabled:
                 cur_replace['required'] += 'disabled '
+            if issubclass(self.form.__class__, FormOverrideMixIn):
+                cur_replace['attrs'] = self.get_override_attrs(name, field)
+            elif field.initial and not isinstance(field.widget, Textarea):
+                cur_replace['attrs'] += f'value="{field.initial}" '
+                # cur_replace['attrs'] = f'value="{field.initial}" ' + cur_replace['attrs']
 
             if isinstance(field, EmailField) and name not in field_formats:
                 cur_replace['input_type'] = 'email'  # replace_text[name] = EMAIL_TXT
             elif isinstance(field.widget, Textarea):
                 cur_replace['initial'] = getattr(field, 'initial', None) or ''
+                # if not issubclass(self.form.__class__, FormOverrideMixIn):
+                attrs = ''
+                cols = field.widget.attrs.get('cols', None)
+                rows = field.widget.attrs.get('rows', None)
+                if cols:
+                    attrs += f'cols="{cols}" '
+                if rows:
+                    attrs += f'rows="{rows}" '
+                cur_replace['attrs'] = attrs
                 field_formats[name] = AREA_TXT
             elif isinstance(field.widget, (CheckboxSelectMultiple, RadioSelect)):
                 input_type = 'radio' if isinstance(field.widget, RadioSelect) else 'checkbox'
@@ -212,11 +233,6 @@ class FormTests:
                     cur_replace['required'] = ''
                 field_formats[name] = SELECT_TXT
 
-            if issubclass(self.form.__class__, FormOverrideMixIn):
-                cur_replace['attrs'] = self.get_override_attrs(name, field)
-            elif field.initial and not isinstance(field.widget, Textarea):
-                cur_replace['attrs'] += f'value="{field.initial}" '
-                # cur_replace['attrs'] = f'value="{field.initial}" ' + cur_replace['attrs']
             txt = field_formats.get(name, DEFAULT_TXT) % cur_replace
             form_list.append(txt)
         str_hidden = ''.join(hidden_list)
