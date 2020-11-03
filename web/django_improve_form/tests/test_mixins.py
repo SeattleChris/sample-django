@@ -17,6 +17,7 @@ from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
 from copy import deepcopy
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
+OTHER_USER = {'email': 'other@fake.com', 'password': 'test1234', 'first_name': 'other_user', 'last_name': 'fake_y'}
 NAME_LENGTH = 'maxlength="150" '
 USER_ATTRS = 'autocapitalize="none" autocomplete="username" '
 FOCUS = 'autofocus '  # TODO: Deal with HTML output for a field (besides username) that has 'autofocus' on a field?
@@ -1382,24 +1383,30 @@ class FormFieldsetTests(FormTests, TestCase):
 
 class ComputedUsernameTests(FormTests, TestCase):
     form_class = ComputedUsernameForm
+    user_type = 'user'  # 'superuser' | 'staff' | 'user' | 'anonymous'
+    mock_users = False
 
     @skip("Not Implemented")
     def test_raises_on_not_user_model(self):
         """Raises ImproperlyConfigured if an appropriate User like model cannot be discovered. """
-        # get_form_user_model
+        # get_form_user_model: uses django.contrib.auth.get_user_model
         pass
 
-    @skip("Not Implemented")
     def test_raises_on_constructor_fields_error(self):
         """Raises ImproperlyConfigured if constructor_fields property is not a list or tuple of strings. """
-        # confirm_required_fields
-        pass
+        self.form.constructor_fields = None
+        message = "Expected a list of field name strings for constructor_fields. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.confirm_required_fields()
 
-    @skip("Not Implemented")
     def test_raises_on_missing_needed_fields(self):
         """Raises ImproperlyConfigured if missing any fields from constructor, username, email, and flag_field. """
-        # confirm_required_fields
-        pass
+        test_name = "impossible_creature_not_present"
+        self.form.constructor_fields = [*self.form.constructor_fields, test_name]
+        message = "The fields for email, username, and constructor must be set in fields. "
+        self.assertNotIn(test_name, self.form.base_fields)
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.confirm_required_fields()
 
     @skip("Not Implemented")
     def test_username_validators(self):
@@ -1411,10 +1418,39 @@ class ComputedUsernameTests(FormTests, TestCase):
         """The validators from name_for_email_validators are applied as expected. """
         pass
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_constructor_fields_used_when_email_fails(self):
         """If email already used, uses constructor_fields to make a username in username_from_email_or_names. """
-        pass
+        self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
+        self.form.name_for_email = self.form._meta.model.get_email_field_name()
+        existing_email = self.user.email
+        new_info = {'first_name': "Newbie", 'last_name': "Newsome", 'email': existing_email}
+        original_data = self.form.data
+        test_data = original_data.copy()
+        test_data.update(new_info)
+        test_data._mutable = False
+        self.form.data = test_data
+        # initial_data = test_data.copy()
+        self.form.is_bound = True
+        self.form.cleaned_data = new_info.copy()
+
+        names = (new_info[field_name] for field_name in self.form.constructor_fields)
+        expected = '_'.join(names).casefold()
+        UserModel = get_user_model()
+        cur_user = self.user
+        found_user = UserModel.objects.get(username=cur_user.email)
+
+        self.assertEqual(cur_user, found_user)
+        for key, value in new_info.items():
+            self.assertIn(key, self.form.cleaned_data)
+            if key in (self.form.name_for_user, self.form.name_for_email):
+                continue
+            self.assertNotEqual(getattr(self.user, key, None), value)
+        result = self.form.username_from_email_or_names(self.form.name_for_user, self.form.name_for_email)
+        self.assertEqual(expected, result)
+
+        self.form.data = original_data
+        del self.form.cleaned_data
 
     @skip("Not Implemented")
     def test_email_from_username_from_email_or_names(self):
