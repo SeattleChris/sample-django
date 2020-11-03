@@ -4,6 +4,8 @@ from django.utils.module_loading import import_string
 UserModel = import_string('django.contrib.auth.models.User')
 AnonymousUser = import_string('django.contrib.auth.models.AnonymousUser')
 APP_NAME = __package__.split('.')[0]
+# USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
+# OTHER_USER = {'email': 'other@fake.com', 'password': 'test1234', 'first_name': 'other_user', 'last_name': 'fake_y'}
 
 
 class MockRequest:
