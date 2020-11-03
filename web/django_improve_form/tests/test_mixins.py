@@ -1389,17 +1389,21 @@ class ComputedUsernameTests(FormTests, TestCase):
         # get_form_user_model
         pass
 
-    @skip("Not Implemented")
     def test_raises_on_constructor_fields_error(self):
         """Raises ImproperlyConfigured if constructor_fields property is not a list or tuple of strings. """
-        # confirm_required_fields
-        pass
+        self.form.constructor_fields = None
+        message = "Expected a list of field name strings for constructor_fields. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.confirm_required_fields()
 
-    @skip("Not Implemented")
     def test_raises_on_missing_needed_fields(self):
         """Raises ImproperlyConfigured if missing any fields from constructor, username, email, and flag_field. """
-        # confirm_required_fields
-        pass
+        test_name = "impossible_creature_not_present"
+        self.form.constructor_fields = [*self.form.constructor_fields, test_name]
+        message = "The fields for email, username, and constructor must be set in fields. "
+        self.assertNotIn(test_name, self.form.base_fields)
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.confirm_required_fields()
 
     @skip("Not Implemented")
     def test_username_validators(self):
