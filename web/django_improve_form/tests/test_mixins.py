@@ -147,13 +147,6 @@ class FormTests:
         """For the given named field, get the attrs as determined by the current FormOverrideMixIn settings. """
         # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
         result = ''
-        # if issubclass(self.form.__class__, FormOverrideMixIn):
-        #     cols = field.widget.attrs.get('cols', None)
-        #     rows = field.widget.attrs.get('rows', None)
-        #     if cols:
-        #         result += f'cols="{cols}" '
-        #     if rows:
-        #         result += f'rows="{rows}" '
         if field.initial and not isinstance(field.widget, Textarea):
             result = f' value="{field.initial}"'
         result += '%(attrs)s'
@@ -191,7 +184,6 @@ class FormTests:
                 cur_replace['input_type'] = 'email'  # replace_text[name] = EMAIL_TXT
             elif isinstance(field.widget, Textarea):
                 cur_replace['initial'] = getattr(field, 'initial', None) or ''
-                # if not issubclass(self.form.__class__, FormOverrideMixIn):
                 attrs = ''
                 cols = field.widget.attrs.get('cols', None)
                 rows = field.widget.attrs.get('rows', None)
@@ -215,13 +207,10 @@ class FormTests:
                     option = OTHER_OPTION_TXT % opt_replace
                     option_list.append(option)
                 cur_replace['options'] = ''.join(option_list)
-                # if isinstance(field.widget, CheckboxSelectMultiple):
-                #     cur_replace['required'] = ''
                 field_formats[name] = RADIO_TXT if isinstance(field.widget, RadioSelect) else CHECK_TXT
             elif isinstance(field, BooleanField) or isinstance(field.widget, CheckboxInput):
                 cur_replace['input_type'] = 'checkbox'
                 cur_replace['attrs'] = ' '
-                # field_formats[name] = BOOL_TXT
             elif isinstance(field.widget, (Select, SelectMultiple)):
                 option_list = []
                 for num, each in enumerate(field.choices):
@@ -266,7 +255,6 @@ class FormTests:
             print('\n'.join(row))
         return conflicts
 
-    # @skip("Not Implemented")
     def test_as_table(self):
         """All forms should return HTML table rows when .as_table is called. """
         output = self.form.as_table().strip()
@@ -283,7 +271,6 @@ class FormTests:
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    # @skip("Not Implemented")
     def test_as_ul(self):
         """All forms should return HTML <li>s when .as_ul is called. """
         output = self.form.as_ul().strip()
@@ -300,7 +287,6 @@ class FormTests:
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    # @skip("Not Implemented")
     def test_as_p(self):
         """All forms should return HTML <p>s when .as_p is called. """
         output = self.form.as_p().strip()
