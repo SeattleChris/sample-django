@@ -245,14 +245,16 @@ class FormTests:
         line_count = max(len(out), len(exp))
         exp += [''] * (line_count - len(exp))
         out += [''] * (line_count - len(out))
-        tail = "\n------------------------------------------------------------------------------------------"
+        mid_break = "***********{}***********"
+        tail = "\n--------------------------------- Expected vs Actual -------------------------------------------"
         conflicts = []
         for a, b in zip(exp, out):
             matching = a == b
+            result = (a, mid_break.format('*' if matching else '** ERROR **'), b, tail)
             if full:
-                conflicts.append((a, b, str(matching), tail))
+                conflicts.append(result)
             elif not matching:
-                conflicts.append((a, b, str(matching), tail))
+                conflicts.append(result)
         for row in conflicts:
             print('\n'.join(row))
         return conflicts
