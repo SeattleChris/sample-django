@@ -1,17 +1,22 @@
 from django.test import TestCase  # , Client, override_settings, modify_settings, TransactionTestCase, RequestFactory
 from unittest import skip
 from django.core.exceptions import ImproperlyConfigured, ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
+from django.urls.exceptions import NoReverseMatch
 from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
 from django.forms import (CharField, BooleanField, EmailField, HiddenInput, MultipleHiddenInput,
                           RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea, Select, SelectMultiple)
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model  # , views
+from django.urls import reverse  # , reverse_lazy
 from django.utils.datastructures import MultiValueDict
+from django.utils.html import format_html  # conditional_escape,
+# from django.utils.safestring import mark_safe
 from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
 from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
 from copy import deepcopy
+
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
 OTHER_USER = {'email': 'other@fake.com', 'password': 'test1234', 'first_name': 'other_user', 'last_name': 'fake_y'}
@@ -103,28 +108,27 @@ class FormTests:
     def _make_real_user(self, user_type=None, **user_setup):
         UserModel = get_user_model()
         user = None
-        if self.user_type == 'anonymous':
-            user = AnonymousUser()
+        if 'username' not in user_setup:
+            user_setup['username'] = user_setup.get('email', '')
+        if self.user_type == 'anonymous':  # Technically already handled.
+            return AnonymousUser()
         elif self.user_type == 'superuser':
             temp = {'is_staff': True, 'is_superuser': True}
             user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
-            user.save()
+            user = UserModel.objects.create_superuser(**user_setup)
         elif self.user_type == 'staff':
             temp = {'is_staff': True, 'is_superuser': False}
             user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
-            user.save()
+            user = UserModel.objects.create_user(**user_setup)
         elif self.user_type == 'user':
             temp = {'is_staff': False, 'is_superuser': False}
             user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
-            user.save()
+            user = UserModel.objects.create_user(**user_setup)
         elif self.user_type == 'inactive':
             temp = {'is_staff': False, 'is_superuser': False, 'is_active': False}
             user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
-            user.save()
+            user = UserModel.objects.create_user(**user_setup)
+        user.save()
         return user
 
     def make_user(self, user_type=None, mock_users=None, **kwargs):
@@ -252,6 +256,28 @@ class FormTests:
         for row in conflicts:
             print('\n'.join(row))
         return conflicts
+
+    def test_made_user(self, user=None):
+        """Confirm the expected user_type was made, using the expected mock or actual user model setup. """
+        user_attr = dict(is_active=True, is_authenticated=True, is_anonymous=False, is_staff=False, is_superuser=False)
+        attr_by_type = {
+            'anonymous': {'is_active': False, 'is_authenticated': False, 'is_anonymous': True},
+            'superuser': {'is_staff': True, 'is_superuser': True},
+            'staff': {'is_staff': True, 'is_superuser': False},
+            'user': {'is_staff': False, 'is_superuser': False},
+            'inactive': {'is_staff': False, 'is_superuser': False, 'is_active': False},
+            }
+        user_attr.update(attr_by_type.get(self.user_type, {}))
+        lookup_type = {'anonymous': AnonymousUser, 'superuser': MockSuperUser, 'staff': MockStaffUser, 'user': MockUser}
+        user_class = lookup_type.get(self.user_type, None)
+        if not self.mock_users and not self.user_type == 'anonymous':
+            user_class = get_user_model()
+        user = user or self.user
+        self.assertIsNotNone(getattr(self, 'user', None))
+        self.assertIsNotNone(user_class)
+        self.assertIsInstance(user, user_class)
+        for key, value in user_attr.items():
+            self.assertEqual(value, getattr(self.user, key, None))
 
     def test_as_table(self):
         """All forms should return HTML table rows when .as_table is called. """
@@ -1415,7 +1441,6 @@ class ComputedUsernameTests(FormTests, TestCase):
         """The validators from name_for_email_validators are applied as expected. """
         pass
 
-    # @skip("Not Implemented")
     def test_constructor_fields_used_when_email_fails(self):
         """If email already used, uses constructor_fields to make a username in username_from_email_or_names. """
         self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
@@ -1427,7 +1452,6 @@ class ComputedUsernameTests(FormTests, TestCase):
         test_data.update(new_info)
         test_data._mutable = False
         self.form.data = test_data
-        # initial_data = test_data.copy()
         self.form.is_bound = True
         self.form.cleaned_data = new_info.copy()
 
@@ -1435,7 +1459,7 @@ class ComputedUsernameTests(FormTests, TestCase):
         expected = '_'.join(names).casefold()
         UserModel = get_user_model()
         cur_user = self.user
-        found_user = UserModel.objects.get(username=cur_user.email)
+        found_user = UserModel.objects.get(username=cur_user.username)
 
         self.assertEqual(cur_user, found_user)
         for key, value in new_info.items():
@@ -1449,24 +1473,127 @@ class ComputedUsernameTests(FormTests, TestCase):
         self.form.data = original_data
         del self.form.cleaned_data
 
-    @skip("Not Implemented")
     def test_email_from_username_from_email_or_names(self):
         """When email is a valid username, username_from_email_or_names method returns email. """
-        pass
+        self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
+        self.form.name_for_email = self.form._meta.model.get_email_field_name()
 
-    @skip("Not Implemented")
-    def test_names_from_username_from_email_or_names(self):
-        """When email is not valid username, username_from_email_or_names method returns expected constructed value. """
-        pass
+        new_info = OTHER_USER.copy()
+        original_data = self.form.data
+        test_data = original_data.copy()
+        test_data.update(new_info)
+        test_data._mutable = False
+        self.form.data = test_data
+        self.form.is_bound = True
+        self.form.cleaned_data = new_info.copy()
 
-    @skip("Not Implemented")
+        expected = new_info['email']
+        UserModel = get_user_model()
+
+        self.assertEqual(1, UserModel.objects.count())
+        self.assertEqual(self.user, UserModel.objects.first())
+        for key in (self.form.name_for_user, self.form.name_for_email):
+            new_info.get(key, None) != getattr(self.user, key, '')
+        for key, value in new_info.items():
+            self.assertIn(key, self.form.cleaned_data)
+        result = self.form.username_from_email_or_names(self.form.name_for_user, self.form.name_for_email)
+        self.assertEqual(expected, result)
+
+        self.form.data = original_data
+        del self.form.cleaned_data
+
     def test_interface_compute_name_for_user(self):
         """The compute_name_for_user method, when not overwritten, calls the default username_from_email_or_names. """
-        pass
+        self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
+        self.form.name_for_email = self.form._meta.model.get_email_field_name()
+        expected = "Unique test response value"
+
+        def confirm_func(username_field_name=None, email_field_name=None): return expected
+        original_func = self.form.username_from_email_or_names
+        self.form.username_from_email_or_names = confirm_func
+        actual = self.form.compute_name_for_user()
+        self.form.username_from_email_or_names = original_func
+
+        self.assertEqual(expected, actual)
 
     # TODO: tests for configure_username_confirmation
-    # TODO: tests for get_login_message
     # TODO: tests for handle_flag_field
+
+    def get_or_make_links(self, link_names):
+        """If reverse is able to find the link_name, return it. Otherwise return a newly created one. """
+        link_names = link_names if isinstance(link_names, (list, tuple)) else [link_names]
+        urls = []
+        for name in link_names:
+            try:
+                url = reverse(name)
+            except NoReverseMatch as e:
+                print(e)
+                url = None
+                # if name == 'password_reset':
+                #     path('test-password/', views.PasswordChangeView.as_view(template_name='update.html'), name=name)
+                # else:
+                #     pass
+            urls.append(url)
+        # print(urls)
+        return urls
+
+    def mock_get_login_message(self, urls, link_text=None, link_only=False, reset=False):
+        login_link = format_html('<a href="{}">{}</a>', urls[0], link_text or 'login')
+        reset_link = format_html('<a href="{}">{}</a>', urls[1], link_text or 'reset the password')
+        expected = None
+        if link_only:
+            expected = reset_link if reset else login_link
+        else:
+            message = "You can {} to your existing account".format(login_link)
+            if reset:
+                message += " or {} if needed".format(reset_link)
+            message += ". "
+            expected = message
+        return expected
+
+    def test_message_link_only_no_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['link_only'] = True
+        # print("============================ TEST MESSAGE LINK METHODS ===============================")
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
+
+        self.assertEqual(expected, actual)
+
+    @skip("Not Implemented")
+    def test_message_link_only_with_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_message_default_no_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_message_default_with_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_message_reset_no_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_message_reset_with_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        pass
 
     @skip("Not Implemented")
     def test_confirmation_username_not_email(self):
