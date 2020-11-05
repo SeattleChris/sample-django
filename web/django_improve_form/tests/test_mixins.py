@@ -1568,35 +1568,99 @@ class ComputedUsernameTests(FormTests, TestCase):
 
         self.assertEqual(expected, actual)
 
-    @skip("Not Implemented")
     def test_message_link_only_with_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
-        pass
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['link_only'] = True
+        kwargs['link_text'] = 'This is the text for the test - test_message_link_only_with_text'
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
 
-    @skip("Not Implemented")
+        self.assertEqual(expected, actual)
+
+    def test_message_reset_link_only_no_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['link_only'] = True
+        kwargs['reset'] = True
+        # print("============================ TEST MESSAGE LINK METHODS ===============================")
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
+
+        self.assertEqual(expected, actual)
+
+    def test_message_reset_link_only_with_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['link_only'] = True
+        kwargs['reset'] = True
+        kwargs['link_text'] = 'This is the text for the test - test_message_link_only_with_text'
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
+
+        self.assertEqual(expected, actual)
+
     def test_message_default_no_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
-        pass
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
 
-    @skip("Not Implemented")
+        self.assertEqual(expected, actual)
+
     def test_message_default_with_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
-        pass
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        link_names = ('login', 'password_reset')
+        text_template = 'The {} test text - test_message_default_with_text'
+        kwargs['link_text'] = [text_template.format(name) for name in link_names]
+        urls = self.get_or_make_links(link_names)
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
 
-    @skip("Not Implemented")
+        self.assertEqual(expected, actual)
+
     def test_message_reset_no_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
-        pass
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['reset'] = True
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
 
-    @skip("Not Implemented")
+        self.assertEqual(expected, actual)
+
     def test_message_reset_with_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
-        pass
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['reset'] = True
+        link_names = ('login', 'password_reset')
+        text_template = 'The {} test text - test_message_default_with_text'
+        kwargs['link_text'] = [text_template.format(name) for name in link_names]
+        urls = self.get_or_make_links(link_names)
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
+
+        self.assertEqual(expected, actual)
 
     @skip("Not Implemented")
     def test_confirmation_username_not_email(self):
