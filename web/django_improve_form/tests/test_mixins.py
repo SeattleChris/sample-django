@@ -105,28 +105,25 @@ class FormTests:
         user = None
         if 'username' not in user_setup:
             user_setup['username'] = user_setup.get('email', '')
-        if self.user_type == 'anonymous':
-            user = AnonymousUser()
+        if self.user_type == 'anonymous':  # Technically already handled.
+            return AnonymousUser()
         elif self.user_type == 'superuser':
             temp = {'is_staff': True, 'is_superuser': True}
             user_setup.update(temp)
             user = UserModel.objects.create_superuser(**user_setup)
-            user.save()
         elif self.user_type == 'staff':
             temp = {'is_staff': True, 'is_superuser': False}
             user_setup.update(temp)
             user = UserModel.objects.create_user(**user_setup)
-            user.save()
         elif self.user_type == 'user':
             temp = {'is_staff': False, 'is_superuser': False}
             user_setup.update(temp)
             user = UserModel.objects.create_user(**user_setup)
-            user.save()
         elif self.user_type == 'inactive':
             temp = {'is_staff': False, 'is_superuser': False, 'is_active': False}
             user_setup.update(temp)
             user = UserModel.objects.create_user(**user_setup)
-            user.save()
+        user.save()
         return user
 
     def make_user(self, user_type=None, mock_users=None, **kwargs):
@@ -257,6 +254,15 @@ class FormTests:
 
     def test_made_user(self):
         """Confirm the expected user_type was made, using the expected mock or actual user model setup. """
+        user_attr = dict(is_active=True, is_authenticated=True, is_anonymous=False, is_staff=False, is_superuser=False)
+        attr_by_type = {
+            'anonymous': {'is_active': False, 'is_authenticated': False, 'is_anonymous': True},
+            'superuser': {'is_staff': True, 'is_superuser': True},
+            'staff': {'is_staff': True, 'is_superuser': False},
+            'user': {'is_staff': False, 'is_superuser': False},
+            'inactive': {'is_staff': False, 'is_superuser': False, 'is_active': False},
+            }
+        user_attr.update(attr_by_type.get(self.user_type, {}))
         lookup_type = {'anonymous': AnonymousUser, 'superuser': MockSuperUser, 'staff': MockStaffUser, 'user': MockUser}
         user_class = lookup_type.get(self.user_type, None)
         if not self.mock_users and not self.user_type == 'anonymous':
@@ -264,6 +270,8 @@ class FormTests:
         self.assertIsNotNone(getattr(self, 'user', None))
         self.assertIsNotNone(user_class)
         self.assertIsInstance(self.user, user_class)
+        for key, value in user_attr.items():
+            self.assertEqual(value, getattr(self.user, key, None))
 
     def test_as_table(self):
         """All forms should return HTML table rows when .as_table is called. """
