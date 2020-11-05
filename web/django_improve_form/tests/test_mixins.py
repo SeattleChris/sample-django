@@ -1436,7 +1436,6 @@ class ComputedUsernameTests(FormTests, TestCase):
         """The validators from name_for_email_validators are applied as expected. """
         pass
 
-    # @skip("Not Implemented")
     def test_constructor_fields_used_when_email_fails(self):
         """If email already used, uses constructor_fields to make a username in username_from_email_or_names. """
         self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
@@ -1456,7 +1455,7 @@ class ComputedUsernameTests(FormTests, TestCase):
         expected = '_'.join(names).casefold()
         UserModel = get_user_model()
         cur_user = self.user
-        found_user = UserModel.objects.get(username=cur_user.email)
+        found_user = UserModel.objects.get(username=cur_user.username)
 
         self.assertEqual(cur_user, found_user)
         for key, value in new_info.items():
