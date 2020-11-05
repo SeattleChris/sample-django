@@ -1,17 +1,22 @@
 from django.test import TestCase  # , Client, override_settings, modify_settings, TransactionTestCase, RequestFactory
 from unittest import skip
 from django.core.exceptions import ImproperlyConfigured, ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
+from django.urls.exceptions import NoReverseMatch
 from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
 from django.forms import (CharField, BooleanField, EmailField, HiddenInput, MultipleHiddenInput,
                           RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea, Select, SelectMultiple)
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model  # , views
+from django.urls import reverse  # , reverse_lazy
 from django.utils.datastructures import MultiValueDict
+from django.utils.html import format_html  # conditional_escape,
+# from django.utils.safestring import mark_safe
 from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
 from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
 from copy import deepcopy
+
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
 OTHER_USER = {'email': 'other@fake.com', 'password': 'test1234', 'first_name': 'other_user', 'last_name': 'fake_y'}
@@ -1512,8 +1517,83 @@ class ComputedUsernameTests(FormTests, TestCase):
         self.assertEqual(expected, actual)
 
     # TODO: tests for configure_username_confirmation
-    # TODO: tests for get_login_message
     # TODO: tests for handle_flag_field
+
+    def get_or_make_links(self, link_names):
+        """If reverse is able to find the link_name, return it. Otherwise return a newly created one. """
+        link_names = link_names if isinstance(link_names, (list, tuple)) else [link_names]
+        urls = []
+        for name in link_names:
+            try:
+                url = reverse(name)
+            except NoReverseMatch as e:
+                print(e)
+                url = None
+                # if name == 'password_reset':
+                #     path('test-password/', views.PasswordChangeView.as_view(template_name='update.html'), name=name)
+                # else:
+                #     pass
+            urls.append(url)
+        # print(urls)
+        return urls
+
+    def mock_get_login_message(self, urls, link_text=None, link_only=False, reset=False):
+        login_link = format_html('<a href="{}">{}</a>', urls[0], link_text or 'login')
+        reset_link = format_html('<a href="{}">{}</a>', urls[1], link_text or 'reset the password')
+        expected = None
+        if link_only:
+            expected = reset_link if reset else login_link
+        else:
+            message = "You can {} to your existing account".format(login_link)
+            if reset:
+                message += " or {} if needed".format(reset_link)
+            message += ". "
+            expected = message
+        return expected
+
+    def test_message_link_only_no_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['link_only'] = True
+        # print("============================ TEST MESSAGE LINK METHODS ===============================")
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
+
+        self.assertEqual(expected, actual)
+
+    @skip("Not Implemented")
+    def test_message_link_only_with_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_message_default_no_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_message_default_with_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_message_reset_no_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_message_reset_with_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        pass
 
     @skip("Not Implemented")
     def test_confirmation_username_not_email(self):
