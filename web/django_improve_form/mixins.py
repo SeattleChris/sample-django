@@ -433,9 +433,11 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
 
     def get_login_message(self, link_text=None, link_only=False, reset=False):
         """Returns text with html links to login. If reset is True, the message includes a link for password reset. """
-        link_text = _(link_text) if link_text else None
-        login_link = format_html('<a href="{}">{}</a>', reverse('login'), link_text or _('login'))
-        reset_link = format_html('<a href="{}">{}</a>', reverse('password_reset'), link_text or _('reset the password'))
+        if not isinstance(link_text, (tuple, list)):
+            link_text = (link_text, link_text)
+        link_text = [_(ea) if ea else None for ea in link_text]
+        login_link = format_html('<a href="{}">{}</a>', reverse('login'), link_text[0] or _('login'))
+        reset_link = format_html('<a href="{}">{}</a>', reverse('password_reset'), link_text[1] or _('reset the password'))
         if link_only:
             return login_link if not reset else reset_link
         message = "You can {} to your existing account".format(login_link)

@@ -1538,8 +1538,11 @@ class ComputedUsernameTests(FormTests, TestCase):
         return urls
 
     def mock_get_login_message(self, urls, link_text=None, link_only=False, reset=False):
-        login_link = format_html('<a href="{}">{}</a>', urls[0], link_text or 'login')
-        reset_link = format_html('<a href="{}">{}</a>', urls[1], link_text or 'reset the password')
+        if not isinstance(link_text, (tuple, list)):
+            link_text = (link_text, link_text)
+        link_text = [ea if ea else None for ea in link_text]
+        login_link = format_html('<a href="{}">{}</a>', urls[0], link_text[0] or 'login')
+        reset_link = format_html('<a href="{}">{}</a>', urls[1], link_text[1] or 'reset the password')
         expected = None
         if link_only:
             expected = reset_link if reset else login_link
