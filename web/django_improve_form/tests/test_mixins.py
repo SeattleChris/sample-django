@@ -252,7 +252,7 @@ class FormTests:
             print('\n'.join(row))
         return conflicts
 
-    def test_made_user(self):
+    def test_made_user(self, user=None):
         """Confirm the expected user_type was made, using the expected mock or actual user model setup. """
         user_attr = dict(is_active=True, is_authenticated=True, is_anonymous=False, is_staff=False, is_superuser=False)
         attr_by_type = {
@@ -267,9 +267,10 @@ class FormTests:
         user_class = lookup_type.get(self.user_type, None)
         if not self.mock_users and not self.user_type == 'anonymous':
             user_class = get_user_model()
+        user = user or self.user
         self.assertIsNotNone(getattr(self, 'user', None))
         self.assertIsNotNone(user_class)
-        self.assertIsInstance(self.user, user_class)
+        self.assertIsInstance(user, user_class)
         for key, value in user_attr.items():
             self.assertEqual(value, getattr(self.user, key, None))
 
