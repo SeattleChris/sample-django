@@ -1504,10 +1504,19 @@ class ComputedUsernameTests(FormTests, TestCase):
         """When email is not valid username, username_from_email_or_names method returns expected constructed value. """
         pass
 
-    @skip("Not Implemented")
     def test_interface_compute_name_for_user(self):
         """The compute_name_for_user method, when not overwritten, calls the default username_from_email_or_names. """
-        pass
+        self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
+        self.form.name_for_email = self.form._meta.model.get_email_field_name()
+        expected = "Unique test response value"
+
+        def confirm_func(username_field_name=None, email_field_name=None): return expected
+        original_func = self.form.username_from_email_or_names
+        self.form.username_from_email_or_names = confirm_func
+        actual = self.form.compute_name_for_user()
+        self.form.username_from_email_or_names = original_func
+
+        self.assertEqual(expected, actual)
 
     # TODO: tests for configure_username_confirmation
     # TODO: tests for get_login_message
