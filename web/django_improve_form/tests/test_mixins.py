@@ -103,27 +103,29 @@ class FormTests:
     def _make_real_user(self, user_type=None, **user_setup):
         UserModel = get_user_model()
         user = None
+        if 'username' not in user_setup:
+            user_setup['username'] = user_setup.get('email', '')
         if self.user_type == 'anonymous':
             user = AnonymousUser()
         elif self.user_type == 'superuser':
             temp = {'is_staff': True, 'is_superuser': True}
             user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
+            user = UserModel.objects.create_superuser(**user_setup)
             user.save()
         elif self.user_type == 'staff':
             temp = {'is_staff': True, 'is_superuser': False}
             user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
+            user = UserModel.objects.create_user(**user_setup)
             user.save()
         elif self.user_type == 'user':
             temp = {'is_staff': False, 'is_superuser': False}
             user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
+            user = UserModel.objects.create_user(**user_setup)
             user.save()
         elif self.user_type == 'inactive':
             temp = {'is_staff': False, 'is_superuser': False, 'is_active': False}
             user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
+            user = UserModel.objects.create_user(**user_setup)
             user.save()
         return user
 
@@ -252,6 +254,16 @@ class FormTests:
         for row in conflicts:
             print('\n'.join(row))
         return conflicts
+
+    def test_made_user(self):
+        """Confirm the expected user_type was made, using the expected mock or actual user model setup. """
+        lookup_type = {'anonymous': AnonymousUser, 'superuser': MockSuperUser, 'staff': MockStaffUser, 'user': MockUser}
+        user_class = lookup_type.get(self.user_type, None)
+        if not self.mock_users and not self.user_type == 'anonymous':
+            user_class = get_user_model()
+        self.assertIsNotNone(getattr(self, 'user', None))
+        self.assertIsNotNone(user_class)
+        self.assertIsInstance(self.user, user_class)
 
     def test_as_table(self):
         """All forms should return HTML table rows when .as_table is called. """
