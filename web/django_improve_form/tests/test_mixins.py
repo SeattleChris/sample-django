@@ -1469,10 +1469,35 @@ class ComputedUsernameTests(FormTests, TestCase):
         self.form.data = original_data
         del self.form.cleaned_data
 
-    @skip("Not Implemented")
     def test_email_from_username_from_email_or_names(self):
         """When email is a valid username, username_from_email_or_names method returns email. """
-        pass
+        self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
+        self.form.name_for_email = self.form._meta.model.get_email_field_name()
+        existing_email = self.user.email
+
+        new_info = OTHER_USER.copy()
+        original_data = self.form.data
+        test_data = original_data.copy()
+        test_data.update(new_info)
+        test_data._mutable = False
+        self.form.data = test_data
+        self.form.is_bound = True
+        self.form.cleaned_data = new_info.copy()
+
+        expected = new_info['email']
+        UserModel = get_user_model()
+
+        self.assertEqual(1, UserModel.objects.count())
+        self.assertEqual(self.user, UserModel.objects.first())
+        for key in (self.form.name_for_user, self.form.name_for_email):
+            new_info.get(key, None) != getattr(self.user, key, '')
+        for key, value in new_info.items():
+            self.assertIn(key, self.form.cleaned_data)
+        result = self.form.username_from_email_or_names(self.form.name_for_user, self.form.name_for_email)
+        self.assertEqual(expected, result)
+
+        self.form.data = original_data
+        del self.form.cleaned_data
 
     @skip("Not Implemented")
     def test_names_from_username_from_email_or_names(self):
