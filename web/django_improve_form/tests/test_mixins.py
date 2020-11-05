@@ -1447,7 +1447,6 @@ class ComputedUsernameTests(FormTests, TestCase):
         test_data.update(new_info)
         test_data._mutable = False
         self.form.data = test_data
-        # initial_data = test_data.copy()
         self.form.is_bound = True
         self.form.cleaned_data = new_info.copy()
 
@@ -1473,7 +1472,6 @@ class ComputedUsernameTests(FormTests, TestCase):
         """When email is a valid username, username_from_email_or_names method returns email. """
         self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
         self.form.name_for_email = self.form._meta.model.get_email_field_name()
-        existing_email = self.user.email
 
         new_info = OTHER_USER.copy()
         original_data = self.form.data
@@ -1498,11 +1496,6 @@ class ComputedUsernameTests(FormTests, TestCase):
 
         self.form.data = original_data
         del self.form.cleaned_data
-
-    @skip("Not Implemented")
-    def test_names_from_username_from_email_or_names(self):
-        """When email is not valid username, username_from_email_or_names method returns expected constructed value. """
-        pass
 
     def test_interface_compute_name_for_user(self):
         """The compute_name_for_user method, when not overwritten, calls the default username_from_email_or_names. """
