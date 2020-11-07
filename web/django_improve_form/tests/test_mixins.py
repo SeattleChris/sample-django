@@ -43,9 +43,9 @@ PASSWORD2_TXT = '' + \
     '%(start_tag)s<label for="id_password2">Password confirmation:</label>%(label_end)s<input type="password" ' + \
     'name="password2" autocomplete="new-password" required id="id_password2">%(input_end)s<span class="helptext">' + \
     'Enter the same password as before, for verification.</span>%(end_tag)s\n'
-EMAIL_TXT = '' + \
-    '%(start_tag)s<label for="id_email_field">Email:</label>%(label_end)s<input type="email" name="email_field" ' + \
-    'maxlength="191" required id="id_email_field">%(end_tag)s\n'
+# EMAIL_TXT = '' + \
+#     '%(start_tag)s<label for="id_email_field">Email:</label>%(label_end)s<input type="email" name="email_field" ' + \
+#     'maxlength="191" required id="id_email_field">%(end_tag)s\n'
 names_text = '' + \
     '%(start_tag)s<label for="id_first_name">First name:</label>%(label_end)s<input type="text" name="first_name" ' + \
     '%(name_length)sid="id_first_name">%(end_tag)s\n' + \
@@ -70,7 +70,7 @@ RADIO_TXT = '%(start_tag)s<label for="id_%(name)s_0">%(pretty)s:</label>%(label_
 OTHER_OPTION_TXT = '    <li><label for="id_%(name)s_%(num)s"><input type="%(input_type)s" name="%(name)s" ' + \
     'value="%(val)s" %(required)sid="id_%(name)s_%(num)s">\n %(display_choice)s</label>\n\n</li>\n'
 FIELD_FORMATS = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
-FIELD_FORMATS['email'] = EMAIL_TXT
+FIELD_FORMATS['email'] = DEFAULT_TXT  # EMAIL_TXT
 for name in ('first_name', 'last_name'):
     name_re = DEFAULT_RE.copy()
     name_re.update(attrs=' ' + NAME_LENGTH, required='')
@@ -85,6 +85,8 @@ class FormTests:
     def setUp(self):
         self.user = self.make_user()
         self.form = self.make_form_request()
+        # field_order = list(self.form.base_fields.keys())
+        # self.form.order_fields(field_order)
 
     def make_form_request(self, method='GET', **kwargs):
         """Constructs a mocked request object with the method, and applies the kwargs. """
@@ -145,27 +147,45 @@ class FormTests:
         user = type_lookup[user_type](**user_setup)
         return user
 
-    def get_override_attrs(self, name, field):
-        """For the given named field, get the attrs as determined by the current FormOverrideMixIn settings. """
-        # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
-        result = ''
-        if field.initial and not isinstance(field.widget, Textarea):
-            result = f' value="{field.initial}"'
-        result += '%(attrs)s'
+    def get_format_attrs(self, name, field):
+        """For the given named field, get the attrs as determined by the field and widget settings. """
+        result = []
+        attrs = field.widget_attrs(field.widget)
+        attrs.pop('required', None)
+        
+        result = ' ' + ' '.join('='.join((key, val)) for key, val in attrs.items())
+        # if field.initial and not isinstance(field.widget, Textarea):
+        #     result.append(f' value="{field.initial}"')
+        # if field.max_length:
+        #     result.append(f' maxlength="{field.max_length}"')
+        # if field.min_length:
+        #     result.append(f' minlength="{field.min_length}"')
+
+        # content '%(attrs)s'
+        if issubclass(self.form.__class__, FormOverrideMixIn):
+            # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
+            result += '%(attrs)s'  # '%(attrs)s' content
         return result
+
+    # def get_override_attrs(self, name, field):
+    #     """For the given named field, get the attrs as determined by the current FormOverrideMixIn settings. """
+    #     result = self.get_normal_attrs(name, field)
+    #     return result
 
     def get_expected_format(self, setup):
         field_formats = FIELD_FORMATS.copy()
         form_list = []
         if issubclass(self.form_class, ComputedUsernameMixIn):
-            name_for_email = self.form.name_for_email or 'email'
-            name_for_user = self.form.name_for_user or 'username'
+            name_for_email = self.form.name_for_email or self.form._meta.model.get_email_field() or 'email'
+            name_for_user = self.form.name_for_user or self.form._meta.model.USERNAME_FIELD or 'username'
             field_formats[name_for_email] = field_formats.pop('email')
             field_formats[name_for_user] = field_formats.pop('username')
-            order = ['first_name', 'last_name', 'username', 'password1', 'password2', 'email']
+            order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
             self.form.order_fields(order)
         hidden_list = []
+        print("======================= GET EXPECTED FORMAT ===============================")
         for name, field in self.form.fields.items():
+            print(self.__class__.__name__, name)
             if isinstance(field.widget, (HiddenInput, MultipleHiddenInput, )):
                 hide_re = {'name': name, 'initial': field.initial}
                 txt = HIDDEN_TXT % hide_re
@@ -176,14 +196,11 @@ class FormTests:
             cur_replace['required'] = REQUIRED if field.required else ''
             if field.disabled:
                 cur_replace['required'] += 'disabled '
-            if issubclass(self.form.__class__, FormOverrideMixIn):
-                cur_replace['attrs'] = self.get_override_attrs(name, field)
-            elif field.initial and not isinstance(field.widget, Textarea):
-                cur_replace['attrs'] += f'value="{field.initial}" '
-                # cur_replace['attrs'] = f'value="{field.initial}" ' + cur_replace['attrs']
+            cur_replace['attrs'] = self.get_format_attrs(name, field)
 
             if isinstance(field, EmailField) and name not in field_formats:
-                cur_replace['input_type'] = 'email'  # replace_text[name] = EMAIL_TXT
+                cur_replace['input_type'] = 'email'
+                # field_formats[name] = EMAIL_TXT
             elif isinstance(field.widget, Textarea):
                 cur_replace['initial'] = getattr(field, 'initial', None) or ''
                 attrs = ''
@@ -245,14 +262,16 @@ class FormTests:
         line_count = max(len(out), len(exp))
         exp += [''] * (line_count - len(exp))
         out += [''] * (line_count - len(out))
-        tail = "\n------------------------------------------------------------------------------------------"
+        mid_break = "***********{}***********"
+        tail = "\n--------------------------------- Expected vs Actual -------------------------------------------"
         conflicts = []
         for a, b in zip(exp, out):
             matching = a == b
+            result = (a, mid_break.format('*' if matching else '** ERROR **'), b, tail)
             if full:
-                conflicts.append((a, b, str(matching), tail))
+                conflicts.append(result)
             elif not matching:
-                conflicts.append((a, b, str(matching), tail))
+                conflicts.append(result)
         for row in conflicts:
             print('\n'.join(row))
         return conflicts
@@ -1409,6 +1428,14 @@ class ComputedUsernameTests(FormTests, TestCase):
     user_type = 'user'  # 'superuser' | 'staff' | 'user' | 'anonymous'
     mock_users = False
 
+    def test_temp(self):
+        self.assertEqual('username', self.form._meta.model.USERNAME_FIELD)
+        self.assertEqual('email', self.form._meta.model.get_email_field_name())
+        self.assertEqual('username', self.form.name_for_user)
+        self.assertEqual('email', self.form.name_for_email)
+        self.assertIn(self.form._meta.model.get_email_field_name(), self.form.fields)
+        self.assertNotIn('email_field', self.form.fields)
+
     @skip("Not Implemented")
     def test_raises_on_not_user_model(self):
         """Raises ImproperlyConfigured if an appropriate User like model cannot be discovered. """
@@ -1516,9 +1543,6 @@ class ComputedUsernameTests(FormTests, TestCase):
 
         self.assertEqual(expected, actual)
 
-    # TODO: tests for configure_username_confirmation
-    # TODO: tests for handle_flag_field
-
     def get_or_make_links(self, link_names):
         """If reverse is able to find the link_name, return it. Otherwise return a newly created one. """
         link_names = link_names if isinstance(link_names, (list, tuple)) else [link_names]
@@ -1538,8 +1562,11 @@ class ComputedUsernameTests(FormTests, TestCase):
         return urls
 
     def mock_get_login_message(self, urls, link_text=None, link_only=False, reset=False):
-        login_link = format_html('<a href="{}">{}</a>', urls[0], link_text or 'login')
-        reset_link = format_html('<a href="{}">{}</a>', urls[1], link_text or 'reset the password')
+        if not isinstance(link_text, (tuple, list)):
+            link_text = (link_text, link_text)
+        link_text = [ea if ea else None for ea in link_text]
+        login_link = format_html('<a href="{}">{}</a>', urls[0], link_text[0] or 'login')
+        reset_link = format_html('<a href="{}">{}</a>', urls[1], link_text[1] or 'reset the password')
         expected = None
         if link_only:
             expected = reset_link if reset else login_link
@@ -1565,35 +1592,99 @@ class ComputedUsernameTests(FormTests, TestCase):
 
         self.assertEqual(expected, actual)
 
-    @skip("Not Implemented")
     def test_message_link_only_with_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
-        pass
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['link_only'] = True
+        kwargs['link_text'] = 'This is the text for the test - test_message_link_only_with_text'
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
 
-    @skip("Not Implemented")
+        self.assertEqual(expected, actual)
+
+    def test_message_reset_link_only_no_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['link_only'] = True
+        kwargs['reset'] = True
+        # print("============================ TEST MESSAGE LINK METHODS ===============================")
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
+
+        self.assertEqual(expected, actual)
+
+    def test_message_reset_link_only_with_text(self):
+        """The get_login_message response for link_only and no text passed returns as expected. """
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['link_only'] = True
+        kwargs['reset'] = True
+        kwargs['link_text'] = 'This is the text for the test - test_message_link_only_with_text'
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
+
+        self.assertEqual(expected, actual)
+
     def test_message_default_no_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
-        pass
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
 
-    @skip("Not Implemented")
+        self.assertEqual(expected, actual)
+
     def test_message_default_with_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
-        pass
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        link_names = ('login', 'password_reset')
+        text_template = 'The {} test text - test_message_default_with_text'
+        kwargs['link_text'] = [text_template.format(name) for name in link_names]
+        urls = self.get_or_make_links(link_names)
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
 
-    @skip("Not Implemented")
+        self.assertEqual(expected, actual)
+
     def test_message_reset_no_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
-        pass
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['reset'] = True
+        urls = self.get_or_make_links(('login', 'password_reset'))
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
 
-    @skip("Not Implemented")
+        self.assertEqual(expected, actual)
+
     def test_message_reset_with_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
-        pass
+        kwargs = dict(link_text=None, link_only=False, reset=False)
+        kwargs['reset'] = True
+        link_names = ('login', 'password_reset')
+        text_template = 'The {} test text - test_message_default_with_text'
+        kwargs['link_text'] = [text_template.format(name) for name in link_names]
+        urls = self.get_or_make_links(link_names)
+        for url in urls:
+            self.assertIsNotNone(url)
+        expected = self.mock_get_login_message(urls, **kwargs)
+        actual = self.form.get_login_message(**kwargs)
+
+        self.assertEqual(expected, actual)
 
     @skip("Not Implemented")
     def test_confirmation_username_not_email(self):
@@ -1619,6 +1710,148 @@ class ComputedUsernameTests(FormTests, TestCase):
     def test_cleaned_data_worked(self):
         """The Form's clean method returns the expected cleaned_data, after cleaning all fields. """
         pass
+
+
+class ConfirmationComputedUsernameTests(FormTests, TestCase):
+    form_class = ComputedUsernameForm
+    user_type = 'user'  # 'superuser' | 'staff' | 'user' | 'anonymous'
+    mock_users = False
+    form_test_data = OTHER_USER
+
+    def setUp(self):
+        self.user = self.make_user()
+        test_data = MultiValueDict()
+        test_data.update(self.form_test_data)
+        test_data.update(email=self.user.email)
+        # test_data._mutable = False
+        self.test_data = test_data
+        # self.form = self.make_form_request(method='POST', data=test_data)
+        self.form = self.make_form_request()
+
+    def test_temp(self):
+        self.assertEqual('username', self.form._meta.model.USERNAME_FIELD)
+        self.assertEqual('email', self.form._meta.model.get_email_field_name())
+        self.assertEqual('username', self.form.name_for_user)
+        self.assertEqual('email', self.form.name_for_email)
+        self.assertIn(self.form._meta.model.get_email_field_name(), self.form.fields)
+
+    # @skip("Not Used")
+    def test_as_table(self):
+        # self.assertTrue(True)
+        pass
+
+    # @skip("Not Used")
+    def test_as_ul(self):
+        # self.assertTrue(True)
+        pass
+
+    # @skip("Not Used")
+    def test_as_p(self):
+        # self.assertTrue(True)
+        pass
+
+    # @skip("Not Implemented")
+    def test_configure_username_confirmation(self):
+        """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
+        UserModel = get_user_model()
+        same_model = issubclass(self.form.user_model, UserModel)
+        self.assertTrue(same_model)
+        self.assertEqual(self.form.name_for_user, UserModel.USERNAME_FIELD)
+        self.assertEqual(self.form.name_for_email, UserModel.get_email_field_name())
+        self.assertEqual('email', self.form.name_for_email)
+        self.assertIn(self.form.name_for_email, self.test_data)
+        self.assertIn(self.form.name_for_email, self.form.fields)
+        initial_data = self.test_data.copy()
+        form_post = self.make_form_request(method='POST', data=self.test_data)
+
+
+    @skip("Not Implemented")
+    def test_configure_username_confirmation(self):
+        """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
+        # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
+        # self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
+        # self.form.name_for_email = self.form._meta.model.get_email_field_name()
+        self.assertIsNotNone(self.form.name_for_user)
+        self.assertIsNotNone(self.form.name_for_email)
+        self.assertIn('email', self.test_data)
+        # form_post = self.make_form_request(method='POST', data=self.test_data)
+
+        # kwargs = {'name_for_user': UserModel.USERNAME_FIELD, 'name_for_email': UserModel.get_email_field_name()}
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        fields = original_fields.copy()
+        computed_fields = original_computed_fields.copy()
+        cleaned_data = original_cleaned_data.copy() if original_cleaned_data else {}
+        # modify fields
+        # modify computed_fields
+        self.form.fields = fields
+        self.form.computed_fields = computed_fields
+        self.form.cleaned_data = cleaned_data
+        # original_data = self.form.data
+        # test_data = original_data.copy()
+        # test_data.update(OTHER_USER)
+        # test_data._mutable = False
+        # self.form.data = test_data
+        # self.form.is_bound = True
+        # initial_data = test_data.copy()
+        # info = OTHER_USER.copy()
+        # self.form.cleaned_data = info
+        test_data = self.form.data
+        initial_data = self.form.data.copy()
+        expected_data = initial_data.copy()  # QueryDict datastructure.
+        self.assertIn(self.form.name_for_user, self.form.computed_fields)
+        self.assertIn(self.form.name_for_email, self.form.fields)
+        self.assertIn(self.form.name_for_email, self.form.data)
+        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.computed_fields)
+        is_valid = self.form.is_valid()
+        # info = self.form.cleaned_data.copy()
+        self.assertIn(self.form.name_for_email, self.form.cleaned_data)
+        expected_username = self.form.compute_name_for_user()
+        # info[self.form.name_for_user] = self.form.compute_name_for_user()
+        # self.form.cleaned_data[self.form.name_for_user] = info[self.form.name_for_user]
+
+        # expected_data.appendlist(self.form.name_for_email, info[self.form.name_for_email])
+        expected_data.appendlist(self.form.name_for_email, self.form.cleaned_data[self.form.name_for_email])
+        expected_data.appendlist(self.form.USERNAME_FLAG_FIELD, str(False))
+        expected_data.appendlist(self.form.name_for_user, expected_username)
+
+        result = self.form.configure_username_confirmation()
+
+        self.assertDictEqual(expected_data, self.form.data)
+        self.assertNotEqual(initial_data, expected_data)
+        self.assertIsNot(test_data, self.form.data)
+
+        self.assertIn(self.form.name_for_user, self.form.fields)
+        self.assertIn(self.form.name_for_email, self.form.fields)
+        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.fields)
+
+        self.form.computed_fields = original_computed_fields
+        self.form.fields = original_fields
+        self.form.data = test_data
+        self.form.cleaned_data = original_cleaned_data
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+
+    # @skip("Not Implemented")
+    # def test_configure_username_confirmation(self):
+    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
+    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
+    #     pass
+
+    # @skip("Not Implemented")
+    # def test_configure_username_confirmation(self):
+    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
+    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
+    #     pass
+
+    # @skip("Not Implemented")
+    # def test_configure_username_confirmation(self):
+    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
+    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
+    #     pass
+
+    # TODO: tests for handle_flag_field
 
 
 class CountryTests(FormTests, TestCase):
