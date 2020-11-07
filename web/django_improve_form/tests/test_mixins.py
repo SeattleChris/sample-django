@@ -85,6 +85,8 @@ class FormTests:
     def setUp(self):
         self.user = self.make_user()
         self.form = self.make_form_request()
+        # field_order = list(self.form.base_fields.keys())
+        # self.form.order_fields(field_order)
 
     def make_form_request(self, method='GET', **kwargs):
         """Constructs a mocked request object with the method, and applies the kwargs. """
@@ -145,14 +147,30 @@ class FormTests:
         user = type_lookup[user_type](**user_setup)
         return user
 
-    def get_override_attrs(self, name, field):
-        """For the given named field, get the attrs as determined by the current FormOverrideMixIn settings. """
-        # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
-        result = ''
-        if field.initial and not isinstance(field.widget, Textarea):
-            result = f' value="{field.initial}"'
-        result += '%(attrs)s'
+    def get_format_attrs(self, name, field):
+        """For the given named field, get the attrs as determined by the field and widget settings. """
+        result = []
+        attrs = field.widget_attrs(field.widget)
+        attrs.pop('required', None)
+        
+        result = ' ' + ' '.join('='.join((key, val)) for key, val in attrs.items())
+        # if field.initial and not isinstance(field.widget, Textarea):
+        #     result.append(f' value="{field.initial}"')
+        # if field.max_length:
+        #     result.append(f' maxlength="{field.max_length}"')
+        # if field.min_length:
+        #     result.append(f' minlength="{field.min_length}"')
+
+        # content '%(attrs)s'
+        if issubclass(self.form.__class__, FormOverrideMixIn):
+            # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
+            result += '%(attrs)s'  # '%(attrs)s' content
         return result
+
+    # def get_override_attrs(self, name, field):
+    #     """For the given named field, get the attrs as determined by the current FormOverrideMixIn settings. """
+    #     result = self.get_normal_attrs(name, field)
+    #     return result
 
     def get_expected_format(self, setup):
         field_formats = FIELD_FORMATS.copy()
@@ -165,7 +183,9 @@ class FormTests:
             order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
             self.form.order_fields(order)
         hidden_list = []
+        print("======================= GET EXPECTED FORMAT ===============================")
         for name, field in self.form.fields.items():
+            print(self.__class__.__name__, name)
             if isinstance(field.widget, (HiddenInput, MultipleHiddenInput, )):
                 hide_re = {'name': name, 'initial': field.initial}
                 txt = HIDDEN_TXT % hide_re
@@ -176,11 +196,7 @@ class FormTests:
             cur_replace['required'] = REQUIRED if field.required else ''
             if field.disabled:
                 cur_replace['required'] += 'disabled '
-            if issubclass(self.form.__class__, FormOverrideMixIn):
-                cur_replace['attrs'] = self.get_override_attrs(name, field)
-            elif field.initial and not isinstance(field.widget, Textarea):
-                cur_replace['attrs'] += f'value="{field.initial}" '
-                # cur_replace['attrs'] = f'value="{field.initial}" ' + cur_replace['attrs']
+            cur_replace['attrs'] = self.get_format_attrs(name, field)
 
             if isinstance(field, EmailField) and name not in field_formats:
                 cur_replace['input_type'] = 'email'
@@ -1412,6 +1428,14 @@ class ComputedUsernameTests(FormTests, TestCase):
     user_type = 'user'  # 'superuser' | 'staff' | 'user' | 'anonymous'
     mock_users = False
 
+    def test_temp(self):
+        self.assertEqual('username', self.form._meta.model.USERNAME_FIELD)
+        self.assertEqual('email', self.form._meta.model.get_email_field_name())
+        self.assertEqual('username', self.form.name_for_user)
+        self.assertEqual('email', self.form.name_for_email)
+        self.assertIn(self.form._meta.model.get_email_field_name(), self.form.fields)
+        self.assertNotIn('email_field', self.form.fields)
+
     @skip("Not Implemented")
     def test_raises_on_not_user_model(self):
         """Raises ImproperlyConfigured if an appropriate User like model cannot be discovered. """
@@ -1518,9 +1542,6 @@ class ComputedUsernameTests(FormTests, TestCase):
         self.form.username_from_email_or_names = original_func
 
         self.assertEqual(expected, actual)
-
-    # TODO: tests for configure_username_confirmation
-    # TODO: tests for handle_flag_field
 
     def get_or_make_links(self, link_names):
         """If reverse is able to find the link_name, return it. Otherwise return a newly created one. """
