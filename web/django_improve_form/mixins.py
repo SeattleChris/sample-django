@@ -265,8 +265,8 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
     """If possible, creates a username according to rules (defaults to email then to name), otherwise set manually. """
     # login_choices = [('use_username', _("provided username")), ('use_email', _("email address")), ]
 
-    email_field = forms.CharField(label=_('Email'), max_length='191', widget=forms.EmailInput())
-    username_field = UsernameField(label=_("Username"))
+    email_field = forms.CharField(label=_('Email Address'), max_length='191', widget=forms.EmailInput())
+    username_field = UsernameField(label=_("Login Username"))
     username_flag = forms.BooleanField(label=_("Login with username, not email address"), required=False)
     # username_flag = forms.CharField(label=_("Login using"),
     #                                 widget=RadioSelect(choices=login_choices), initial='use_email')
@@ -314,8 +314,8 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         models = [model for model in (user_model, form_model) if model]
         models = [model for model in models if all(hasattr(model, ea) for ea in req_features)]
         user_model = models[-1] if models else None  # Has req_features, prioritize form_model over user_model.
-        if not user_model:
-            raise ImproperlyConfigured(_("Unable to discover a User or User like model for ComputedFieldsMixIn. "))
+        # if not user_model:
+        #     raise ImproperlyConfigured(_("Unable to discover a User or User like model for ComputedFieldsMixIn. "))
         return user_model
 
     def confirm_required_fields(self):
@@ -373,12 +373,12 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         normalize = self.user_model.normalize_username  # TODO: Fail gracefully version?
         result = self.construct_value_from_values(field_names=(email_field_name, ), normalize=normalize)
         lookup = {"{}__iexact".format(self.user_model.USERNAME_FIELD): result}
-        try:
-            if not result or self.user_model._default_manager.filter(**lookup).exists():
-                result = self.construct_value_from_values(field_names=self.constructor_fields, normalize=normalize)
-        except Exception as e:
-            print("Unable to query to lookup if this username exists. ")
-            print(e)
+        # try:
+        if not result or self.user_model._default_manager.filter(**lookup).exists():
+            result = self.construct_value_from_values(field_names=self.constructor_fields, normalize=normalize)
+        # except Exception as e:
+        #     print("Unable to query to lookup if this username exists. ")
+        #     print(e)
         return result
 
     def compute_name_for_user(self):
