@@ -43,9 +43,9 @@ PASSWORD2_TXT = '' + \
     '%(start_tag)s<label for="id_password2">Password confirmation:</label>%(label_end)s<input type="password" ' + \
     'name="password2" autocomplete="new-password" required id="id_password2">%(input_end)s<span class="helptext">' + \
     'Enter the same password as before, for verification.</span>%(end_tag)s\n'
-EMAIL_TXT = '' + \
-    '%(start_tag)s<label for="id_email_field">Email:</label>%(label_end)s<input type="email" name="email_field" ' + \
-    'maxlength="191" required id="id_email_field">%(end_tag)s\n'
+# EMAIL_TXT = '' + \
+#     '%(start_tag)s<label for="id_email_field">Email:</label>%(label_end)s<input type="email" name="email_field" ' + \
+#     'maxlength="191" required id="id_email_field">%(end_tag)s\n'
 names_text = '' + \
     '%(start_tag)s<label for="id_first_name">First name:</label>%(label_end)s<input type="text" name="first_name" ' + \
     '%(name_length)sid="id_first_name">%(end_tag)s\n' + \
@@ -70,7 +70,7 @@ RADIO_TXT = '%(start_tag)s<label for="id_%(name)s_0">%(pretty)s:</label>%(label_
 OTHER_OPTION_TXT = '    <li><label for="id_%(name)s_%(num)s"><input type="%(input_type)s" name="%(name)s" ' + \
     'value="%(val)s" %(required)sid="id_%(name)s_%(num)s">\n %(display_choice)s</label>\n\n</li>\n'
 FIELD_FORMATS = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
-FIELD_FORMATS['email'] = EMAIL_TXT
+FIELD_FORMATS['email'] = DEFAULT_TXT  # EMAIL_TXT
 for name in ('first_name', 'last_name'):
     name_re = DEFAULT_RE.copy()
     name_re.update(attrs=' ' + NAME_LENGTH, required='')
@@ -158,11 +158,11 @@ class FormTests:
         field_formats = FIELD_FORMATS.copy()
         form_list = []
         if issubclass(self.form_class, ComputedUsernameMixIn):
-            name_for_email = self.form.name_for_email or 'email'
-            name_for_user = self.form.name_for_user or 'username'
+            name_for_email = self.form.name_for_email or self.form._meta.model.get_email_field() or 'email'
+            name_for_user = self.form.name_for_user or self.form._meta.model.USERNAME_FIELD or 'username'
             field_formats[name_for_email] = field_formats.pop('email')
             field_formats[name_for_user] = field_formats.pop('username')
-            order = ['first_name', 'last_name', 'username', 'password1', 'password2', 'email']
+            order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
             self.form.order_fields(order)
         hidden_list = []
         for name, field in self.form.fields.items():
@@ -183,7 +183,8 @@ class FormTests:
                 # cur_replace['attrs'] = f'value="{field.initial}" ' + cur_replace['attrs']
 
             if isinstance(field, EmailField) and name not in field_formats:
-                cur_replace['input_type'] = 'email'  # replace_text[name] = EMAIL_TXT
+                cur_replace['input_type'] = 'email'
+                # field_formats[name] = EMAIL_TXT
             elif isinstance(field.widget, Textarea):
                 cur_replace['initial'] = getattr(field, 'initial', None) or ''
                 attrs = ''
