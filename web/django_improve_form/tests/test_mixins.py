@@ -1690,5 +1690,147 @@ class ComputedUsernameTests(FormTests, TestCase):
         pass
 
 
+class ConfirmationComputedUsernameTests(FormTests, TestCase):
+    form_class = ComputedUsernameForm
+    user_type = 'user'  # 'superuser' | 'staff' | 'user' | 'anonymous'
+    mock_users = False
+    form_test_data = OTHER_USER
+
+    def setUp(self):
+        self.user = self.make_user()
+        test_data = MultiValueDict()
+        test_data.update(self.form_test_data)
+        test_data.update(email=self.user.email)
+        # test_data._mutable = False
+        self.test_data = test_data
+        # self.form = self.make_form_request(method='POST', data=test_data)
+        self.form = self.make_form_request()
+
+    def test_temp(self):
+        self.assertEqual('username', self.form._meta.model.USERNAME_FIELD)
+        self.assertEqual('email', self.form._meta.model.get_email_field_name())
+        self.assertEqual('username', self.form.name_for_user)
+        self.assertEqual('email', self.form.name_for_email)
+        self.assertIn(self.form._meta.model.get_email_field_name(), self.form.fields)
+
+    # @skip("Not Used")
+    def test_as_table(self):
+        # self.assertTrue(True)
+        pass
+
+    # @skip("Not Used")
+    def test_as_ul(self):
+        # self.assertTrue(True)
+        pass
+
+    # @skip("Not Used")
+    def test_as_p(self):
+        # self.assertTrue(True)
+        pass
+
+    # @skip("Not Implemented")
+    def test_configure_username_confirmation(self):
+        """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
+        UserModel = get_user_model()
+        same_model = issubclass(self.form.user_model, UserModel)
+        self.assertTrue(same_model)
+        self.assertEqual(self.form.name_for_user, UserModel.USERNAME_FIELD)
+        self.assertEqual(self.form.name_for_email, UserModel.get_email_field_name())
+        self.assertEqual('email', self.form.name_for_email)
+        self.assertIn(self.form.name_for_email, self.test_data)
+        self.assertIn(self.form.name_for_email, self.form.fields)
+        initial_data = self.test_data.copy()
+        form_post = self.make_form_request(method='POST', data=self.test_data)
+
+
+    @skip("Not Implemented")
+    def test_configure_username_confirmation(self):
+        """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
+        # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
+        # self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
+        # self.form.name_for_email = self.form._meta.model.get_email_field_name()
+        self.assertIsNotNone(self.form.name_for_user)
+        self.assertIsNotNone(self.form.name_for_email)
+        self.assertIn('email', self.test_data)
+        # form_post = self.make_form_request(method='POST', data=self.test_data)
+
+        # kwargs = {'name_for_user': UserModel.USERNAME_FIELD, 'name_for_email': UserModel.get_email_field_name()}
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        fields = original_fields.copy()
+        computed_fields = original_computed_fields.copy()
+        cleaned_data = original_cleaned_data.copy() if original_cleaned_data else {}
+        # modify fields
+        # modify computed_fields
+        self.form.fields = fields
+        self.form.computed_fields = computed_fields
+        self.form.cleaned_data = cleaned_data
+        # original_data = self.form.data
+        # test_data = original_data.copy()
+        # test_data.update(OTHER_USER)
+        # test_data._mutable = False
+        # self.form.data = test_data
+        # self.form.is_bound = True
+        # initial_data = test_data.copy()
+        # info = OTHER_USER.copy()
+        # self.form.cleaned_data = info
+        test_data = self.form.data
+        initial_data = self.form.data.copy()
+        expected_data = initial_data.copy()  # QueryDict datastructure.
+        self.assertIn(self.form.name_for_user, self.form.computed_fields)
+        self.assertIn(self.form.name_for_email, self.form.fields)
+        self.assertIn(self.form.name_for_email, self.form.data)
+        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.computed_fields)
+        is_valid = self.form.is_valid()
+        # info = self.form.cleaned_data.copy()
+        self.assertIn(self.form.name_for_email, self.form.cleaned_data)
+        expected_username = self.form.compute_name_for_user()
+        # info[self.form.name_for_user] = self.form.compute_name_for_user()
+        # self.form.cleaned_data[self.form.name_for_user] = info[self.form.name_for_user]
+
+        # expected_data.appendlist(self.form.name_for_email, info[self.form.name_for_email])
+        expected_data.appendlist(self.form.name_for_email, self.form.cleaned_data[self.form.name_for_email])
+        expected_data.appendlist(self.form.USERNAME_FLAG_FIELD, str(False))
+        expected_data.appendlist(self.form.name_for_user, expected_username)
+
+        result = self.form.configure_username_confirmation()
+
+        self.assertDictEqual(expected_data, self.form.data)
+        self.assertNotEqual(initial_data, expected_data)
+        self.assertIsNot(test_data, self.form.data)
+
+        self.assertIn(self.form.name_for_user, self.form.fields)
+        self.assertIn(self.form.name_for_email, self.form.fields)
+        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.fields)
+
+        self.form.computed_fields = original_computed_fields
+        self.form.fields = original_fields
+        self.form.data = test_data
+        self.form.cleaned_data = original_cleaned_data
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+
+    # @skip("Not Implemented")
+    # def test_configure_username_confirmation(self):
+    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
+    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
+    #     pass
+
+    # @skip("Not Implemented")
+    # def test_configure_username_confirmation(self):
+    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
+    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
+    #     pass
+
+    # @skip("Not Implemented")
+    # def test_configure_username_confirmation(self):
+    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
+    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
+    #     pass
+
+    # TODO: tests for handle_flag_field
+
+
 class CountryTests(FormTests, TestCase):
     form_class = CountryForm
