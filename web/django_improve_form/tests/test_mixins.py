@@ -43,24 +43,14 @@ PASSWORD2_TXT = '' + \
     '%(start_tag)s<label for="id_password2">Password confirmation:</label>%(label_end)s<input type="password" ' + \
     'name="password2" autocomplete="new-password" required id="id_password2">%(input_end)s<span class="helptext">' + \
     'Enter the same password as before, for verification.</span>%(end_tag)s\n'
-# EMAIL_TXT = '' + \
-#     '%(start_tag)s<label for="id_email_field">Email:</label>%(label_end)s<input type="email" name="email_field" ' + \
-#     'maxlength="191" required id="id_email_field">%(end_tag)s\n'
-names_text = '' + \
-    '%(start_tag)s<label for="id_first_name">First name:</label>%(label_end)s<input type="text" name="first_name" ' + \
-    '%(name_length)sid="id_first_name">%(end_tag)s\n' + \
-    '%(start_tag)s<label for="id_last_name">Last name:</label>%(label_end)s<input type="text" name="last_name" ' + \
-    '%(name_length)sid="id_last_name">%(end_tag)s\n'
 TOS_TXT = '%(start_tag)s<label for="id_tos_field">I have read and agree to the Terms of Service:</label>' + \
     '%(label_end)s<input type="checkbox" name="tos_field" required id="id_tos_field">%(end_tag)s\n'
 HIDDEN_TXT = '<input type="hidden" name="%(name)s" value="%(initial)s" id="id_%(name)s">'
 START_LABEL = '%(start_tag)s<label for="id_%(name)s">%(pretty)s:</label>%(label_end)s'
 DEFAULT_TXT = START_LABEL + \
-    '<input type="%(input_type)s" name="%(name)s"%(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
+    '<input type="%(input_type)s" name="%(name)s" %(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
 AREA_TXT = START_LABEL + \
     '<textarea name="%(name)s" %(attrs)s%(required)sid="id_%(name)s">\n%(initial)s</textarea>%(end_tag)s\n'
-# BOOL_TXT = START_LABEL + \
-#     '<input type="checkbox" name="%(name)s" %(required)sid="id_%(name)s">%(end_tag)s\n'  #
 SELECT_TXT = START_LABEL + \
     '<select name="%(name)s" %(required)sid="id_%(name)s"%(multiple)s>\n%(options)s</select>%(end_tag)s\n'
 OPTION_TXT = '  <option value="%(val)s">%(display_choice)s</option>\n\n'
@@ -70,11 +60,6 @@ RADIO_TXT = '%(start_tag)s<label for="id_%(name)s_0">%(pretty)s:</label>%(label_
 OTHER_OPTION_TXT = '    <li><label for="id_%(name)s_%(num)s"><input type="%(input_type)s" name="%(name)s" ' + \
     'value="%(val)s" %(required)sid="id_%(name)s_%(num)s">\n %(display_choice)s</label>\n\n</li>\n'
 FIELD_FORMATS = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
-FIELD_FORMATS['email'] = DEFAULT_TXT  # EMAIL_TXT
-for name in ('first_name', 'last_name'):
-    name_re = DEFAULT_RE.copy()
-    name_re.update(attrs=' ' + NAME_LENGTH, required='')
-    FIELD_FORMATS[name] = DEFAULT_TXT % name_re
 
 
 class FormTests:
@@ -151,26 +136,16 @@ class FormTests:
         """For the given named field, get the attrs as determined by the field and widget settings. """
         result = []
         attrs = field.widget_attrs(field.widget)
-        attrs.pop('required', None)
-        
-        result = ' ' + ' '.join('='.join((key, val)) for key, val in attrs.items())
-        # if field.initial and not isinstance(field.widget, Textarea):
-        #     result.append(f' value="{field.initial}"')
-        # if field.max_length:
-        #     result.append(f' maxlength="{field.max_length}"')
-        # if field.min_length:
-        #     result.append(f' minlength="{field.min_length}"')
-
-        # content '%(attrs)s'
+        if field.initial and not isinstance(field.widget, Textarea):
+            attrs['value'] = str(field.initial)
+        # attrs.update(field.widget.attrs)
+        result = ''.join(f'{key}="{val}" ' for key, val in attrs.items())
         if issubclass(self.form.__class__, FormOverrideMixIn):
             # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
-            result += '%(attrs)s'  # '%(attrs)s' content
+            result += '%(attrs)s'  # content '%(attrs)s'
+        else:
+            result = '%(attrs)s' + result  # '%(attrs)s' content
         return result
-
-    # def get_override_attrs(self, name, field):
-    #     """For the given named field, get the attrs as determined by the current FormOverrideMixIn settings. """
-    #     result = self.get_normal_attrs(name, field)
-    #     return result
 
     def get_expected_format(self, setup):
         field_formats = FIELD_FORMATS.copy()
@@ -178,29 +153,29 @@ class FormTests:
         if issubclass(self.form_class, ComputedUsernameMixIn):
             name_for_email = self.form.name_for_email or self.form._meta.model.get_email_field() or 'email'
             name_for_user = self.form.name_for_user or self.form._meta.model.USERNAME_FIELD or 'username'
-            field_formats[name_for_email] = field_formats.pop('email')
-            field_formats[name_for_user] = field_formats.pop('username')
+            if 'email' in field_formats:
+                field_formats[name_for_email] = field_formats.pop('email')
+            if 'username' in field_formats:
+                field_formats[name_for_user] = field_formats.pop('username')
             order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
             self.form.order_fields(order)
         hidden_list = []
-        print("======================= GET EXPECTED FORMAT ===============================")
+        # print("======================= GET EXPECTED FORMAT ===============================")
         for name, field in self.form.fields.items():
-            print(self.__class__.__name__, name)
             if isinstance(field.widget, (HiddenInput, MultipleHiddenInput, )):
                 hide_re = {'name': name, 'initial': field.initial}
                 txt = HIDDEN_TXT % hide_re
                 hidden_list.append(txt)
                 continue
             cur_replace = DEFAULT_RE.copy()
-            cur_replace.update({'name': name, 'pretty': pretty_name(name), 'attrs': '%(attrs)s'})
+            cur_replace.update({'name': name, 'pretty': field.label or pretty_name(name)})
             cur_replace['required'] = REQUIRED if field.required else ''
             if field.disabled:
                 cur_replace['required'] += 'disabled '
             cur_replace['attrs'] = self.get_format_attrs(name, field)
-
+            # print(self.__class__.__name__, name, field.label, 'attrs:', cur_replace['attrs'], '|', field.widget.attrs, )
             if isinstance(field, EmailField) and name not in field_formats:
                 cur_replace['input_type'] = 'email'
-                # field_formats[name] = EMAIL_TXT
             elif isinstance(field.widget, Textarea):
                 cur_replace['initial'] = getattr(field, 'initial', None) or ''
                 attrs = ''
@@ -229,7 +204,7 @@ class FormTests:
                 field_formats[name] = RADIO_TXT if isinstance(field.widget, RadioSelect) else CHECK_TXT
             elif isinstance(field, BooleanField) or isinstance(field.widget, CheckboxInput):
                 cur_replace['input_type'] = 'checkbox'
-                cur_replace['attrs'] = ' '
+                cur_replace['attrs'] = ''
             elif isinstance(field.widget, (Select, SelectMultiple)):
                 option_list = []
                 for num, each in enumerate(field.choices):
@@ -302,7 +277,7 @@ class FormTests:
         """All forms should return HTML table rows when .as_table is called. """
         output = self.form.as_table().strip()
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
-        override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
+        override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
         setup.update(attrs=override_attrs)
         expected = self.get_expected_format(setup)
         if output != expected:
@@ -318,7 +293,7 @@ class FormTests:
         """All forms should return HTML <li>s when .as_ul is called. """
         output = self.form.as_ul().strip()
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
-        override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
+        override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
         setup.update(attrs=override_attrs)
         expected = self.get_expected_format(setup)
         if output != expected:
@@ -334,7 +309,7 @@ class FormTests:
         """All forms should return HTML <p>s when .as_p is called. """
         output = self.form.as_p().strip()
         setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
-        override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
+        override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
         setup.update(attrs=override_attrs)
         expected = self.get_expected_format(setup)
         if output != expected:
@@ -1461,12 +1436,67 @@ class ComputedUsernameTests(FormTests, TestCase):
     @skip("Not Implemented")
     def test_username_validators(self):
         """The validators from name_for_user_validators are applied as expected. """
+        # if self.form.strict_username:
         pass
 
     @skip("Not Implemented")
     def test_email_validators(self):
         """The validators from name_for_email_validators are applied as expected. """
-        pass
+        from django_registration import validators
+        field_name = self.form.name_for_email
+        field = self.form.fields[field_name]
+        original_validators = field.validators
+        expected = [validators.HTML5EmailValidator, validators.validate_confusables_email, ]
+        if self.form.strict_email:
+            expected.append(validators.CaseInsensitiveUnique)
+        # expected = [ea.__class__.__name__ for ea in expected]
+        field.validators = []
+        print("============ TEST EMAIL VALIDATORS =================")
+        print(original_validators)
+        print(self.form.fields[field_name].validators)
+        print([ea.__class__ for ea in expected])
+        print([ea.__name__ for ea in expected])
+        print([ea.__class__.__name__ for ea in expected])
+        print(expected)
+        print("-----------------------------------------")
+
+        email_opts = {'names': (field_name, 'email'), 'alt_field': 'email_field', 'computed': False}
+        email_opts.update({'name': field_name, 'field': field})
+        self.form.name_for_email_validators(self.form.fields)
+        actual = self.form.fields[field_name].validators
+        for ea in actual:
+            if not getattr(ea, '__name__', None):
+                print(dir(ea.__class__))
+                print("<><><><>")
+                print(dir(ea))
+            else:
+                print(dir(ea))
+            print("****************************")
+        # print([ea.__class__ for ea in actual])
+        # print([ea.__name__ if '__name__' in ea else ea.__class__ for ea in actual])
+        # print([ea.__class__.__name__ for ea in actual])
+        print(actual)
+        # actual_name = [ea.__name__ for ea in actual]
+        # found, extra = [], []
+        # for ea in actual:
+        #     match = isinstance(ea, tuple(expected))
+        #     if match:
+        #         found.append(ea)
+        #     else:
+        #         extra.append(ea)
+        found_list = []
+        for ea in actual:
+            for goal in expected:
+                if isinstance(ea, goal):
+                    found_list.append(goal)
+
+        self.assertTrue(getattr(field, 'required', None))
+        # self.assertEqual(len(expected), len(found))
+        self.assertSetEqual(set(expected), set(found_list))
+        self.assertEqual(len(expected), len(actual))
+        self.assertSetEqual(set(expected), set(actual_name))
+
+        self.form.fields[field_name].validators = original_validators
 
     def test_constructor_fields_used_when_email_fails(self):
         """If email already used, uses constructor_fields to make a username in username_from_email_or_names. """
