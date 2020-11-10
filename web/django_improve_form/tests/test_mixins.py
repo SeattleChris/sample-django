@@ -136,20 +136,14 @@ class FormTests:
         """For the given named field, get the attrs as determined by the field and widget settings. """
         result = []
         attrs = field.widget_attrs(field.widget)
-        attrs.pop('required', None)
-        
-        result = ' ' + ' '.join('='.join((key, val)) for key, val in attrs.items())
-        # if field.initial and not isinstance(field.widget, Textarea):
-        #     result.append(f' value="{field.initial}"')
-        # if field.max_length:
-        #     result.append(f' maxlength="{field.max_length}"')
-        # if field.min_length:
-        #     result.append(f' minlength="{field.min_length}"')
-
-        # content '%(attrs)s'
+        if field.initial and not isinstance(field.widget, Textarea):
+            attrs['value'] = str(field.initial)
+        result = ''.join(f'{key}="{val}" ' for key, val in attrs.items())
         if issubclass(self.form.__class__, FormOverrideMixIn):
             # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
-            result += '%(attrs)s'  # '%(attrs)s' content
+            result += '%(attrs)s'  # content '%(attrs)s'
+        else:
+            result = '%(attrs)s' + result  # '%(attrs)s' content
         return result
 
     # def get_override_attrs(self, name, field):
@@ -288,7 +282,7 @@ class FormTests:
         """All forms should return HTML table rows when .as_table is called. """
         output = self.form.as_table().strip()
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
-        override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
+        override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
         setup.update(attrs=override_attrs)
         expected = self.get_expected_format(setup)
         if output != expected:
@@ -304,7 +298,7 @@ class FormTests:
         """All forms should return HTML <li>s when .as_ul is called. """
         output = self.form.as_ul().strip()
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
-        override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
+        override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
         setup.update(attrs=override_attrs)
         expected = self.get_expected_format(setup)
         if output != expected:
@@ -320,7 +314,7 @@ class FormTests:
         """All forms should return HTML <p>s when .as_p is called. """
         output = self.form.as_p().strip()
         setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
-        override_attrs = ' size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ' '
+        override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
         setup.update(attrs=override_attrs)
         expected = self.get_expected_format(setup)
         if output != expected:
