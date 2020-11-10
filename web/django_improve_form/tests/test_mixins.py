@@ -70,7 +70,7 @@ RADIO_TXT = '%(start_tag)s<label for="id_%(name)s_0">%(pretty)s:</label>%(label_
 OTHER_OPTION_TXT = '    <li><label for="id_%(name)s_%(num)s"><input type="%(input_type)s" name="%(name)s" ' + \
     'value="%(val)s" %(required)sid="id_%(name)s_%(num)s">\n %(display_choice)s</label>\n\n</li>\n'
 FIELD_FORMATS = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
-FIELD_FORMATS['email'] = DEFAULT_TXT  # EMAIL_TXT
+# FIELD_FORMATS['email'] = DEFAULT_TXT % {'input_type': 'email'}  # EMAIL_TXT
 for name in ('first_name', 'last_name'):
     name_re = DEFAULT_RE.copy()
     name_re.update(attrs=' ' + NAME_LENGTH, required='')
@@ -200,7 +200,6 @@ class FormTests:
 
             if isinstance(field, EmailField) and name not in field_formats:
                 cur_replace['input_type'] = 'email'
-                # field_formats[name] = EMAIL_TXT
             elif isinstance(field.widget, Textarea):
                 cur_replace['initial'] = getattr(field, 'initial', None) or ''
                 attrs = ''
