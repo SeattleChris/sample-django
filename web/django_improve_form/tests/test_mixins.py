@@ -43,20 +43,12 @@ PASSWORD2_TXT = '' + \
     '%(start_tag)s<label for="id_password2">Password confirmation:</label>%(label_end)s<input type="password" ' + \
     'name="password2" autocomplete="new-password" required id="id_password2">%(input_end)s<span class="helptext">' + \
     'Enter the same password as before, for verification.</span>%(end_tag)s\n'
-# EMAIL_TXT = '' + \
-#     '%(start_tag)s<label for="id_email_field">Email:</label>%(label_end)s<input type="email" name="email_field" ' + \
-#     'maxlength="191" required id="id_email_field">%(end_tag)s\n'
-names_text = '' + \
-    '%(start_tag)s<label for="id_first_name">First name:</label>%(label_end)s<input type="text" name="first_name" ' + \
-    '%(name_length)sid="id_first_name">%(end_tag)s\n' + \
-    '%(start_tag)s<label for="id_last_name">Last name:</label>%(label_end)s<input type="text" name="last_name" ' + \
-    '%(name_length)sid="id_last_name">%(end_tag)s\n'
 TOS_TXT = '%(start_tag)s<label for="id_tos_field">I have read and agree to the Terms of Service:</label>' + \
     '%(label_end)s<input type="checkbox" name="tos_field" required id="id_tos_field">%(end_tag)s\n'
 HIDDEN_TXT = '<input type="hidden" name="%(name)s" value="%(initial)s" id="id_%(name)s">'
 START_LABEL = '%(start_tag)s<label for="id_%(name)s">%(pretty)s:</label>%(label_end)s'
 DEFAULT_TXT = START_LABEL + \
-    '<input type="%(input_type)s" name="%(name)s"%(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
+    '<input type="%(input_type)s" name="%(name)s" %(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
 AREA_TXT = START_LABEL + \
     '<textarea name="%(name)s" %(attrs)s%(required)sid="id_%(name)s">\n%(initial)s</textarea>%(end_tag)s\n'
 # BOOL_TXT = START_LABEL + \
@@ -70,11 +62,6 @@ RADIO_TXT = '%(start_tag)s<label for="id_%(name)s_0">%(pretty)s:</label>%(label_
 OTHER_OPTION_TXT = '    <li><label for="id_%(name)s_%(num)s"><input type="%(input_type)s" name="%(name)s" ' + \
     'value="%(val)s" %(required)sid="id_%(name)s_%(num)s">\n %(display_choice)s</label>\n\n</li>\n'
 FIELD_FORMATS = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
-# FIELD_FORMATS['email'] = DEFAULT_TXT % {'input_type': 'email'}  # EMAIL_TXT
-for name in ('first_name', 'last_name'):
-    name_re = DEFAULT_RE.copy()
-    name_re.update(attrs=' ' + NAME_LENGTH, required='')
-    FIELD_FORMATS[name] = DEFAULT_TXT % name_re
 
 
 class FormTests:
@@ -178,8 +165,10 @@ class FormTests:
         if issubclass(self.form_class, ComputedUsernameMixIn):
             name_for_email = self.form.name_for_email or self.form._meta.model.get_email_field() or 'email'
             name_for_user = self.form.name_for_user or self.form._meta.model.USERNAME_FIELD or 'username'
-            field_formats[name_for_email] = field_formats.pop('email')
-            field_formats[name_for_user] = field_formats.pop('username')
+            if 'email' in field_formats:
+                field_formats[name_for_email] = field_formats.pop('email')
+            if 'username' in field_formats:
+                field_formats[name_for_user] = field_formats.pop('username')
             order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
             self.form.order_fields(order)
         hidden_list = []
