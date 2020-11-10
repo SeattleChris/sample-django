@@ -138,6 +138,7 @@ class FormTests:
         attrs = field.widget_attrs(field.widget)
         if field.initial and not isinstance(field.widget, Textarea):
             attrs['value'] = str(field.initial)
+        # attrs.update(field.widget.attrs)
         result = ''.join(f'{key}="{val}" ' for key, val in attrs.items())
         if issubclass(self.form.__class__, FormOverrideMixIn):
             # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
@@ -145,11 +146,6 @@ class FormTests:
         else:
             result = '%(attrs)s' + result  # '%(attrs)s' content
         return result
-
-    # def get_override_attrs(self, name, field):
-    #     """For the given named field, get the attrs as determined by the current FormOverrideMixIn settings. """
-    #     result = self.get_normal_attrs(name, field)
-    #     return result
 
     def get_expected_format(self, setup):
         field_formats = FIELD_FORMATS.copy()
@@ -164,9 +160,8 @@ class FormTests:
             order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
             self.form.order_fields(order)
         hidden_list = []
-        print("======================= GET EXPECTED FORMAT ===============================")
+        # print("======================= GET EXPECTED FORMAT ===============================")
         for name, field in self.form.fields.items():
-            print(self.__class__.__name__, name)
             if isinstance(field.widget, (HiddenInput, MultipleHiddenInput, )):
                 hide_re = {'name': name, 'initial': field.initial}
                 txt = HIDDEN_TXT % hide_re
@@ -178,7 +173,7 @@ class FormTests:
             if field.disabled:
                 cur_replace['required'] += 'disabled '
             cur_replace['attrs'] = self.get_format_attrs(name, field)
-
+            # print(self.__class__.__name__, name, field.label, 'attrs:', cur_replace['attrs'], '|', field.widget.attrs, )
             if isinstance(field, EmailField) and name not in field_formats:
                 cur_replace['input_type'] = 'email'
             elif isinstance(field.widget, Textarea):
