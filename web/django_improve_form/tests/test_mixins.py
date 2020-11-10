@@ -51,8 +51,6 @@ DEFAULT_TXT = START_LABEL + \
     '<input type="%(input_type)s" name="%(name)s" %(attrs)s%(required)sid="id_%(name)s">%(end_tag)s\n'
 AREA_TXT = START_LABEL + \
     '<textarea name="%(name)s" %(attrs)s%(required)sid="id_%(name)s">\n%(initial)s</textarea>%(end_tag)s\n'
-# BOOL_TXT = START_LABEL + \
-#     '<input type="checkbox" name="%(name)s" %(required)sid="id_%(name)s">%(end_tag)s\n'  #
 SELECT_TXT = START_LABEL + \
     '<select name="%(name)s" %(required)sid="id_%(name)s"%(multiple)s>\n%(options)s</select>%(end_tag)s\n'
 OPTION_TXT = '  <option value="%(val)s">%(display_choice)s</option>\n\n'
@@ -217,7 +215,7 @@ class FormTests:
                 field_formats[name] = RADIO_TXT if isinstance(field.widget, RadioSelect) else CHECK_TXT
             elif isinstance(field, BooleanField) or isinstance(field.widget, CheckboxInput):
                 cur_replace['input_type'] = 'checkbox'
-                cur_replace['attrs'] = ' '
+                cur_replace['attrs'] = ''
             elif isinstance(field.widget, (Select, SelectMultiple)):
                 option_list = []
                 for num, each in enumerate(field.choices):
