@@ -179,7 +179,7 @@ class FormTests:
                 hidden_list.append(txt)
                 continue
             cur_replace = DEFAULT_RE.copy()
-            cur_replace.update({'name': name, 'pretty': pretty_name(name), 'attrs': '%(attrs)s'})
+            cur_replace.update({'name': name, 'pretty': field.label or pretty_name(name)})
             cur_replace['required'] = REQUIRED if field.required else ''
             if field.disabled:
                 cur_replace['required'] += 'disabled '
