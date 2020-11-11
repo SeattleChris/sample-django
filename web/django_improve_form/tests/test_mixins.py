@@ -1433,36 +1433,68 @@ class ComputedUsernameTests(FormTests, TestCase):
         with self.assertRaisesMessage(ImproperlyConfigured, message):
             self.form.confirm_required_fields()
 
+    def validators_effect_required(self, field, func, *args, **kwargs):
+        """Gets the effect that running the validator method has on the field's required attribute. """
+        NOT_EXIST = '_MISSING_'
+        original_required = getattr(field, 'required', NOT_EXIST)
+        field.required = False
+        func(*args, **kwargs)
+        after_false = field.required
+        field.required = True
+        func(*args, **kwargs)
+        after_true = field.required
+        result = None
+        if after_false and after_true:
+            result = True
+        elif not after_false and not after_true:
+            result = False
+        elif after_false and not after_true:
+            result = 'Flip'
+        field.required = original_required
+        if original_required == NOT_EXIST:
+            del field.required
+        return result
+
+    def validators_applied_count(self, field, func, *args, **kwargs):
+        """Returns how many validators are applied to a given field. """
+        original_validators = field.validators
+        field.validators = []
+        func(*args, **kwargs)
+        result = len(field.validators)
+        field.validators = original_validators
+        return result
+
     @skip("Not Implemented")
     def test_username_validators(self):
         """The validators from name_for_user_validators are applied as expected. """
         # if self.form.strict_username:
         pass
 
-    # @skip("Not Implemented")
     def test_email_validators(self):
         """The validators from name_for_email_validators are applied as expected. """
-        from django_registration import validators
         field_name = self.form.name_for_email
         field = self.form.fields[field_name]
-        original_validators = field.validators
-        original_required = getattr(field, 'required', None)
-        expected = [validators.HTML5EmailValidator, validators.validate_confusables_email, ]
-        if self.form.strict_email:
-            expected.append(validators.CaseInsensitiveUnique)
-        field.validators = []
+        expected = 2
+        original_strict = getattr(self.form, 'strict_email', None)
+        expected_strict = expected + 1
+        self.form.strict_email = False
+        func = self.form.name_for_email_validators
         # email_opts = {'names': (field_name, 'email'), 'alt_field': 'email_field', 'computed': False}
         # email_opts.update({'name': field_name, 'field': field})
-        self.form.name_for_email_validators(self.form.fields)
-        actual = self.form.fields[field_name].validators
+        actual = self.validators_applied_count(field, func, self.form.fields)
+        required_not_strict = self.validators_effect_required(field, func, self.form.fields)
+        self.form.strict_email = True
+        actual_strict = self.validators_applied_count(field, func, self.form.fields)
+        required_strict = self.validators_effect_required(field, func, self.form.fields)
 
-        self.assertTrue(getattr(field, 'required', None))
-        self.assertEqual(len(expected), len(actual))
+        self.assertTrue(required_not_strict)
+        self.assertEqual(expected, actual)
+        self.assertTrue(required_strict)
+        self.assertEqual(expected_strict, actual_strict)
 
-        self.form.fields[field_name].validators = original_validators
-        self.form.fields[field_name].required = original_required
-        if original_required is None:
-            del self.form.fields[field_name].required
+        self.form.strict_email = original_strict
+        if original_strict is None:
+            del self.form.strict_email
 
     def test_constructor_fields_used_when_email_fails(self):
         """If email already used, uses constructor_fields to make a username in username_from_email_or_names. """
