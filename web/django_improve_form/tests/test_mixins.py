@@ -2081,25 +2081,121 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.assertEqual(expected, actual)
         self.form.USERNAME_FLAG_FIELD = original_flag_name
 
-    @skip("Not Implemented")
     def test_no_error_handle_flag_field(self):
         """If there is no error found during handle_flag_field, expected return of an empty Dict. """
-        pass
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        new_cleaned_data[self.form.USERNAME_FLAG_FIELD] = True  # False
+        user_field = self.form.computed_fields.pop(self.form.name_for_user, None)
+        self.form.fields.update({self.form.name_for_user: user_field})
+        email_field = self.form.fields[self.form.name_for_email]
+        email_field.initial = new_cleaned_data[self.form.name_for_email]
+        self.form.cleaned_data = new_cleaned_data.copy()
+        expected = {}
+        actual = self.form.handle_flag_field(self.form.name_for_email, self.form.name_for_user)
+
+        self.assertIsNotNone(user_field)
+        self.assertFalse(email_field.has_changed(email_field.initial, self.form.cleaned_data[self.form.name_for_email]))
+        self.assertEqual(expected, actual)
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
     @skip("Not Implemented")
     def test_username_of_email_exists_handle_flag_field(self):
         """If current email matches an existing username, handle_flag_field returns a Dict with that error. """
-        pass
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        self.form.cleaned_data = new_cleaned_data.copy()
+
+        # Do stuff
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
     @skip("Not Implemented")
     def test_email_works_as_username_handle_flag_field(self):
         """If current email is a valid username, set username value in cleaned_data. No error returned. """
-        pass
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        self.form.cleaned_data = new_cleaned_data.copy()
+
+        # Do stuff
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
     @skip("Not Implemented")
     def test_bad_flag_handle_flag_field(self):
         """If they should have unchecked the flag field, return a Dict with that error. """
-        pass
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        self.form.cleaned_data = new_cleaned_data.copy()
+
+        # Do stuff
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
 
 class CountryTests(FormTests, TestCase):
