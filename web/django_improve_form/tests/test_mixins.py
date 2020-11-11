@@ -1974,17 +1974,17 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_cleaned_data is None:
             del self.form.cleaned_data
 
-    # @skip("Not Implemented")
-    # def test_configure_username_confirmation(self):
-    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
-    #     pass
+    @skip("Not Implemented")
+    def test_clean_moves_computed_fields_to_fields(self):
+        """If not errors, clean method adds all compute_fields to fields. """
+        # cleaned_data = self.form.clean()
+        pass
 
-    # @skip("Not Implemented")
-    # def test_configure_username_confirmation(self):
-    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
-    #     pass
+    @skip("Not Implemented")
+    def test_clean_calls_handle_flag_field(self):
+        """If not compute errors, clean method raises ValidationError if non-empty response from handle_flag_field. """
+        # handle_flag_field(self.form.name_for_email, self.form.name_for_user):
+        pass
 
     # TODO: tests for handle_flag_field
 
