@@ -1799,6 +1799,36 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
     def test_as_ul(self): pass
     def test_as_p(self): pass
 
+    def test_raise_missing_flag_field(self):
+        """Raises ImproperlyConfigured if flag field cannot be found for configure_username_confirmation. """
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_flag = self.form.USERNAME_FLAG_FIELD
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        original_errors = getattr(self.form, '_errors', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.USERNAME_FLAG_FIELD = 'Not a valid field name'
+        self.form.cleaned_data = {self.form.name_for_user: 'test_username', self.form.name_for_email: 'test_email'}
+
+        with self.assertRaises(ImproperlyConfigured):
+            self.form.configure_username_confirmation()
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.USERNAME_FLAG_FIELD = original_flag
+        self.form.cleaned_data = original_cleaned_data
+        self.form._errors = original_errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+        if original_errors is None:
+            del self.form._errors
+
+    @skip("Not Implemented")
+    def test_focus_update_for_configure_username_confirmation(self):
+        """If the assign_focus_field method is present, then we expect email field to get the focus. """
+        pass
+
     # @skip("Not Implemented")
     def test_configure_username_confirmation(self):
         """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
