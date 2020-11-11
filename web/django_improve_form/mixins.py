@@ -14,7 +14,7 @@ from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django_registration import validators
 from copy import deepcopy
-from pprint import pprint
+from pprint import pprint  # TODO: Remove after debugging.
 
 DEFAULT_COUNTRY = getattr(settings, 'DEFAULT_COUNTRY', 'US')
 
@@ -182,7 +182,6 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
         # print("======================= ComputedFieldsMixIn.__init__ =================================")
         kwargs = self.setup_critical_fields(**kwargs)
         computed_field_names = kwargs.pop('computed_fields', [])
-        # computed_field_names = self.get_computed_field_names(computed_field_names, self.base_fields)
         super().__init__(*args, **kwargs)
         computed_field_names.extend(kwargs.pop('computed_fields', []))  # TODO: ? Is this even possible?
         self.computed_fields = self.get_computed_fields(computed_field_names)
@@ -198,7 +197,7 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
         else:
             raise ImproperlyConfigured(_("The Form's computed_fields property is corrupted. "))
         field_names.extend(getattr(self, name) for name, opts in self.critical_fields.items() if opts.get('computed'))
-        field_names = set(field_names)  # Unique field names only.
+        field_names = set(field_names)
         computed_field_names = [name for name in field_names if name in fields]
         # TODO: Decide if this method should be able to create missing fields if needed.
         return computed_field_names
@@ -337,7 +336,7 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         username_validators = [
             validators.ReservedNameValidator(reserved_names),
             validators.validate_confusables,
-        ]
+            ]
         if strict_username:
             username_validators.append(
                 validators.CaseInsensitiveUnique(
@@ -354,7 +353,7 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         email_validators = [
             validators.HTML5EmailValidator(),
             validators.validate_confusables_email
-        ]
+            ]
         if strict_email:
             email_validators.append(
                 validators.CaseInsensitiveUnique(
@@ -370,15 +369,11 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         """Initial username field value. Must be evaluated after dependent fields populate cleaned_data. """
         email_field_name = email_field_name or self.name_for_email
         username_field_name = username_field_name or self.name_for_user
-        normalize = self.user_model.normalize_username  # TODO: Fail gracefully version?
+        normalize = getattr(self.user_model, 'normalize_username', None)
         result = self.construct_value_from_values(field_names=(email_field_name, ), normalize=normalize)
         lookup = {"{}__iexact".format(self.user_model.USERNAME_FIELD): result}
-        # try:
         if not result or self.user_model._default_manager.filter(**lookup).exists():
             result = self.construct_value_from_values(field_names=self.constructor_fields, normalize=normalize)
-        # except Exception as e:
-        #     print("Unable to query to lookup if this username exists. ")
-        #     print(e)
         return result
 
     def compute_name_for_user(self):
@@ -487,18 +482,16 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         return error_collected
 
     def clean(self):
-        cleaned_data = super().clean()  # compute fields, return self.cleaned_data, sets unique validation boolean.
+        cleaned_data = super().clean()  # compute fields, raise if confirmation needed, set unique validation boolean.
         username_value = self.cleaned_data.get(self.name_for_user, '')
         email_value = self.cleaned_data.get(self.name_for_email, None)
         if self.name_for_user not in self.data and username_value != email_value:
             # print("- - - - - - - - - Confirmation Required - - - - - - - - - - - - - - -")
             marked_safe_translatable_html = self.configure_username_confirmation()
             raise ValidationError(marked_safe_translatable_html)
-        else:  # computed fields had no problems.
-            self.fields.update(self.computed_fields)
+        # computed fields had no problems.
         error_dict = self.handle_flag_field(self.name_for_email, self.name_for_user)
         if error_dict:
-            print("We had an error processing the flag. ")
             raise ValidationError(error_dict)
         return cleaned_data
 
@@ -536,11 +529,9 @@ class FormOverrideMixIn:
         }
 
     def __init__(self, *args, **kwargs):
-        # print("======================= FormOverrideMixIn.__init__ =================================")
         if not issubclass(self.__class__, ComputedFieldsMixIn):
             self.remove_field_names = getattr(self, 'remove_field_names', [])
         super().__init__(*args, **kwargs)
-        # print("--------------------- FINISH FormOverrideMixIn.__init__ --------------------")
 
     def set_alt_data(self, data=None, name='', field=None, value=None):
         """Modify the form submitted value if it matches a no longer accurate default value. """
@@ -638,10 +629,9 @@ class FormOverrideMixIn:
             args = [opts, None, fields, prep_args]
             kwargs.update(flat_fields=True)
             opts, _ignored, fields, *prep_args, kwargs = self.handle_modifiers(*args, **kwargs)
-        # TODO: Confirm this works and/or use computed_fields names & technique
         has_computed = issubclass(self.__class__, ComputedFieldsMixIn)
-        if not has_computed:  # hasattr(self, 'remove_field_names'):
-            fields = self.handle_removals(fields)
+        if not has_computed:
+            fields = self.handle_removals(fields)  # TODO: Confirm this works and/or use computed_fields technique
         overrides = self.get_overrides()  # may have some key names not in self.fields, which will later be ignored.
         DEFAULT = overrides.get('_default_', {})
         alt_field_info = self.get_alt_field_info()  # condition_<label> methods are run.
@@ -691,7 +681,6 @@ class FormOverrideMixIn:
         return fields
 
     def _html_output(self, *args, **kwargs):
-        # print("************************** OVERRIDES FOR _HTML_OUTPUT *************************************")
         self.fields = self.prep_fields()
         return super()._html_output(*args, **kwargs)
 
@@ -943,7 +932,6 @@ class FormFieldsetMixIn:
             fieldsets.pop(index)
         max_position += 1
         if len(remaining_fields):
-            # pprint(remaining_fields)
             raise ImproperlyConfigured(_("Some unassigned fields, perhaps some added during make_fieldset. "))
         lookup = {'end': max_position + 2, 'remaining': max_position + 1, None: max_position}
         fieldsets = [(k, v) for k, v in sorted(fieldsets,
