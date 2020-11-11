@@ -1908,7 +1908,7 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
     # @skip("Not Implemented")
     def test_message_configure_username_confirmation(self):
         """The configure_username_confirmation method adds  'email' and 'username' errors and returns a message. """
-        from pprint import pprint
+        # from pprint import pprint
         original_data = self.form.data
         original_fields = self.form.fields
         original_computed_fields = self.form.computed_fields
@@ -1938,26 +1938,25 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
             message,  # _(message),
             self.form.get_login_message(reset=True),
             )
-
-        print("=============== test_configure_username_confirmation ===================")
+        # print("=============== test_configure_username_confirmation ===================")
         actual_message = self.form.configure_username_confirmation()
         actual_email_error = ''.join(self.form._errors.get(self.form.name_for_email))
         actual_user_error = ''.join(self.form._errors.get(self.form.name_for_user))
         # print("-----------------------------------------------------------")
-        pprint(self.form)
-        print("-----------------------------------------------------------")
-        pprint(expected_message)
-        print("*********************************")
-        pprint(actual_message)
-        print("-----------------------------------------------------------")
-        pprint(expected_email_error)
-        print("*********************************")
-        pprint(actual_email_error)
-        print("-----------------------------------------------------------")
-        pprint(expected_user_error)
-        print("*********************************")
-        pprint(actual_user_error)
-        print("-----------------------------------------------------------")
+        # pprint(self.form)
+        # print("-----------------------------------------------------------")
+        # pprint(expected_message)
+        # print("*********************************")
+        # pprint(actual_message)
+        # print("-----------------------------------------------------------")
+        # pprint(expected_email_error)
+        # print("*********************************")
+        # pprint(actual_email_error)
+        # print("-----------------------------------------------------------")
+        # pprint(expected_user_error)
+        # print("*********************************")
+        # pprint(actual_user_error)
+        # print("-----------------------------------------------------------")
 
         self.assertEqual(expected_message, actual_message)
         self.assertEqual(expected_email_error, actual_email_error)
