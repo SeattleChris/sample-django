@@ -2071,7 +2071,30 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_cleaned_data is None:
             del self.form.cleaned_data
 
-    # TODO: tests for handle_flag_field
+    @skip("Not Implemented")
+    def test_no_flag_handle_flag_field(self):
+        """If there is no flag field, expected return of None. """
+        pass
+
+    @skip("Not Implemented")
+    def test_no_error_handle_flag_field(self):
+        """If there is no error found during handle_flag_field, expected return of an empty Dict. """
+        pass
+
+    @skip("Not Implemented")
+    def test_username_of_email_exists_handle_flag_field(self):
+        """If current email matches an existing username, handle_flag_field returns a Dict with that error. """
+        pass
+
+    @skip("Not Implemented")
+    def test_email_works_as_username_handle_flag_field(self):
+        """If current email is a valid username, set username value in cleaned_data. No error returned. """
+        pass
+
+    @skip("Not Implemented")
+    def test_bad_flag_handle_flag_field(self):
+        """If they should have unchecked the flag field, return a Dict with that error. """
+        pass
 
 
 class CountryTests(FormTests, TestCase):
