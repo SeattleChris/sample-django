@@ -1974,17 +1974,103 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_cleaned_data is None:
             del self.form.cleaned_data
 
-    @skip("Not Implemented")
+    @skip("Not Needed for this test suite")
     def test_clean_moves_computed_fields_to_fields(self):
-        """If not errors, clean method adds all compute_fields to fields. """
-        # cleaned_data = self.form.clean()
-        pass
+        """Possibly add to ComputeFields test. If not errors, clean method adds all compute_fields to fields. """
+        # from pprint import pprint
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        original_handle_flag_field = self.form.handle_flag_field
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        self.form.cleaned_data = new_cleaned_data.copy()
+        def replace_handle_flag_field(email, user): return {}
+        self.form.handle_flag_field = replace_handle_flag_field
+
+        expected_fields = original_fields.copy()
+        expected_fields.update(original_computed_fields)
+        cleaned_data = self.form.clean()
+        actual_fields = self.form.fields
+
+        self.assertDictEqual(expected_fields, actual_fields)
+        self.assertDictEqual(new_cleaned_data, cleaned_data)
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        self.form.handle_flag_field = original_handle_flag_field
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+
+    # @skip("Not Implemented")
+    def test_clean_calls_handle_flag_field(self):
+        """If not compute errors, clean method raises ValidationError for non-empty return from handle_flag_field. """
+        # from pprint import pprint
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        self.form.cleaned_data = new_cleaned_data.copy()
+        # expected_error = {self.form.name_for_email: "test email error", self.form.name_for_user: "test user error"}
+        expected_error = "The replace_handle_flag_field test return value. "
+        def replace_handle_flag_field(email, user): return expected_error
+        self.form.handle_flag_field = replace_handle_flag_field
+        with self.assertRaisesMessage(ValidationError, expected_error):
+            self.form.clean()
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
     @skip("Not Implemented")
-    def test_clean_calls_handle_flag_field(self):
-        """If not compute errors, clean method raises ValidationError if non-empty response from handle_flag_field. """
-        # handle_flag_field(self.form.name_for_email, self.form.name_for_user):
-        pass
+    def test_clean_returns_cleaned_data(self):
+        """If not compute errors, handle_flag_errors, or other errors, clean returns cleaned_data. """
+        # from pprint import pprint
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        self.form.cleaned_data = new_cleaned_data.copy()
+
+        cleaned_data = self.form.clean()
+        self.assertDictEqual(new_cleaned_data, cleaned_data)
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
     # TODO: tests for handle_flag_field
 
