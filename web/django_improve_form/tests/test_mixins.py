@@ -1829,14 +1829,15 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         """If the assign_focus_field method is present, then we expect email field to get the focus. """
         pass
 
-    # @skip("Not Implemented")
     def test_configure_username_confirmation(self):
         """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
         from pprint import pprint
         original_data = self.form.data
         original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
         self.form.data = original_data.copy()
         self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
         print("=============== test_configure_username_confirmation ===================")
         pprint(self.form)
         print("-----------------------------------------------------------")
