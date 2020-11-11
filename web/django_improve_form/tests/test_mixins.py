@@ -1464,19 +1464,39 @@ class ComputedUsernameTests(FormTests, TestCase):
         field.validators = original_validators
         return result
 
-    @skip("Not Implemented")
     def test_username_validators(self):
         """The validators from name_for_user_validators are applied as expected. """
-        # if self.form.strict_username:
-        pass
+        name = self.form.name_for_user
+        field_source = self.form.fields if name in self.form.fields else self.form.base_fields
+        field = field_source.get(name, None)
+        self.assertIsNotNone(field)
+        expected = 2
+        count_strict = expected + 1
+        original_strict = getattr(self.form, 'strict_username', None)
+        self.form.strict_username = False
+        func = self.form.name_for_user_validators
+        actual = self.validators_applied_count(field, func, field_source)
+        required_not_strict = self.validators_effect_required(field, func, field_source)
+        self.form.strict_username = True
+        actual_strict = self.validators_applied_count(field, func, field_source)
+        required_strict = self.validators_effect_required(field, func, field_source)
+
+        self.assertIsNone(required_not_strict)
+        self.assertEqual(expected, actual)
+        self.assertIsNone(required_strict)
+        self.assertEqual(count_strict, actual_strict)
+
+        self.form.strict_username = original_strict
+        if original_strict is None:
+            del self.form.strict_username
 
     def test_email_validators(self):
         """The validators from name_for_email_validators are applied as expected. """
-        field_name = self.form.name_for_email
-        field = self.form.fields[field_name]
+        name = self.form.name_for_email
+        field = self.form.fields[name]
         expected = 2
+        count_strict = expected + 1
         original_strict = getattr(self.form, 'strict_email', None)
-        expected_strict = expected + 1
         self.form.strict_email = False
         func = self.form.name_for_email_validators
         # email_opts = {'names': (field_name, 'email'), 'alt_field': 'email_field', 'computed': False}
@@ -1490,7 +1510,7 @@ class ComputedUsernameTests(FormTests, TestCase):
         self.assertTrue(required_not_strict)
         self.assertEqual(expected, actual)
         self.assertTrue(required_strict)
-        self.assertEqual(expected_strict, actual_strict)
+        self.assertEqual(count_strict, actual_strict)
 
         self.form.strict_email = original_strict
         if original_strict is None:
