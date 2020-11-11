@@ -283,7 +283,7 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
     }
 
     def __init__(self, *args, **kwargs):
-        # print("======================= ComputedUsernameMixIn(ComputedFieldsMixIn).__init__ ==========================")
+        # print("====================== ComputedUsernameMixIn(ComputedFieldsMixIn).__init__ ==========================")
         user_model = self.user_model = self.get_form_user_model()
         name_for_email = user_model.get_email_field_name()
         name_for_user = user_model.USERNAME_FIELD
@@ -436,8 +436,9 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         if not isinstance(link_text, (tuple, list)):
             link_text = (link_text, link_text)
         link_text = [_(ea) if ea else None for ea in link_text]
-        login_link = format_html('<a href="{}">{}</a>', reverse('login'), link_text[0] or _('login'))
-        reset_link = format_html('<a href="{}">{}</a>', reverse('password_reset'), link_text[1] or _('reset the password'))
+        default_text = [_('login'), _('reset the password')]
+        login_link = format_html('<a href="{}">{}</a>', reverse('login'), link_text[0] or default_text[0])
+        reset_link = format_html('<a href="{}">{}</a>', reverse('password_reset'), link_text[1] or default_text[1])
         if link_only:
             return login_link if not reset else reset_link
         message = "You can {} to your existing account".format(login_link)

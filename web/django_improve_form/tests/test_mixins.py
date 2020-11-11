@@ -1433,70 +1433,88 @@ class ComputedUsernameTests(FormTests, TestCase):
         with self.assertRaisesMessage(ImproperlyConfigured, message):
             self.form.confirm_required_fields()
 
-    @skip("Not Implemented")
+    def validators_effect_required(self, field, func, *args, **kwargs):
+        """Gets the effect that running the validator method has on the field's required attribute. """
+        NOT_EXIST = '_MISSING_'
+        original_required = getattr(field, 'required', NOT_EXIST)
+        field.required = False
+        func(*args, **kwargs)
+        after_false = field.required
+        field.required = True
+        func(*args, **kwargs)
+        after_true = field.required
+        result = None
+        if after_false and after_true:
+            result = True
+        elif not after_false and not after_true:
+            result = False
+        elif after_false and not after_true:
+            result = 'Flip'
+        field.required = original_required
+        if original_required == NOT_EXIST:
+            del field.required
+        return result
+
+    def validators_applied_count(self, field, func, *args, **kwargs):
+        """Returns how many validators are applied to a given field. """
+        original_validators = field.validators
+        field.validators = []
+        func(*args, **kwargs)
+        result = len(field.validators)
+        field.validators = original_validators
+        return result
+
     def test_username_validators(self):
         """The validators from name_for_user_validators are applied as expected. """
-        # if self.form.strict_username:
-        pass
+        name = self.form.name_for_user
+        field_source = self.form.fields if name in self.form.fields else self.form.base_fields
+        field = field_source.get(name, None)
+        self.assertIsNotNone(field)
+        expected = 2
+        count_strict = expected + 1
+        original_strict = getattr(self.form, 'strict_username', None)
+        self.form.strict_username = False
+        func = self.form.name_for_user_validators
+        actual = self.validators_applied_count(field, func, field_source)
+        required_not_strict = self.validators_effect_required(field, func, field_source)
+        self.form.strict_username = True
+        actual_strict = self.validators_applied_count(field, func, field_source)
+        required_strict = self.validators_effect_required(field, func, field_source)
 
-    @skip("Not Implemented")
+        self.assertIsNone(required_not_strict)
+        self.assertEqual(expected, actual)
+        self.assertIsNone(required_strict)
+        self.assertEqual(count_strict, actual_strict)
+
+        self.form.strict_username = original_strict
+        if original_strict is None:
+            del self.form.strict_username
+
     def test_email_validators(self):
         """The validators from name_for_email_validators are applied as expected. """
-        from django_registration import validators
-        field_name = self.form.name_for_email
-        field = self.form.fields[field_name]
-        original_validators = field.validators
-        expected = [validators.HTML5EmailValidator, validators.validate_confusables_email, ]
-        if self.form.strict_email:
-            expected.append(validators.CaseInsensitiveUnique)
-        # expected = [ea.__class__.__name__ for ea in expected]
-        field.validators = []
-        print("============ TEST EMAIL VALIDATORS =================")
-        print(original_validators)
-        print(self.form.fields[field_name].validators)
-        print([ea.__class__ for ea in expected])
-        print([ea.__name__ for ea in expected])
-        print([ea.__class__.__name__ for ea in expected])
-        print(expected)
-        print("-----------------------------------------")
+        name = self.form.name_for_email
+        field = self.form.fields[name]
+        expected = 2
+        count_strict = expected + 1
+        original_strict = getattr(self.form, 'strict_email', None)
+        self.form.strict_email = False
+        func = self.form.name_for_email_validators
+        # email_opts = {'names': (field_name, 'email'), 'alt_field': 'email_field', 'computed': False}
+        # email_opts.update({'name': field_name, 'field': field})
+        actual = self.validators_applied_count(field, func, self.form.fields)
+        required_not_strict = self.validators_effect_required(field, func, self.form.fields)
+        self.form.strict_email = True
+        actual_strict = self.validators_applied_count(field, func, self.form.fields)
+        required_strict = self.validators_effect_required(field, func, self.form.fields)
 
-        email_opts = {'names': (field_name, 'email'), 'alt_field': 'email_field', 'computed': False}
-        email_opts.update({'name': field_name, 'field': field})
-        self.form.name_for_email_validators(self.form.fields)
-        actual = self.form.fields[field_name].validators
-        for ea in actual:
-            if not getattr(ea, '__name__', None):
-                print(dir(ea.__class__))
-                print("<><><><>")
-                print(dir(ea))
-            else:
-                print(dir(ea))
-            print("****************************")
-        # print([ea.__class__ for ea in actual])
-        # print([ea.__name__ if '__name__' in ea else ea.__class__ for ea in actual])
-        # print([ea.__class__.__name__ for ea in actual])
-        print(actual)
-        # actual_name = [ea.__name__ for ea in actual]
-        # found, extra = [], []
-        # for ea in actual:
-        #     match = isinstance(ea, tuple(expected))
-        #     if match:
-        #         found.append(ea)
-        #     else:
-        #         extra.append(ea)
-        found_list = []
-        for ea in actual:
-            for goal in expected:
-                if isinstance(ea, goal):
-                    found_list.append(goal)
+        self.assertTrue(required_not_strict)
+        self.assertEqual(expected, actual)
+        self.assertTrue(required_strict)
+        self.assertEqual(count_strict, actual_strict)
 
-        self.assertTrue(getattr(field, 'required', None))
-        # self.assertEqual(len(expected), len(found))
-        self.assertSetEqual(set(expected), set(found_list))
-        self.assertEqual(len(expected), len(actual))
-        self.assertSetEqual(set(expected), set(actual_name))
-
-        self.form.fields[field_name].validators = original_validators
+        self.form.strict_email = original_strict
+        if original_strict is None:
+            del self.form.strict_email
 
     def test_constructor_fields_used_when_email_fails(self):
         """If email already used, uses constructor_fields to make a username in username_from_email_or_names. """
@@ -1750,53 +1768,160 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 
     def setUp(self):
         self.user = self.make_user()
+        self.form = self.make_form_request()
+        email_name = getattr(self.form, 'name_for_email', None) or 'email'
         test_data = MultiValueDict()
         test_data.update(self.form_test_data)
-        test_data.update(email=self.user.email)
+        test_data.update({email_name: getattr(self.user, email_name)})
         # test_data._mutable = False
         self.test_data = test_data
-        # self.form = self.make_form_request(method='POST', data=test_data)
-        self.form = self.make_form_request()
+        self.form = self.make_form_request(method='POST', data=test_data)
 
-    def test_temp(self):
-        self.assertEqual('username', self.form._meta.model.USERNAME_FIELD)
-        self.assertEqual('email', self.form._meta.model.get_email_field_name())
-        self.assertEqual('username', self.form.name_for_user)
-        self.assertEqual('email', self.form.name_for_email)
-        self.assertIn(self.form._meta.model.get_email_field_name(), self.form.fields)
+    def test_init(self):
+        meta = getattr(self.form, '_meta', None)
+        self.assertIsNotNone(meta)
+        user_model = getattr(meta, 'model', None)
+        self.assertIsNotNone(user_model)
+        self.assertEqual(user_model, self.form.user_model)
+        expected_name = meta.model.USERNAME_FIELD
+        expected_email = meta.model.get_email_field_name()
+        expected_flag = self.form.USERNAME_FLAG_FIELD
+        self.assertEqual(expected_name, self.form.name_for_user)
+        self.assertEqual(expected_email, self.form.name_for_email)
+        self.assertIsNotNone(expected_flag)
+        self.assertIn(expected_email, self.form.fields)
+        self.assertIn(expected_name, self.form.base_fields)
+        self.assertNotIn(expected_name, self.form.fields)
+        self.assertIn(expected_email, self.test_data)
+        self.assertIn(expected_flag, self.form.base_fields)
 
-    # @skip("Not Used")
-    def test_as_table(self):
-        # self.assertTrue(True)
-        pass
+    def test_as_table(self): pass
+    def test_as_ul(self): pass
+    def test_as_p(self): pass
 
-    # @skip("Not Used")
-    def test_as_ul(self):
-        # self.assertTrue(True)
-        pass
+    def test_raise_missing_flag_field(self):
+        """Raises ImproperlyConfigured if flag field cannot be found for configure_username_confirmation. """
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_flag = self.form.USERNAME_FLAG_FIELD
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        original_errors = getattr(self.form, '_errors', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.USERNAME_FLAG_FIELD = 'Not a valid field name'
+        self.form.cleaned_data = {self.form.name_for_user: 'test_username', self.form.name_for_email: 'test_email'}
+        self.form._errors = None if original_errors is None else original_errors.copy()
 
-    # @skip("Not Used")
-    def test_as_p(self):
-        # self.assertTrue(True)
-        pass
+        with self.assertRaises(ImproperlyConfigured):
+            self.form.configure_username_confirmation()
 
-    # @skip("Not Implemented")
-    def test_configure_username_confirmation(self):
-        """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-        UserModel = get_user_model()
-        same_model = issubclass(self.form.user_model, UserModel)
-        self.assertTrue(same_model)
-        self.assertEqual(self.form.name_for_user, UserModel.USERNAME_FIELD)
-        self.assertEqual(self.form.name_for_email, UserModel.get_email_field_name())
-        self.assertEqual('email', self.form.name_for_email)
-        self.assertIn(self.form.name_for_email, self.test_data)
-        self.assertIn(self.form.name_for_email, self.form.fields)
-        initial_data = self.test_data.copy()
-        form_post = self.make_form_request(method='POST', data=self.test_data)
-
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.USERNAME_FLAG_FIELD = original_flag
+        self.form.cleaned_data = original_cleaned_data
+        self.form._errors = original_errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+        if original_errors is None:
+            del self.form._errors
 
     @skip("Not Implemented")
+    def test_focus_update_for_configure_username_confirmation(self):
+        """If the assign_focus_field method is present, then we expect email field to get the focus. """
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        original_errors = getattr(self.form, '_errors', None)
+        original_focus = getattr(self.form, 'named_focus', None)
+        original_focus_method = getattr(self.form, 'assign_focus_field', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form.cleaned_data = {self.form.name_for_user: 'test_username', self.form.name_for_email: 'test_email'}
+        self.form._errors = None if original_errors is None else original_errors.copy()
+        self.form.named_focus = None
+        test_value = 'value for method test'
+        if original_focus_method is None:
+            def mock_focus_method(name, *args, **kwargs): return test_value  # return name
+            self.form.assigned_focus_field = mock_focus_method
+        message = self.form.configure_username_confirmation()
+        message = None if not message else message
+        # valid = self.form.is_valid()
+        # self.form.full_clean()
+        # expected_focus = self.form.name_for_email
+        expected_focus = test_value
+        actual_focus = getattr(self.form, 'named_focus', None)
+
+        # self.assertFalse(valid)
+        self.assertIsNotNone(message)
+        self.assertEqual(expected_focus, actual_focus)
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form.named_focus = original_focus
+        self.form.assign_focus_field = original_focus_method
+        self.form.cleaned_data = original_cleaned_data
+        self.form._errors = original_errors
+        if original_focus is None:
+            del self.form.named_focus
+        if original_focus_method is None:
+            del self.form.assign_focus_method
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+        if original_errors is None:
+            del self.form._errors
+
     def test_configure_username_confirmation(self):
+        """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
+        from pprint import pprint
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        print("=============== test_configure_username_confirmation ===================")
+        pprint(self.form)
+        print("-----------------------------------------------------------")
+        # valid = self.form.is_valid()
+        # print(valid)
+        self.form.full_clean()
+        pprint(self.form)
+        print("-----------------------------------------------------------")
+        pprint(original_data)
+        print("*********************************")
+        pprint(self.form.data)
+        print("-----------------------------------------------------------")
+        pprint(original_fields)
+        print("*********************************")
+        pprint(self.form.fields)
+        print("-----------------------------------------------------------")
+        names = (original_data.get(field_name, None) for field_name in self.form.constructor_fields)
+        expected_name = '_'.join(name for name in names if name is not None).casefold()
+        normalize = self.form.user_model.normalize_username
+        if callable(normalize):
+            expected_name = normalize(expected_name)
+        expected_flag = 'False'
+
+        self.assertNotIn(self.form.name_for_user, original_data)
+        self.assertNotIn(self.form.name_for_user, original_fields)
+        self.assertIn(self.form.name_for_user, self.form.data)
+        self.assertIn(self.form.name_for_user, self.form.fields)
+        self.assertNotIn(self.form.USERNAME_FLAG_FIELD, original_data)
+        self.assertNotIn(self.form.USERNAME_FLAG_FIELD, original_fields)
+        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.data)
+        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.fields)
+        self.assertEqual(expected_name, self.form.data.get(self.form.name_for_user, None))
+        self.assertEqual(expected_flag, self.form.data.get(self.form.USERNAME_FLAG_FIELD, None))
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+
+    @skip("Not Implemented")
+    def test_configure_username_confirmation_b(self):
         """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
         # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
         # self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
