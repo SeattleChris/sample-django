@@ -2071,10 +2071,15 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_cleaned_data is None:
             del self.form.cleaned_data
 
-    @skip("Not Implemented")
     def test_no_flag_handle_flag_field(self):
         """If there is no flag field, expected return of None. """
-        pass
+        original_flag_name = self.form.USERNAME_FLAG_FIELD
+        self.form.USERNAME_FLAG_FIELD = "This is not a valid field name"
+        expected = None
+        actual = self.form.handle_flag_field(self.form.name_for_email, self.form.name_for_user)
+
+        self.assertEqual(expected, actual)
+        self.form.USERNAME_FLAG_FIELD = original_flag_name
 
     @skip("Not Implemented")
     def test_no_error_handle_flag_field(self):
