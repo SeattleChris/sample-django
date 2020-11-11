@@ -1832,17 +1832,47 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
     # @skip("Not Implemented")
     def test_configure_username_confirmation(self):
         """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-        UserModel = get_user_model()
-        same_model = issubclass(self.form.user_model, UserModel)
-        self.assertTrue(same_model)
-        self.assertEqual(self.form.name_for_user, UserModel.USERNAME_FIELD)
-        self.assertEqual(self.form.name_for_email, UserModel.get_email_field_name())
-        self.assertEqual('email', self.form.name_for_email)
-        self.assertIn(self.form.name_for_email, self.test_data)
-        self.assertIn(self.form.name_for_email, self.form.fields)
-        initial_data = self.test_data.copy()
-        form_post = self.make_form_request(method='POST', data=self.test_data)
+        from pprint import pprint
+        original_data = self.form.data
+        original_fields = self.form.fields
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        print("=============== test_configure_username_confirmation ===================")
+        pprint(self.form)
+        print("-----------------------------------------------------------")
+        # valid = self.form.is_valid()
+        # print(valid)
+        self.form.full_clean()
+        pprint(self.form)
+        print("-----------------------------------------------------------")
+        pprint(original_data)
+        print("*********************************")
+        pprint(self.form.data)
+        print("-----------------------------------------------------------")
+        pprint(original_fields)
+        print("*********************************")
+        pprint(self.form.fields)
+        print("-----------------------------------------------------------")
+        names = (original_data.get(field_name, None) for field_name in self.form.constructor_fields)
+        expected_name = '_'.join(name for name in names if name is not None).casefold()
+        normalize = self.form.user_model.normalize_username
+        if callable(normalize):
+            expected_name = normalize(expected_name)
+        expected_flag = 'False'
 
+        self.assertNotIn(self.form.name_for_user, original_data)
+        self.assertNotIn(self.form.name_for_user, original_fields)
+        self.assertIn(self.form.name_for_user, self.form.data)
+        self.assertIn(self.form.name_for_user, self.form.fields)
+        self.assertNotIn(self.form.USERNAME_FLAG_FIELD, original_data)
+        self.assertNotIn(self.form.USERNAME_FLAG_FIELD, original_fields)
+        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.data)
+        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.fields)
+        self.assertEqual(expected_name, self.form.data.get(self.form.name_for_user, None))
+        self.assertEqual(expected_flag, self.form.data.get(self.form.USERNAME_FLAG_FIELD, None))
+
+        self.form.data = original_data
+        self.form.fields = original_fields
 
     @skip("Not Implemented")
     def test_configure_username_confirmation(self):
