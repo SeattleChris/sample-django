@@ -1810,6 +1810,7 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.fields = original_fields.copy()
         self.form.USERNAME_FLAG_FIELD = 'Not a valid field name'
         self.form.cleaned_data = {self.form.name_for_user: 'test_username', self.form.name_for_email: 'test_email'}
+        self.form._errors = None if original_errors is None else original_errors.copy()
 
         with self.assertRaises(ImproperlyConfigured):
             self.form.configure_username_confirmation()
@@ -1920,7 +1921,7 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.computed_fields = original_computed_fields
 
     @skip("Not Implemented")
-    def test_configure_username_confirmation(self):
+    def test_configure_username_confirmation_b(self):
         """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
         # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
         # self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
