@@ -1906,6 +1906,75 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.computed_fields = original_computed_fields
 
     # @skip("Not Implemented")
+    def test_message_configure_username_confirmation(self):
+        """The configure_username_confirmation method adds  'email' and 'username' errors and returns a message. """
+        from pprint import pprint
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        original_clean = self.form.clean
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        self.form.cleaned_data = {self.form.name_for_user: 'test_username', self.form.name_for_email: 'test_email'}
+        def replace_clean(): raise ImproperlyConfigured("Unexpected Clean Method Called. ")
+        self.form.clean = replace_clean
+
+        login_link = self.form.get_login_message(link_text='login to existing account', link_only=True)
+        expected_email_error = "Use a non-shared email, or {}. ".format(login_link)
+        # self.add_error(name_for_email, mark_safe(_(text)))
+        e_note = "Typically people have their own unique email address, which you can update. "
+        e_note += "If you share an email with another user, then you will need to create a username for your login. "
+        expected_user_error = e_note
+        # self.add_error(name_for_user, (_(e_note)))
+        title = "Login with existing account, change to a non-shared email, or create a username. "
+        message = "Did you already make an account, or have one because you've had classes with us before? "
+        expected_message = format_html(
+            "<h3>{}</h3> <p>{} <br />{}</p>",
+            title,  # _(title),
+            message,  # _(message),
+            self.form.get_login_message(reset=True),
+            )
+
+        print("=============== test_configure_username_confirmation ===================")
+        actual_message = self.form.configure_username_confirmation()
+        actual_email_error = ''.join(self.form._errors.get(self.form.name_for_email))
+        actual_user_error = ''.join(self.form._errors.get(self.form.name_for_user))
+        # print("-----------------------------------------------------------")
+        pprint(self.form)
+        print("-----------------------------------------------------------")
+        pprint(expected_message)
+        print("*********************************")
+        pprint(actual_message)
+        print("-----------------------------------------------------------")
+        pprint(expected_email_error)
+        print("*********************************")
+        pprint(actual_email_error)
+        print("-----------------------------------------------------------")
+        pprint(expected_user_error)
+        print("*********************************")
+        pprint(actual_user_error)
+        print("-----------------------------------------------------------")
+
+        self.assertEqual(expected_message, actual_message)
+        self.assertEqual(expected_email_error, actual_email_error)
+        self.assertEqual(expected_user_error, actual_user_error)
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.clean = original_clean
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+
+    # @skip("Not Implemented")
     # def test_configure_username_confirmation(self):
     #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
     #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
