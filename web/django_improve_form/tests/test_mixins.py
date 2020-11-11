@@ -1874,6 +1874,7 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 
         self.form.data = original_data
         self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
 
     @skip("Not Implemented")
     def test_configure_username_confirmation(self):
