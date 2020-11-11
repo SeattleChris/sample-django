@@ -1874,30 +1874,15 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
             del self.form._errors
 
     def test_configure_username_confirmation(self):
-        """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-        from pprint import pprint
+        """The configure_username_confirmation method modifies the data, & fields, and returns expected message. """
         original_data = self.form.data
         original_fields = self.form.fields
         original_computed_fields = self.form.computed_fields
         self.form.data = original_data.copy()
         self.form.fields = original_fields.copy()
         self.form.computed_fields = original_computed_fields.copy()
-        print("=============== test_configure_username_confirmation ===================")
-        pprint(self.form)
-        print("-----------------------------------------------------------")
         # valid = self.form.is_valid()
-        # print(valid)
         self.form.full_clean()
-        pprint(self.form)
-        print("-----------------------------------------------------------")
-        pprint(original_data)
-        print("*********************************")
-        pprint(self.form.data)
-        print("-----------------------------------------------------------")
-        pprint(original_fields)
-        print("*********************************")
-        pprint(self.form.fields)
-        print("-----------------------------------------------------------")
         names = (original_data.get(field_name, None) for field_name in self.form.constructor_fields)
         expected_name = '_'.join(name for name in names if name is not None).casefold()
         normalize = self.form.user_model.normalize_username
@@ -1919,80 +1904,6 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.data = original_data
         self.form.fields = original_fields
         self.form.computed_fields = original_computed_fields
-
-    @skip("Not Implemented")
-    def test_configure_username_confirmation_b(self):
-        """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-        # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
-        # self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
-        # self.form.name_for_email = self.form._meta.model.get_email_field_name()
-        self.assertIsNotNone(self.form.name_for_user)
-        self.assertIsNotNone(self.form.name_for_email)
-        self.assertIn('email', self.test_data)
-        # form_post = self.make_form_request(method='POST', data=self.test_data)
-
-        # kwargs = {'name_for_user': UserModel.USERNAME_FIELD, 'name_for_email': UserModel.get_email_field_name()}
-        original_fields = self.form.fields
-        original_computed_fields = self.form.computed_fields
-        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
-        fields = original_fields.copy()
-        computed_fields = original_computed_fields.copy()
-        cleaned_data = original_cleaned_data.copy() if original_cleaned_data else {}
-        # modify fields
-        # modify computed_fields
-        self.form.fields = fields
-        self.form.computed_fields = computed_fields
-        self.form.cleaned_data = cleaned_data
-        # original_data = self.form.data
-        # test_data = original_data.copy()
-        # test_data.update(OTHER_USER)
-        # test_data._mutable = False
-        # self.form.data = test_data
-        # self.form.is_bound = True
-        # initial_data = test_data.copy()
-        # info = OTHER_USER.copy()
-        # self.form.cleaned_data = info
-        test_data = self.form.data
-        initial_data = self.form.data.copy()
-        expected_data = initial_data.copy()  # QueryDict datastructure.
-        self.assertIn(self.form.name_for_user, self.form.computed_fields)
-        self.assertIn(self.form.name_for_email, self.form.fields)
-        self.assertIn(self.form.name_for_email, self.form.data)
-        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.computed_fields)
-        is_valid = self.form.is_valid()
-        # info = self.form.cleaned_data.copy()
-        self.assertIn(self.form.name_for_email, self.form.cleaned_data)
-        expected_username = self.form.compute_name_for_user()
-        # info[self.form.name_for_user] = self.form.compute_name_for_user()
-        # self.form.cleaned_data[self.form.name_for_user] = info[self.form.name_for_user]
-
-        # expected_data.appendlist(self.form.name_for_email, info[self.form.name_for_email])
-        expected_data.appendlist(self.form.name_for_email, self.form.cleaned_data[self.form.name_for_email])
-        expected_data.appendlist(self.form.USERNAME_FLAG_FIELD, str(False))
-        expected_data.appendlist(self.form.name_for_user, expected_username)
-
-        result = self.form.configure_username_confirmation()
-
-        self.assertDictEqual(expected_data, self.form.data)
-        self.assertNotEqual(initial_data, expected_data)
-        self.assertIsNot(test_data, self.form.data)
-
-        self.assertIn(self.form.name_for_user, self.form.fields)
-        self.assertIn(self.form.name_for_email, self.form.fields)
-        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.fields)
-
-        self.form.computed_fields = original_computed_fields
-        self.form.fields = original_fields
-        self.form.data = test_data
-        self.form.cleaned_data = original_cleaned_data
-        if original_cleaned_data is None:
-            del self.form.cleaned_data
-
-    # @skip("Not Implemented")
-    # def test_configure_username_confirmation(self):
-    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
-    #     pass
 
     # @skip("Not Implemented")
     # def test_configure_username_confirmation(self):
