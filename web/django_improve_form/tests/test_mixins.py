@@ -1768,35 +1768,36 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 
     def setUp(self):
         self.user = self.make_user()
+        self.form = self.make_form_request()
+        email_name = getattr(self.form, 'name_for_email', None) or 'email'
         test_data = MultiValueDict()
         test_data.update(self.form_test_data)
-        test_data.update(email=self.user.email)
+        test_data.update({email_name: getattr(self.user, email_name)})
         # test_data._mutable = False
         self.test_data = test_data
-        # self.form = self.make_form_request(method='POST', data=test_data)
-        self.form = self.make_form_request()
+        self.form = self.make_form_request(method='POST', data=test_data)
 
-    def test_temp(self):
-        self.assertEqual('username', self.form._meta.model.USERNAME_FIELD)
-        self.assertEqual('email', self.form._meta.model.get_email_field_name())
-        self.assertEqual('username', self.form.name_for_user)
-        self.assertEqual('email', self.form.name_for_email)
-        self.assertIn(self.form._meta.model.get_email_field_name(), self.form.fields)
+    def test_init(self):
+        meta = getattr(self.form, '_meta', None)
+        self.assertIsNotNone(meta)
+        user_model = getattr(meta, 'model', None)
+        self.assertIsNotNone(user_model)
+        self.assertEqual(user_model, self.form.user_model)
+        expected_name = meta.model.USERNAME_FIELD
+        expected_email = meta.model.get_email_field_name()
+        expected_flag = self.form.USERNAME_FLAG_FIELD
+        self.assertEqual(expected_name, self.form.name_for_user)
+        self.assertEqual(expected_email, self.form.name_for_email)
+        self.assertIsNotNone(expected_flag)
+        self.assertIn(expected_email, self.form.fields)
+        self.assertIn(expected_name, self.form.base_fields)
+        self.assertNotIn(expected_name, self.form.fields)
+        self.assertIn(expected_email, self.test_data)
+        self.assertIn(expected_flag, self.form.base_fields)
 
-    # @skip("Not Used")
-    def test_as_table(self):
-        # self.assertTrue(True)
-        pass
-
-    # @skip("Not Used")
-    def test_as_ul(self):
-        # self.assertTrue(True)
-        pass
-
-    # @skip("Not Used")
-    def test_as_p(self):
-        # self.assertTrue(True)
-        pass
+    def test_as_table(self): pass
+    def test_as_ul(self): pass
+    def test_as_p(self): pass
 
     # @skip("Not Implemented")
     def test_configure_username_confirmation(self):
