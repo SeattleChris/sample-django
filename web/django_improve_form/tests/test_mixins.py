@@ -1439,64 +1439,30 @@ class ComputedUsernameTests(FormTests, TestCase):
         # if self.form.strict_username:
         pass
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_email_validators(self):
         """The validators from name_for_email_validators are applied as expected. """
         from django_registration import validators
         field_name = self.form.name_for_email
         field = self.form.fields[field_name]
         original_validators = field.validators
+        original_required = getattr(field, 'required', None)
         expected = [validators.HTML5EmailValidator, validators.validate_confusables_email, ]
         if self.form.strict_email:
             expected.append(validators.CaseInsensitiveUnique)
-        # expected = [ea.__class__.__name__ for ea in expected]
         field.validators = []
-        print("============ TEST EMAIL VALIDATORS =================")
-        print(original_validators)
-        print(self.form.fields[field_name].validators)
-        print([ea.__class__ for ea in expected])
-        print([ea.__name__ for ea in expected])
-        print([ea.__class__.__name__ for ea in expected])
-        print(expected)
-        print("-----------------------------------------")
-
-        email_opts = {'names': (field_name, 'email'), 'alt_field': 'email_field', 'computed': False}
-        email_opts.update({'name': field_name, 'field': field})
+        # email_opts = {'names': (field_name, 'email'), 'alt_field': 'email_field', 'computed': False}
+        # email_opts.update({'name': field_name, 'field': field})
         self.form.name_for_email_validators(self.form.fields)
         actual = self.form.fields[field_name].validators
-        for ea in actual:
-            if not getattr(ea, '__name__', None):
-                print(dir(ea.__class__))
-                print("<><><><>")
-                print(dir(ea))
-            else:
-                print(dir(ea))
-            print("****************************")
-        # print([ea.__class__ for ea in actual])
-        # print([ea.__name__ if '__name__' in ea else ea.__class__ for ea in actual])
-        # print([ea.__class__.__name__ for ea in actual])
-        print(actual)
-        # actual_name = [ea.__name__ for ea in actual]
-        # found, extra = [], []
-        # for ea in actual:
-        #     match = isinstance(ea, tuple(expected))
-        #     if match:
-        #         found.append(ea)
-        #     else:
-        #         extra.append(ea)
-        found_list = []
-        for ea in actual:
-            for goal in expected:
-                if isinstance(ea, goal):
-                    found_list.append(goal)
 
         self.assertTrue(getattr(field, 'required', None))
-        # self.assertEqual(len(expected), len(found))
-        self.assertSetEqual(set(expected), set(found_list))
         self.assertEqual(len(expected), len(actual))
-        self.assertSetEqual(set(expected), set(actual_name))
 
         self.form.fields[field_name].validators = original_validators
+        self.form.fields[field_name].required = original_required
+        if original_required is None:
+            del self.form.fields[field_name].required
 
     def test_constructor_fields_used_when_email_fails(self):
         """If email already used, uses constructor_fields to make a username in username_from_email_or_names. """
