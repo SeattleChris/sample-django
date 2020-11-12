@@ -277,8 +277,13 @@ class FormTests:
         """All forms should return HTML table rows when .as_table is called. """
         output = self.form.as_table().strip()
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
-        override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
-        setup.update(attrs=override_attrs)
+        setup.update(attrs='')
+        # override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
+        # setup.update(attrs=override_attrs)
+        if issubclass(self.form_class, FormOverrideMixIn):
+            size_default = self.form.get_overrides().get('_default_', {}).get('size', None)
+            override_attrs = '' if not size_default else f'size="{size_default}" '
+            setup.update(attrs=override_attrs)
         expected = self.get_expected_format(setup)
         if output != expected:
             form_class = self.form.__class__.__name__
@@ -292,9 +297,13 @@ class FormTests:
     def test_as_ul(self):
         """All forms should return HTML <li>s when .as_ul is called. """
         output = self.form.as_ul().strip()
-        setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
-        override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
-        setup.update(attrs=override_attrs)
+        setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' ', 'attrs': ''}
+        # override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
+        # setup.update(attrs=override_attrs)
+        if issubclass(self.form_class, FormOverrideMixIn):
+            size_default = self.form.get_overrides().get('_default_', {}).get('size', None)
+            override_attrs = '' if not size_default else f'size="{size_default}" '
+            setup.update(attrs=override_attrs)
         expected = self.get_expected_format(setup)
         if output != expected:
             form_class = self.form.__class__.__name__
@@ -309,6 +318,13 @@ class FormTests:
         """All forms should return HTML <p>s when .as_p is called. """
         output = self.form.as_p().strip()
         setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
+        setup.update(attrs='')
+        # override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
+        # setup.update(attrs=override_attrs)
+        if issubclass(self.form_class, FormOverrideMixIn):
+            size_default = self.form.get_overrides().get('_default_', {}).get('size', None)
+            override_attrs = '' if not size_default else f'size="{size_default}" '
+            setup.update(attrs=override_attrs)
         override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
         setup.update(attrs=override_attrs)
         expected = self.get_expected_format(setup)
@@ -826,6 +842,45 @@ class ComputedTests(FormTests, TestCase):
         else:
             self.form.cleaned_data = original_cleaned_data
         self.form._errors = original_errors
+
+    def test_clean_moves_computed_fields_to_fields(self):
+        """If no errors, clean method adds all compute_fields to fields. """
+        name = 'test_field'
+        if isinstance(self.form.computed_fields, (list, tuple)):
+            self.form.computed_fields = self.form.get_computed_fields([name])
+        computed_names = list(self.form.computed_fields.keys())
+        field_names = list(self.form.fields.keys())
+        field_data = {f_name: f"input_{f_name}_{i}" for i, f_name in enumerate(field_names)}
+        field_data.update({name: f"value_{f_name}_{i}" for i, f_name in enumerate(computed_names)})
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()  # mimic full_clean
+        populated_cleaned_data = deepcopy(original_cleaned_data or {})
+        populated_cleaned_data.update(field_data)
+        self.form.cleaned_data = populated_cleaned_data.copy()  # ensure cleaned_data is present (mimic full_clean)
+        final_cleaned_data = self.form.clean()
+
+        self.assertIn(name, computed_names)
+        self.assertNotIn(name, field_names)
+        self.assertEqual(1, len(computed_names))
+        self.assertIn(name, self.form.fields)
+        self.assertNotEqual(original_cleaned_data, final_cleaned_data)
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
 
 class OverrideTests(FormTests, TestCase):
@@ -1773,7 +1828,6 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         test_data = MultiValueDict()
         test_data.update(self.form_test_data)
         test_data.update({email_name: getattr(self.user, email_name)})
-        # test_data._mutable = False
         self.test_data = test_data
         self.form = self.make_form_request(method='POST', data=test_data)
 
@@ -1810,6 +1864,7 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.fields = original_fields.copy()
         self.form.USERNAME_FLAG_FIELD = 'Not a valid field name'
         self.form.cleaned_data = {self.form.name_for_user: 'test_username', self.form.name_for_email: 'test_email'}
+        # self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
         self.form._errors = None if original_errors is None else original_errors.copy()
 
         with self.assertRaises(ImproperlyConfigured):
@@ -1825,7 +1880,6 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_errors is None:
             del self.form._errors
 
-    @skip("Not Implemented")
     def test_focus_update_for_configure_username_confirmation(self):
         """If the assign_focus_field method is present, then we expect email field to get the focus. """
         original_data = self.form.data
@@ -1839,23 +1893,20 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.fields = original_fields.copy()
         self.form.computed_fields = original_computed_fields.copy()
         self.form.cleaned_data = {self.form.name_for_user: 'test_username', self.form.name_for_email: 'test_email'}
-        self.form._errors = None if original_errors is None else original_errors.copy()
-        self.form.named_focus = None
-        test_value = 'value for method test'
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        self.form.named_focus = ''
         if original_focus_method is None:
-            def mock_focus_method(name, *args, **kwargs): return test_value  # return name
-            self.form.assigned_focus_field = mock_focus_method
+            def mock_focus_method(name, *args, **kwargs): return name
+            setattr(self.form, 'assign_focus_field', mock_focus_method)
         message = self.form.configure_username_confirmation()
         message = None if not message else message
-        # valid = self.form.is_valid()
-        # self.form.full_clean()
-        # expected_focus = self.form.name_for_email
-        expected_focus = test_value
-        actual_focus = getattr(self.form, 'named_focus', None)
+        expected = self.form.name_for_email
+        actual = getattr(self.form, 'named_focus', None)
 
-        # self.assertFalse(valid)
         self.assertIsNotNone(message)
-        self.assertEqual(expected_focus, actual_focus)
+        self.assertTrue(hasattr(self.form, 'assign_focus_field'))
+        self.assertEqual(expected, self.form.assign_focus_field(expected))
+        self.assertEqual(expected, actual)
 
         self.form.data = original_data
         self.form.fields = original_fields
@@ -1867,37 +1918,22 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_focus is None:
             del self.form.named_focus
         if original_focus_method is None:
-            del self.form.assign_focus_method
+            del self.form.assign_focus_field
         if original_cleaned_data is None:
             del self.form.cleaned_data
         if original_errors is None:
             del self.form._errors
 
     def test_configure_username_confirmation(self):
-        """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-        from pprint import pprint
+        """The configure_username_confirmation method modifies the data, & fields, and returns expected message. """
         original_data = self.form.data
         original_fields = self.form.fields
         original_computed_fields = self.form.computed_fields
         self.form.data = original_data.copy()
         self.form.fields = original_fields.copy()
         self.form.computed_fields = original_computed_fields.copy()
-        print("=============== test_configure_username_confirmation ===================")
-        pprint(self.form)
-        print("-----------------------------------------------------------")
         # valid = self.form.is_valid()
-        # print(valid)
         self.form.full_clean()
-        pprint(self.form)
-        print("-----------------------------------------------------------")
-        pprint(original_data)
-        print("*********************************")
-        pprint(self.form.data)
-        print("-----------------------------------------------------------")
-        pprint(original_fields)
-        print("*********************************")
-        pprint(self.form.fields)
-        print("-----------------------------------------------------------")
         names = (original_data.get(field_name, None) for field_name in self.form.constructor_fields)
         expected_name = '_'.join(name for name in names if name is not None).casefold()
         normalize = self.form.user_model.normalize_username
@@ -1920,94 +1956,340 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.fields = original_fields
         self.form.computed_fields = original_computed_fields
 
-    @skip("Not Implemented")
-    def test_configure_username_confirmation_b(self):
-        """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-        # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
-        # self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
-        # self.form.name_for_email = self.form._meta.model.get_email_field_name()
-        self.assertIsNotNone(self.form.name_for_user)
-        self.assertIsNotNone(self.form.name_for_email)
-        self.assertIn('email', self.test_data)
-        # form_post = self.make_form_request(method='POST', data=self.test_data)
-
-        # kwargs = {'name_for_user': UserModel.USERNAME_FIELD, 'name_for_email': UserModel.get_email_field_name()}
+    def test_message_configure_username_confirmation(self):
+        """The configure_username_confirmation method adds  'email' and 'username' errors and returns a message. """
+        original_data = self.form.data
         original_fields = self.form.fields
         original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
         original_cleaned_data = getattr(self.form, 'cleaned_data', None)
-        fields = original_fields.copy()
-        computed_fields = original_computed_fields.copy()
-        cleaned_data = original_cleaned_data.copy() if original_cleaned_data else {}
-        # modify fields
-        # modify computed_fields
-        self.form.fields = fields
-        self.form.computed_fields = computed_fields
-        self.form.cleaned_data = cleaned_data
-        # original_data = self.form.data
-        # test_data = original_data.copy()
-        # test_data.update(OTHER_USER)
-        # test_data._mutable = False
-        # self.form.data = test_data
-        # self.form.is_bound = True
-        # initial_data = test_data.copy()
-        # info = OTHER_USER.copy()
-        # self.form.cleaned_data = info
-        test_data = self.form.data
-        initial_data = self.form.data.copy()
-        expected_data = initial_data.copy()  # QueryDict datastructure.
-        self.assertIn(self.form.name_for_user, self.form.computed_fields)
-        self.assertIn(self.form.name_for_email, self.form.fields)
-        self.assertIn(self.form.name_for_email, self.form.data)
-        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.computed_fields)
-        is_valid = self.form.is_valid()
-        # info = self.form.cleaned_data.copy()
-        self.assertIn(self.form.name_for_email, self.form.cleaned_data)
-        expected_username = self.form.compute_name_for_user()
-        # info[self.form.name_for_user] = self.form.compute_name_for_user()
-        # self.form.cleaned_data[self.form.name_for_user] = info[self.form.name_for_user]
+        original_clean = self.form.clean
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        self.form.cleaned_data = {self.form.name_for_user: 'test_username', self.form.name_for_email: 'test_email'}
+        def replace_clean(): raise ImproperlyConfigured("Unexpected Clean Method Called. ")
+        self.form.clean = replace_clean
 
-        # expected_data.appendlist(self.form.name_for_email, info[self.form.name_for_email])
-        expected_data.appendlist(self.form.name_for_email, self.form.cleaned_data[self.form.name_for_email])
-        expected_data.appendlist(self.form.USERNAME_FLAG_FIELD, str(False))
-        expected_data.appendlist(self.form.name_for_user, expected_username)
+        login_link = self.form.get_login_message(link_text='login to existing account', link_only=True)
+        expected_email_error = "Use a non-shared email, or {}. ".format(login_link)
+        e_note = "Typically people have their own unique email address, which you can update. "
+        e_note += "If you share an email with another user, then you will need to create a username for your login. "
+        expected_user_error = e_note
+        title = "Login with existing account, change to a non-shared email, or create a username. "
+        message = "Did you already make an account, or have one because you've had classes with us before? "
+        expected_message = format_html(
+            "<h3>{}</h3> <p>{} <br />{}</p>",
+            title,
+            message,
+            self.form.get_login_message(reset=True),
+            )
+        # print("=============== test_configure_username_confirmation ===================")
+        actual_message = self.form.configure_username_confirmation()
+        actual_email_error = ''.join(self.form._errors.get(self.form.name_for_email))
+        actual_user_error = ''.join(self.form._errors.get(self.form.name_for_user))
+        # print("-----------------------------------------------------------")
+        # pprint(self.form)
+        # print("-----------------------------------------------------------")
+        # pprint(expected_message)
+        # print("*********************************")
+        # pprint(actual_message)
+        # print("-----------------------------------------------------------")
+        # pprint(expected_email_error)
+        # print("*********************************")
+        # pprint(actual_email_error)
+        # print("-----------------------------------------------------------")
+        # pprint(expected_user_error)
+        # print("*********************************")
+        # pprint(actual_user_error)
+        # print("-----------------------------------------------------------")
 
-        result = self.form.configure_username_confirmation()
+        self.assertEqual(expected_message, actual_message)
+        self.assertEqual(expected_email_error, actual_email_error)
+        self.assertEqual(expected_user_error, actual_user_error)
 
-        self.assertDictEqual(expected_data, self.form.data)
-        self.assertNotEqual(initial_data, expected_data)
-        self.assertIsNot(test_data, self.form.data)
-
-        self.assertIn(self.form.name_for_user, self.form.fields)
-        self.assertIn(self.form.name_for_email, self.form.fields)
-        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.fields)
-
-        self.form.computed_fields = original_computed_fields
+        self.form.data = original_data
         self.form.fields = original_fields
-        self.form.data = test_data
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.clean = original_clean
         self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
         if original_cleaned_data is None:
             del self.form.cleaned_data
 
-    # @skip("Not Implemented")
-    # def test_configure_username_confirmation(self):
-    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
-    #     pass
+    def test_clean_calls_handle_flag_field(self):
+        """If not compute errors, clean method raises ValidationError for non-empty return from handle_flag_field. """
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        self.form.cleaned_data = new_cleaned_data.copy()
+        # expected_error = {self.form.name_for_email: "test email error", self.form.name_for_user: "test user error"}
+        expected_error = "The replace_handle_flag_field test return value. "
+        def replace_handle_flag_field(email, user): return expected_error
+        self.form.handle_flag_field = replace_handle_flag_field
+        with self.assertRaisesMessage(ValidationError, expected_error):
+            self.form.clean()
 
-    # @skip("Not Implemented")
-    # def test_configure_username_confirmation(self):
-    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
-    #     pass
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
-    # @skip("Not Implemented")
-    # def test_configure_username_confirmation(self):
-    #     """The configure_username_confirmation method modifies the data, the fields & computed_fields, and returns expected message. """
-    #     # configure_username_confirmation(self, name_for_user=None, name_for_email=None):
-    #     pass
+    def test_clean_returns_cleaned_data(self):
+        """If not compute errors, handle_flag_errors, or other errors, clean returns cleaned_data & updates fields. """
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        new_cleaned_data[self.form.USERNAME_FLAG_FIELD] = False
+        self.form.cleaned_data = new_cleaned_data.copy()
+        expected_fields = {**original_fields, **original_computed_fields}
 
-    # TODO: tests for handle_flag_field
+        cleaned_data = self.form.clean()
+        self.assertDictEqual(new_cleaned_data, cleaned_data)
+        self.assertDictEqual(expected_fields, self.form.fields)
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+
+    def test_no_flag_handle_flag_field(self):
+        """If there is no flag field, expected return of None. """
+        original_flag_name = self.form.USERNAME_FLAG_FIELD
+        self.form.USERNAME_FLAG_FIELD = "This is not a valid field name"
+        expected = None
+        actual = self.form.handle_flag_field(self.form.name_for_email, self.form.name_for_user)
+
+        self.assertEqual(expected, actual)
+        self.form.USERNAME_FLAG_FIELD = original_flag_name
+
+    def test_no_error_handle_flag_field(self):
+        """If there is no error found during handle_flag_field, expected return of an empty Dict. """
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        new_cleaned_data[self.form.USERNAME_FLAG_FIELD] = True  # False
+        user_field = self.form.computed_fields.pop(self.form.name_for_user, None)
+        self.form.fields.update({self.form.name_for_user: user_field})
+        email_field = self.form.fields[self.form.name_for_email]
+        email_field.initial = new_cleaned_data[self.form.name_for_email]
+        self.form.cleaned_data = new_cleaned_data.copy()
+        expected = {}
+        actual = self.form.handle_flag_field(self.form.name_for_email, self.form.name_for_user)
+
+        self.assertIsNotNone(user_field)
+        self.assertFalse(email_field.has_changed(email_field.initial, self.form.cleaned_data[self.form.name_for_email]))
+        self.assertEqual(expected, actual)
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+
+    def test_username_of_email_exists_handle_flag_field(self):
+        """If current email matches an existing username, handle_flag_field returns a Dict with that error. """
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        email_val = getattr(self.user, self.form.name_for_user, None)
+        new_cleaned_data = {self.form.name_for_user: email_val, self.form.name_for_email: email_val}
+        new_cleaned_data[self.form.USERNAME_FLAG_FIELD] = False
+        user_field = self.form.computed_fields.pop(self.form.name_for_user, None)
+        self.form.fields.update({self.form.name_for_user: user_field})
+        self.form.cleaned_data = new_cleaned_data.copy()
+        expected_message = "You must give a unique email not shared with other users (or create a username). "
+        expected = {self.form.name_for_email: expected_message}
+        actual = self.form.handle_flag_field(self.form.name_for_email, self.form.name_for_user)
+
+        self.assertIsNotNone(email_val)
+        self.assertIsNotNone(user_field)
+        self.assertEqual(email_val, self.form.data.get(self.form.name_for_email, None))
+        self.assertEqual(expected, actual)
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+
+    def test_email_works_as_username_handle_flag_field(self):
+        """If current email is a valid username, set username value in cleaned_data. No error returned. """
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        email_val = self.form_test_data.get(self.form.name_for_email)  # was overwritten for form request.
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: email_val}
+        new_cleaned_data[self.form.USERNAME_FLAG_FIELD] = False
+        user_field = self.form.computed_fields.pop(self.form.name_for_user, None)
+        self.form.fields.update({self.form.name_for_user: user_field})
+        email_field = self.form.fields[self.form.name_for_email]
+        email_field.initial = getattr(self.user, self.form.name_for_user)
+        self.form.cleaned_data = new_cleaned_data.copy()
+        expected = {}
+        actual = self.form.handle_flag_field(self.form.name_for_email, self.form.name_for_user)
+        actual_username = self.form.cleaned_data.get(self.form.name_for_user, None)
+
+        self.assertIsNotNone(email_val)
+        self.assertIsNotNone(user_field)
+        self.assertTrue(email_field.has_changed(email_field.initial, self.form.cleaned_data[self.form.name_for_email]))
+        self.assertNotEqual(getattr(self.user, self.form.name_for_user), email_val)
+        self.assertNotEqual(new_cleaned_data[self.form.name_for_user], actual_username)
+        self.assertEqual(email_val, actual_username)
+        self.assertEqual(expected, actual)
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+
+    def test_bad_flag_handle_flag_field(self):
+        """If they should have unchecked the flag field, return a Dict with that error. """
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        email_val = self.form_test_data.get(self.form.name_for_email)  # was overwritten for form request.
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: email_val}
+        new_cleaned_data[self.form.USERNAME_FLAG_FIELD] = True
+        user_field = self.form.computed_fields.pop(self.form.name_for_user, None)
+        self.form.fields.update({self.form.name_for_user: user_field})
+        email_field = self.form.fields[self.form.name_for_email]
+        email_field.initial = getattr(self.user, self.form.name_for_user)
+        self.form.cleaned_data = new_cleaned_data.copy()
+        message = "Un-check the box, or leave empty, if you want to use this email address. "
+        expected = {self.form.USERNAME_FLAG_FIELD: message}
+        actual = self.form.handle_flag_field(self.form.name_for_email, self.form.name_for_user)
+        actual_username = self.form.cleaned_data.get(self.form.name_for_user, None)
+
+        self.assertIsNotNone(email_val)
+        self.assertIsNotNone(user_field)
+        self.assertTrue(email_field.has_changed(email_field.initial, self.form.cleaned_data[self.form.name_for_email]))
+        self.assertNotEqual(getattr(self.user, self.form.name_for_user), email_val)
+        self.assertEqual(new_cleaned_data[self.form.name_for_user], actual_username)
+        self.assertNotEqual(email_val, actual_username)
+        self.assertEqual(expected, actual)
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
 
 class CountryTests(FormTests, TestCase):
     form_class = CountryForm
+
+    def empty_good_practice_attrs(self): return {}
+    def empty_get_overrides(self): return {}  # return self.form.good_practice_attrs()
+    def empty_get_alt_field_info(self): return {}
+
+    def setUp(self):
+        # self.user = self.make_user()
+        # self.form = self.make_form_request()
+        super().setUp()
+        self.original_good_practice_attrs = self.form.good_practice_attrs
+        self.original_get_overrides = self.form.get_overrides
+        self.original_get_alt_field_info = self.form.get_alt_field_info
+        self.form.good_practice_attrs = self.empty_good_practice_attrs
+        self.form.get_overrides = self.empty_get_overrides
+        self.form.get_alt_field_info = self.empty_get_alt_field_info
+        # fd = self.form.fields
+        # test_initial = {'first': fd['first'].initial, 'second': fd['second'].initial, 'last': fd['last'].initial}
+        # test_initial['generic_field'] = fd['generic_field'].initial
+        # test_data = MultiValueDict()
+        # test_data.update({name: f"test_value_{name}" for name in test_initial})
+        # self.test_initial = test_initial
+        # self.test_data = test_data
+
+    def test_setup(self):
+        """Are the overriden methods the new empty versions? """
+        self.assertIsNotNone(getattr(self, 'original_good_practice_attrs', None))
+        self.assertIsNotNone(getattr(self, 'original_get_overrides', None))
+        self.assertIsNotNone(getattr(self, 'original_get_alt_field_info', None))
+        print("================ TEST SETUP ======================")
+        print(self.form.good_practice_attrs())
+        print(self.form.get_overrides())
+        print(self.form.get_alt_field_info())
+        print(self.form.good_practice_attrs.__name__)
+        print(self.form.get_overrides.__name__)
+        print(self.form.get_alt_field_info.__name__)
+        self.assertEqual({}, self.form.good_practice_attrs())
+        self.assertEqual({}, self.form.get_overrides())
+        self.assertEqual({}, self.form.get_alt_field_info())
+
+    @skip("Hold for testing. ")
+    def test_as_table(self):
+        super().test_as_table()
+
+    @skip("Hold for testing. ")
+    def test_as_ul(self):
+        super().test_as_ul()

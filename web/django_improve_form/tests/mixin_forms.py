@@ -8,7 +8,7 @@ from django.forms import (Form, CharField, EmailField, BooleanField, ChoiceField
 # , ModelForm, BaseModelForm, ModelFormMetaclass
 from django.contrib.auth.forms import UserCreationForm  # , UserChangeForm
 from ..mixins import (
-    FocusMixIn, CriticalFieldMixIn, ComputedFieldsMixIn, FormOverrideMixIn, FormFieldsetMixIn,
+    DEFAULT_COUNTRY, FocusMixIn, CriticalFieldMixIn, ComputedFieldsMixIn, FormOverrideMixIn, FormFieldsetMixIn,
     ComputedUsernameMixIn, OverrideCountryMixIn,
     FieldsetOverrideMixIn,  # FieldsetOverrideComputedMixIn, FieldsetOverrideUsernameMixIn,
     # AddressMixIn, AddressUsernameMixIn,
@@ -107,7 +107,32 @@ class ComputedUsernameForm(ComputedUsernameMixIn, UserCreationForm):
 
 
 class CountryForm(OverrideCountryMixIn, Form):
+    DEFAULT_CITY = 'Seattle'
+    DEFAULT_COUNTRY_AREA_STATE = 'WA'
+    # Already imported DEFAULT_COUNTRY
+
     generic_field = CharField()
+    billing_address_1 = CharField(label='street address (line 1)', max_length=191, required=False, )
+    billing_address_2 = CharField(label='street address (continued)', max_length=191, required=False, )
+    billing_city = CharField(label='city', max_length=191, initial=DEFAULT_CITY, required=False, )
+    billing_country_area = CharField(label='state', max_length=2, initial=DEFAULT_COUNTRY_AREA_STATE, required=False, )
+    billing_postcode = CharField(label='zipcode', max_length=10, required=False, )
+    billing_country_code = CharField(label='country', initial=DEFAULT_COUNTRY, max_length=2, required=False,)
+
+    def clean_billing_city(self):
+        if not self['billing_city'].html_name in self.data:
+            return self.fields['billing_city'].initial
+        return self.cleaned_data['billing_city']
+
+    def clean_billing_country_area(self):
+        if not self['billing_country_area'].html_name in self.data:
+            return self.fields['billing_country_area'].initial
+        return self.cleaned_data['billing_country_area']
+
+    def clean_billing_country_code(self):
+        if not self['billing_country_code'].html_name in self.data:
+            return self.fields['billing_country_code'].initial
+        return self.cleaned_data['billing_country_code']
 
 
 # # MixIn Interactions # #
