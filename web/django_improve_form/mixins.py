@@ -446,39 +446,31 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         """If the user gave a non-shared email, we expect flag is False, and no username value. """
         flag_name = self.USERNAME_FLAG_FIELD
         flag_field = self.fields.get(flag_name, None) or self.computed_fields.get(flag_name, None)
-        print("==================== ComputedUsernameMixIn.handle_flag_field =====================================")
+        # print("==================== ComputedUsernameMixIn.handle_flag_field =====================================")
         if not flag_field:
-            print("No flag field")
             return
         flag_value = self.cleaned_data[flag_name]
-        flag_changed = flag_field.has_changed(flag_field.initial, flag_value)
+        # flag_changed = flag_field.has_changed(flag_field.initial, flag_value)
         email_field = self.fields[email_field_name]
         email_value = self.cleaned_data[email_field_name]
         email_changed = email_field.has_changed(email_field.initial, email_value)
-        user_field = self.fields[user_field_name]
-        user_value = self.cleaned_data[user_field_name]
-        user_changed = user_field.has_changed(user_field.initial, user_value)
-        flag_data = f"Init: {flag_field.initial} | Clean: {flag_value} | New: {flag_changed} "
-        email_data = f"Init: {email_field.initial} | Clean: {email_value} | New: {email_changed} "
-        user_data = f"Init: {user_field.initial} | Clean: {user_value} | New: {user_changed} "
-        pprint(flag_data)
-        pprint(email_data)
-        pprint(user_data)
+        # user_field = self.fields[user_field_name]
+        # user_value = self.cleaned_data[user_field_name]
+        # user_changed = user_field.has_changed(user_field.initial, user_value)
+        # flag_data = f"Init: {flag_field.initial} | Clean: {flag_value} | New: {flag_changed} "
+        # email_data = f"Init: {email_field.initial} | Clean: {email_value} | New: {email_changed} "
+        # user_data = f"Init: {user_field.initial} | Clean: {user_value} | New: {user_changed} "
         error_collected = {}
         if not flag_value:  # Using email as username, confirm it is unique.
-            lookup = {"{}__iexact".format(self.user_model.USERNAME_FIELD): email_value}
-            try:
-                if self.user_model._default_manager.filter(**lookup).exists():  # not email_changed or
-                    message = "You must give a unique email not shared with other users (or create a username). "
-                    error_collected[email_field_name] = _(message)
-            except Exception as e:
-                print("Could not lookup if the new email is already used as a username. ")
-                print(e)
+            lookup = {"{}__iexact".format(self.form.name_for_user): email_value}
+            if self.user_model._default_manager.filter(**lookup).exists():  # not email_changed or
+                message = "You must give a unique email not shared with other users (or create a username). "
+                error_collected[email_field_name] = _(message)
             self.cleaned_data[user_field_name] = email_value
         elif email_changed:
             message = "Un-check the box, or leave empty, if you want to use this email address. "
             error_collected[flag_name] = _(message)
-        print("------------------------- END ComputedUsernameMixIn.handle_flag_field END ------------------------")
+        # print("------------------------- END ComputedUsernameMixIn.handle_flag_field END ------------------------")
         return error_collected
 
     def clean(self):
