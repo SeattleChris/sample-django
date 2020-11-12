@@ -1773,7 +1773,6 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         test_data = MultiValueDict()
         test_data.update(self.form_test_data)
         test_data.update({email_name: getattr(self.user, email_name)})
-        # test_data._mutable = False
         self.test_data = test_data
         self.form = self.make_form_request(method='POST', data=test_data)
 
@@ -1844,10 +1843,10 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_focus_method is None:
             def mock_focus_method(name, *args, **kwargs): return name
             setattr(self.form, 'assign_focus_field', mock_focus_method)
-        expected = self.form.name_for_email
-        actual = getattr(self.form, 'named_focus', None)
         message = self.form.configure_username_confirmation()
         message = None if not message else message
+        expected = self.form.name_for_email
+        actual = getattr(self.form, 'named_focus', None)
 
         self.assertIsNotNone(message)
         self.assertTrue(hasattr(self.form, 'assign_focus_field'))
@@ -1902,10 +1901,8 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.fields = original_fields
         self.form.computed_fields = original_computed_fields
 
-    # @skip("Not Implemented")
     def test_message_configure_username_confirmation(self):
         """The configure_username_confirmation method adds  'email' and 'username' errors and returns a message. """
-        # from pprint import pprint
         original_data = self.form.data
         original_fields = self.form.fields
         original_computed_fields = self.form.computed_fields
@@ -1922,17 +1919,15 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 
         login_link = self.form.get_login_message(link_text='login to existing account', link_only=True)
         expected_email_error = "Use a non-shared email, or {}. ".format(login_link)
-        # self.add_error(name_for_email, mark_safe(_(text)))
         e_note = "Typically people have their own unique email address, which you can update. "
         e_note += "If you share an email with another user, then you will need to create a username for your login. "
         expected_user_error = e_note
-        # self.add_error(name_for_user, (_(e_note)))
         title = "Login with existing account, change to a non-shared email, or create a username. "
         message = "Did you already make an account, or have one because you've had classes with us before? "
         expected_message = format_html(
             "<h3>{}</h3> <p>{} <br />{}</p>",
-            title,  # _(title),
-            message,  # _(message),
+            title,
+            message,
             self.form.get_login_message(reset=True),
             )
         # print("=============== test_configure_username_confirmation ===================")
@@ -2007,10 +2002,8 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_cleaned_data is None:
             del self.form.cleaned_data
 
-    # @skip("Not Implemented")
     def test_clean_calls_handle_flag_field(self):
         """If not compute errors, clean method raises ValidationError for non-empty return from handle_flag_field. """
-        # from pprint import pprint
         original_data = self.form.data
         original_fields = self.form.fields
         original_computed_fields = self.form.computed_fields
