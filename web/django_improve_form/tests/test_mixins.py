@@ -2247,3 +2247,33 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 
 class CountryTests(FormTests, TestCase):
     form_class = CountryForm
+
+    def empty_good_practice_attrs(self): return {}
+    def empty_get_overrides(self): return self.form.good_practice_attrs()
+    def empty_get_alt_field_info(self): return {}
+
+    def setUp(self):
+        # self.user = self.make_user()
+        # self.form = self.make_form_request()
+        super().setUp()
+        self.original_good_practice_attrs = self.form.good_practice_attrs
+        self.original_get_overrides = self.form.get_overrides
+        self.original_get_alt_field_info = self.form.get_alt_field_info
+        self.form.good_practice_attrs = self.empty_good_practice_attrs
+        self.form.get_overrides = self.empty_get_overrides
+        self.form.get_alt_field_info = self.empty_get_alt_field_info
+        # fd = self.form.fields
+        # test_initial = {'first': fd['first'].initial, 'second': fd['second'].initial, 'last': fd['last'].initial}
+        # test_initial['generic_field'] = fd['generic_field'].initial
+        # test_data = MultiValueDict()
+        # test_data.update({name: f"test_value_{name}" for name in test_initial})
+        # self.test_initial = test_initial
+        # self.test_data = test_data
+
+    @skip("Hold for testing. ")
+    def test_as_table(self):
+        super().test_as_table()
+
+    @skip("Hold for testing. ")
+    def test_as_ul(self):
+        super().test_as_ul()
