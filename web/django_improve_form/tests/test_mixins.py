@@ -2168,17 +2168,19 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         new_cleaned_data[self.form.USERNAME_FLAG_FIELD] = False
         user_field = self.form.computed_fields.pop(self.form.name_for_user, None)
         self.form.fields.update({self.form.name_for_user: user_field})
+        email_field = self.form.fields[self.form.name_for_email]
+        email_field.initial = getattr(self.user, self.form.name_for_user)
         self.form.cleaned_data = new_cleaned_data.copy()
         expected = {}
         actual = self.form.handle_flag_field(self.form.name_for_email, self.form.name_for_user)
-        expected_username = email_val
         actual_username = self.form.cleaned_data.get(self.form.name_for_user, None)
 
         self.assertIsNotNone(email_val)
         self.assertIsNotNone(user_field)
+        self.assertTrue(email_field.has_changed(email_field.initial, self.form.cleaned_data[self.form.name_for_email]))
         self.assertNotEqual(getattr(self.user, self.form.name_for_user), email_val)
         self.assertNotEqual(new_cleaned_data[self.form.name_for_user], actual_username)
-        self.assertEqual(expected_username, actual_username)
+        self.assertEqual(email_val, actual_username)
         self.assertEqual(expected, actual)
 
         self.form.data = original_data
