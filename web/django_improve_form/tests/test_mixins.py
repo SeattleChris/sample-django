@@ -2152,7 +2152,6 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_cleaned_data is None:
             del self.form.cleaned_data
 
-    @skip("Not Implemented")
     def test_email_works_as_username_handle_flag_field(self):
         """If current email is a valid username, set username value in cleaned_data. No error returned. """
         original_data = self.form.data
@@ -2164,10 +2163,23 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.fields = original_fields.copy()
         self.form.computed_fields = original_computed_fields.copy()
         self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
-        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        email_val = self.form_test_data.get(self.form.name_for_email)  # was overwritten for form request.
+        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: email_val}
+        new_cleaned_data[self.form.USERNAME_FLAG_FIELD] = False
+        user_field = self.form.computed_fields.pop(self.form.name_for_user, None)
+        self.form.fields.update({self.form.name_for_user: user_field})
         self.form.cleaned_data = new_cleaned_data.copy()
+        expected = {}
+        actual = self.form.handle_flag_field(self.form.name_for_email, self.form.name_for_user)
+        expected_username = email_val
+        actual_username = self.form.cleaned_data.get(self.form.name_for_user, None)
 
-        # Do stuff
+        self.assertIsNotNone(email_val)
+        self.assertIsNotNone(user_field)
+        self.assertNotEqual(getattr(self.user, self.form.name_for_user), email_val)
+        self.assertNotEqual(new_cleaned_data[self.form.name_for_user], actual_username)
+        self.assertEqual(expected_username, actual_username)
+        self.assertEqual(expected, actual)
 
         self.form.data = original_data
         self.form.fields = original_fields
