@@ -2042,10 +2042,8 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_cleaned_data is None:
             del self.form.cleaned_data
 
-    @skip("Not Implemented")
     def test_clean_returns_cleaned_data(self):
-        """If not compute errors, handle_flag_errors, or other errors, clean returns cleaned_data. """
-        # from pprint import pprint
+        """If not compute errors, handle_flag_errors, or other errors, clean returns cleaned_data & updates fields. """
         original_data = self.form.data
         original_fields = self.form.fields
         original_computed_fields = self.form.computed_fields
@@ -2056,10 +2054,13 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.computed_fields = original_computed_fields.copy()
         self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
         new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
+        new_cleaned_data[self.form.USERNAME_FLAG_FIELD] = False
         self.form.cleaned_data = new_cleaned_data.copy()
+        expected_fields = {**original_fields, **original_computed_fields}
 
         cleaned_data = self.form.clean()
         self.assertDictEqual(new_cleaned_data, cleaned_data)
+        self.assertDictEqual(expected_fields, self.form.fields)
 
         self.form.data = original_data
         self.form.fields = original_fields
