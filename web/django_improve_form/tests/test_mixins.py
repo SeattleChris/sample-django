@@ -1810,6 +1810,7 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.fields = original_fields.copy()
         self.form.USERNAME_FLAG_FIELD = 'Not a valid field name'
         self.form.cleaned_data = {self.form.name_for_user: 'test_username', self.form.name_for_email: 'test_email'}
+        # self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
         self.form._errors = None if original_errors is None else original_errors.copy()
 
         with self.assertRaises(ImproperlyConfigured):
@@ -1825,7 +1826,6 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_errors is None:
             del self.form._errors
 
-    @skip("Not Implemented")
     def test_focus_update_for_configure_username_confirmation(self):
         """If the assign_focus_field method is present, then we expect email field to get the focus. """
         original_data = self.form.data
@@ -1839,23 +1839,20 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form.fields = original_fields.copy()
         self.form.computed_fields = original_computed_fields.copy()
         self.form.cleaned_data = {self.form.name_for_user: 'test_username', self.form.name_for_email: 'test_email'}
-        self.form._errors = None if original_errors is None else original_errors.copy()
-        self.form.named_focus = None
-        test_value = 'value for method test'
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
+        self.form.named_focus = ''
         if original_focus_method is None:
-            def mock_focus_method(name, *args, **kwargs): return test_value  # return name
-            self.form.assigned_focus_field = mock_focus_method
+            def mock_focus_method(name, *args, **kwargs): return name
+            setattr(self.form, 'assign_focus_field', mock_focus_method)
+        expected = self.form.name_for_email
+        actual = getattr(self.form, 'named_focus', None)
         message = self.form.configure_username_confirmation()
         message = None if not message else message
-        # valid = self.form.is_valid()
-        # self.form.full_clean()
-        # expected_focus = self.form.name_for_email
-        expected_focus = test_value
-        actual_focus = getattr(self.form, 'named_focus', None)
 
-        # self.assertFalse(valid)
         self.assertIsNotNone(message)
-        self.assertEqual(expected_focus, actual_focus)
+        self.assertTrue(hasattr(self.form, 'assign_focus_field'))
+        self.assertEqual(expected, self.form.assign_focus_field(expected))
+        self.assertEqual(expected, actual)
 
         self.form.data = original_data
         self.form.fields = original_fields
@@ -1867,7 +1864,7 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         if original_focus is None:
             del self.form.named_focus
         if original_focus_method is None:
-            del self.form.assign_focus_method
+            del self.form.assign_focus_field
         if original_cleaned_data is None:
             del self.form.cleaned_data
         if original_errors is None:
