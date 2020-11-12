@@ -2249,7 +2249,7 @@ class CountryTests(FormTests, TestCase):
     form_class = CountryForm
 
     def empty_good_practice_attrs(self): return {}
-    def empty_get_overrides(self): return self.form.good_practice_attrs()
+    def empty_get_overrides(self): return {}  # return self.form.good_practice_attrs()
     def empty_get_alt_field_info(self): return {}
 
     def setUp(self):
@@ -2269,6 +2269,22 @@ class CountryTests(FormTests, TestCase):
         # test_data.update({name: f"test_value_{name}" for name in test_initial})
         # self.test_initial = test_initial
         # self.test_data = test_data
+
+    def test_setup(self):
+        """Are the overriden methods the new empty versions? """
+        self.assertIsNotNone(getattr(self, 'original_good_practice_attrs', None))
+        self.assertIsNotNone(getattr(self, 'original_get_overrides', None))
+        self.assertIsNotNone(getattr(self, 'original_get_alt_field_info', None))
+        print("================ TEST SETUP ======================")
+        print(self.form.good_practice_attrs())
+        print(self.form.get_overrides())
+        print(self.form.get_alt_field_info())
+        print(self.form.good_practice_attrs.__name__)
+        print(self.form.get_overrides.__name__)
+        print(self.form.get_alt_field_info.__name__)
+        self.assertEqual({}, self.form.good_practice_attrs())
+        self.assertEqual({}, self.form.get_overrides())
+        self.assertEqual({}, self.form.get_alt_field_info())
 
     @skip("Hold for testing. ")
     def test_as_table(self):
