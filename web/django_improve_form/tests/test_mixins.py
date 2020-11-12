@@ -827,6 +827,45 @@ class ComputedTests(FormTests, TestCase):
             self.form.cleaned_data = original_cleaned_data
         self.form._errors = original_errors
 
+    def test_clean_moves_computed_fields_to_fields(self):
+        """If no errors, clean method adds all compute_fields to fields. """
+        name = 'test_field'
+        if isinstance(self.form.computed_fields, (list, tuple)):
+            self.form.computed_fields = self.form.get_computed_fields([name])
+        computed_names = list(self.form.computed_fields.keys())
+        field_names = list(self.form.fields.keys())
+        field_data = {f_name: f"input_{f_name}_{i}" for i, f_name in enumerate(field_names)}
+        field_data.update({name: f"value_{f_name}_{i}" for i, f_name in enumerate(computed_names)})
+        original_data = self.form.data
+        original_fields = self.form.fields
+        original_computed_fields = self.form.computed_fields
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form.data = original_data.copy()
+        self.form.fields = original_fields.copy()
+        self.form.computed_fields = original_computed_fields.copy()
+        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()  # mimic full_clean
+        populated_cleaned_data = deepcopy(original_cleaned_data or {})
+        populated_cleaned_data.update(field_data)
+        self.form.cleaned_data = populated_cleaned_data.copy()  # ensure cleaned_data is present (mimic full_clean)
+        final_cleaned_data = self.form.clean()
+
+        self.assertIn(name, computed_names)
+        self.assertNotIn(name, field_names)
+        self.assertEqual(1, len(computed_names))
+        self.assertIn(name, self.form.fields)
+        self.assertNotEqual(original_cleaned_data, final_cleaned_data)
+
+        self.form.data = original_data
+        self.form.fields = original_fields
+        self.form.computed_fields = original_computed_fields
+        self.form._errors = original_errors
+        self.form.cleaned_data = original_cleaned_data
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
+
 
 class OverrideTests(FormTests, TestCase):
     form_class = OverrideForm
@@ -1960,43 +1999,6 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
         self.form._errors = original_errors
         self.form.clean = original_clean
         self.form.cleaned_data = original_cleaned_data
-        if original_errors is None:
-            del self.form._errors
-        if original_cleaned_data is None:
-            del self.form.cleaned_data
-
-    @skip("Not Needed for this test suite")
-    def test_clean_moves_computed_fields_to_fields(self):
-        """Possibly add to ComputeFields test. If not errors, clean method adds all compute_fields to fields. """
-        # from pprint import pprint
-        original_data = self.form.data
-        original_fields = self.form.fields
-        original_computed_fields = self.form.computed_fields
-        original_errors = getattr(self.form, '_errors', None)
-        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
-        original_handle_flag_field = self.form.handle_flag_field
-        self.form.data = original_data.copy()
-        self.form.fields = original_fields.copy()
-        self.form.computed_fields = original_computed_fields.copy()
-        self.form._errors = ErrorDict() if original_errors is None else original_errors.copy()
-        new_cleaned_data = {self.form.name_for_user: 'test_value', self.form.name_for_email: 'test_value'}
-        self.form.cleaned_data = new_cleaned_data.copy()
-        def replace_handle_flag_field(email, user): return {}
-        self.form.handle_flag_field = replace_handle_flag_field
-
-        expected_fields = original_fields.copy()
-        expected_fields.update(original_computed_fields)
-        cleaned_data = self.form.clean()
-        actual_fields = self.form.fields
-
-        self.assertDictEqual(expected_fields, actual_fields)
-        self.assertDictEqual(new_cleaned_data, cleaned_data)
-        self.form.data = original_data
-        self.form.fields = original_fields
-        self.form.computed_fields = original_computed_fields
-        self.form._errors = original_errors
-        self.form.cleaned_data = original_cleaned_data
-        self.form.handle_flag_field = original_handle_flag_field
         if original_errors is None:
             del self.form._errors
         if original_cleaned_data is None:
