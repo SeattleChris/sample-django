@@ -462,7 +462,7 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         # user_data = f"Init: {user_field.initial} | Clean: {user_value} | New: {user_changed} "
         error_collected = {}
         if not flag_value:  # Using email as username, confirm it is unique.
-            lookup = {"{}__iexact".format(self.form.name_for_user): email_value}
+            lookup = {"{}__iexact".format(self.name_for_user): email_value}
             if self.user_model._default_manager.filter(**lookup).exists():  # not email_changed or
                 message = "You must give a unique email not shared with other users (or create a username). "
                 error_collected[email_field_name] = _(message)
