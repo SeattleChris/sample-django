@@ -2270,6 +2270,7 @@ class CountryTests(FormTests, TestCase):
         self.assertIsNotNone(getattr(self, 'original_good_practice_attrs', None))
         self.assertIsNotNone(getattr(self, 'original_get_overrides', None))
         self.assertIsNotNone(getattr(self, 'original_get_alt_field_info', None))
+        self.assertIsNone(getattr(self.form, 'is_prepared', None))
         print("================ TEST SETUP ======================")
         self.assertNotIn('good_practice_attrs', self.form.has_call)
         self.assertNotIn('get_overrides', self.form.has_call)
