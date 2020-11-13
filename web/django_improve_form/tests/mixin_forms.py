@@ -106,7 +106,7 @@ class ComputedUsernameForm(ComputedUsernameMixIn, UserCreationForm):
         fields = ['first_name', 'last_name', 'email', 'username', ]
 
 
-class CountryForm(OverrideCountryMixIn, Form):
+class BaseCountryForm(Form):
     DEFAULT_CITY = 'Seattle'
     DEFAULT_COUNTRY_AREA_STATE = 'WA'
     # Already imported DEFAULT_COUNTRY
@@ -135,6 +135,10 @@ class CountryForm(OverrideCountryMixIn, Form):
         return self.cleaned_data['billing_country_code']
 
 
+class CountryForm(OverrideCountryMixIn, BaseCountryForm):
+    pass
+
+
 # # MixIn Interactions # #
 
 
@@ -148,9 +152,9 @@ class UsernameFocusForm(FocusMixIn, ComputedUsernameMixIn, Form):
     generic_field = CharField()
 
 
-class ComputedCountryForm(OverrideCountryMixIn, ComputedFieldsMixIn):
+class ComputedCountryForm(OverrideCountryMixIn, ComputedFieldsMixIn, BaseCountryForm):
     """The Computed get_critical_field method & computed_fields property are used in OverrideCountryMixIn.__init__. """
-    generic_field = CharField()
+    pass
 
 
 class ModelSimpleFlowTests(BaseRegisterTests, TestCase):
