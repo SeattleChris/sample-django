@@ -299,7 +299,7 @@ class FormTests:
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
         expected = self.get_expected_format(setup)
         if output != expected:
-            self.log_html_diff(expected, output, as_type='as_ul', full=False)  # , full=False)
+            self.log_html_diff(expected, output, as_type='as_ul', full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
@@ -1242,10 +1242,8 @@ class OverrideTests(FormTests, TestCase):
         """False goal, adding takes precedence. Adding only triggered because a value is inserted in form data. """
         self.assertFalse(False)
 
-    # @skip("Not Implemented")
     def test_prep_overrides(self):
         """Applies overrides of field widget attrs if name is in overrides. """
-        # from pprint import pprint
         original_data = self.form.data
         test_data = original_data.copy()
         test_data._mutable = False
@@ -1295,7 +1293,7 @@ class OverrideTests(FormTests, TestCase):
             if possible_size and width_attr_name:
                 attrs[width_attr_name] = str(min(possible_size))
             expected_attrs[name] = attrs
-        # print("======================== test_prep_overrides ============================")
+        # Expected:
         # formfield_attrs_overrides = {
         #     '_default_': {'size': 15, 'cols': 20, 'rows': 4, },
         #     'first': {'maxlength': 191, 'size': 20, },
@@ -1310,21 +1308,16 @@ class OverrideTests(FormTests, TestCase):
         second_maxlength = expected_attrs['second']['maxlength']  # overrides['second']['maxlength']
         last_maxlength = expected_attrs['last']['maxlength']  # overrides['last']['maxlength']
         last_size = expected_attrs['last']['size']  # overrides['last']['size']
-        # tests
+
         self.assertEqual(first_maxlength, result_fields['first'].widget.attrs.get('maxlength', None))
         self.assertEqual(first_size, result_fields['first'].widget.attrs.get('size', None))
         self.assertEqual(second_maxlength, result_fields['second'].widget.attrs.get('maxlength', None))
         self.assertEqual(last_maxlength, result_fields['last'].widget.attrs.get('maxlength', None))
         self.assertEqual(last_size, result_fields['last'].widget.attrs.get('size', None))
         for key, val in expected_attrs.items():
-            # print(key, "\n")
-            # pprint(val)
-            # print("--------------------------------------------------------------------------------")
-            # pprint(result_attrs[key])
-            # print("********************************************************************************")
             self.assertEqual(val, result_attrs[key])
         self.assertDictEqual(expected_attrs, result_attrs)
-        # tear-down: reset back to original state.
+
         self.form.alt_field_info = original_alt_field_info
         if original_alt_field_info is None:
             del self.form.alt_field_info
@@ -1347,10 +1340,8 @@ class OverrideTests(FormTests, TestCase):
         """Does not apply measurements if it is not an appropriate form input type. """
         pass
 
-    # @skip("Not Implemented")
     def test_prep_field_properties(self):
         """If field name is in alt_field_info, the field properties are modified as expected (field.<thing>). """
-        # from pprint import pprint
         original_data = self.form.data
         test_data = original_data.copy()
         # modify values in data
@@ -1368,39 +1359,22 @@ class OverrideTests(FormTests, TestCase):
         self.form.alt_field_info = self.alt_field_info
         self.form.test_condition_response = True
         expected_fields_info = test_fields_info.copy()
-        # print("======================== test_prep_field_properties ============================")
-        # {'alt_test_feature': {
-        #     'first': {
-        #             'label': "Alt First Label",
-        #             'help_text': '',
-        #             'initial': 'alt_first_initial', },
-        #     'last': {
-        #             'label': None,
-        #             'initial': 'alt_last_initial',
-        #             'help_text': '', },
-        #     }}
         result_fields = self.form.prep_fields()
         result_fields_info = {name: field.__dict__.copy() for name, field in result_fields.items()}
-
         modified_info = self.alt_field_info['alt_test_feature']
         first_label = modified_info['first']['label']
         first_initial = modified_info['first']['initial']
         last_initial = modified_info['last']['initial']
         for name, opts in modified_info.items():
             expected_fields_info[name].update(opts)
-        # tests
+
         self.assertEqual(first_label, result_fields['first'].label)
         self.assertEqual(first_initial, result_fields['first'].initial)
         self.assertEqual(last_initial, result_fields['last'].initial)
         for key, val in expected_fields_info.items():
-            # print(key, "\n")
-            # pprint(val)
-            # print("--------------------------------------------------------------------------------")
-            # pprint(result_fields_info[key])
-            # print("********************************************************************************")
             self.assertEqual(val, result_fields_info[key])
         self.assertDictEqual(expected_fields_info, result_fields_info)
-        # tear-down: reset back to original state.
+
         self.form.test_condition_response = False
         self.form.alt_field_info = original_alt_field_info
         if original_alt_field_info is None:
@@ -2224,14 +2198,7 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 class CountryTests(FormTests, TestCase):
     form_class = CountryForm
 
-    def empty_good_practice_attrs(self): self.form.has_call.append('good_practice_attrs'); return {}
-    def empty_get_overrides(self): self.form.has_call.append('get_overrides'); return self.form.good_practice_attrs()
-    def empty_get_alt_field_info(self): self.form.has_call.append('get_alt_field_info'); return {}
-    def skip_get_overrides(self): self.form.has_call.append('get_overrides'); return self.no_resize_override(empty=True)
-
     def setUp(self):
-        # self.user = self.make_user()
-        # self.form = self.make_form_request()
         super().setUp()
         self.form.has_call = []
         self.original_good_practice_attrs = self.form.good_practice_attrs
@@ -2247,13 +2214,11 @@ class CountryTests(FormTests, TestCase):
         self.form.formfield_attrs_overrides = {}
         self.form.autocomplete = {}
         self.form.alt_field_info = {}
-        # fd = self.form.fields
-        # test_initial = {'first': fd['first'].initial, 'second': fd['second'].initial, 'last': fd['last'].initial}
-        # test_initial['generic_field'] = fd['generic_field'].initial
-        # test_data = MultiValueDict()
-        # test_data.update({name: f"test_value_{name}" for name in test_initial})
-        # self.test_initial = test_initial
-        # self.test_data = test_data
+
+    def empty_good_practice_attrs(self): self.form.has_call.append('good_practice_attrs'); return {}
+    def empty_get_overrides(self): self.form.has_call.append('get_overrides'); return self.form.good_practice_attrs()
+    def empty_get_alt_field_info(self): self.form.has_call.append('get_alt_field_info'); return {}
+    def skip_get_overrides(self): self.form.has_call.append('get_overrides'); return self.no_resize_override(empty=True)
 
     def no_resize_override(self, empty=False, names='all'):
         """Create or update override dict to force skipping resizing step of prep_fields for all or given fields. """
