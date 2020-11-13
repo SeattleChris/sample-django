@@ -2289,6 +2289,14 @@ class CountryTests(FormTests, TestCase):
         if original_data is None:
             del self.form.data
 
+    def get_missing_field(self, name):
+        """Remove & return the named field if it had been moved from fields to removed_fields or computed_fields. """
+        source = getattr(self.form, 'removed_fields', {})
+        if issubclass(self.form.__class__, ComputedFieldsMixIn):
+            source = self.form.computed_fields
+        field = source.pop(name, None)
+        return field
+
     def test_pass_through_prep_country_fields(self):
         """Returns unmodified inputs if form.country_optional is False. """
         original_flag = self.form.country_optional
