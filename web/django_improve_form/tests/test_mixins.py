@@ -2357,9 +2357,49 @@ class CountryTests(FormTests, TestCase):
         if original_computed is not None:
             self.form.computed_fields = original_computed
 
-    @skip("Not Implemented")
     def test_prep_country_fields_flat(self):
         """When kwargs['flat_fields'] = True, the expected fields are put back into remaining_fields. """
+        original_flag = self.form.country_optional
+        self.form.country_optional = True
+        original_fields = self.form.fields
+        original_removed = getattr(self.form, 'removed_fields', None)
+        original_computed = getattr(self.form, 'computed_fields', None)
+        self.form.fields = original_fields.copy()
+        if original_removed is not None:
+            self.form.removed_fields = original_removed.copy()
+        if original_computed is not None:
+            self.form.computed_fields = original_computed.copy()
+        remaining = original_fields.copy()
+        opts, field_rows = {'fake_opts': 'fake', 'fields': ['nope']}, [{'name': 'assigned_field'}]
+        args = ['arbitrary', 'input', 'args']
+        kwargs = {'test_1': 'data_1', 'test_2': 'data_2'}
+        field_names = (self.form.country_field_name, 'country_flag', )
+        if not any(remaining.get(name, None) for name in field_names):
+            fix_fields = {name: self.get_missing_field(name) for name in field_names if name not in remaining}
+            remaining.update(fix_fields)
+        expected_add = {name: remaining[name] for name in field_names if name in remaining}
+        expected_field_rows = field_rows.copy()
+        expected_field_rows.append(expected_add)
+        expected_remaining = {name: field for name, field in remaining.items() if name not in expected_add}
+        expected_opts = deepcopy(opts)
+        # expected_opts['fields'].append(field_names)
+        kwargs['flat_fields'] = True
+        expected_remaining.update(expected_add)
+
+        sent = (opts, field_rows, remaining, *args)
+        r_opts, r_rows, r_remaining, *r_args, r_kwargs = self.form.prep_country_fields(*sent, **kwargs)
+        self.assertEqual(expected_opts, r_opts)
+        self.assertEqual(expected_field_rows, r_rows)
+        self.assertEqual(expected_remaining, r_remaining)
+        self.assertEqual(args, r_args)
+        self.assertEqual(kwargs, r_kwargs)
+
+        self.form.country_optional = original_flag
+        self.form.fields = original_fields
+        if original_removed is not None:
+            self.form.removed_fields = original_removed
+        if original_computed is not None:
+            self.form.computed_fields = original_computed
         pass
 
     @skip("Not Implemented")
