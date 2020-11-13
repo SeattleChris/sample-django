@@ -2224,14 +2224,16 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 class CountryTests(FormTests, TestCase):
     form_class = CountryForm
 
-    def empty_good_practice_attrs(self): return {}
-    def empty_get_overrides(self): return {}  # return self.form.good_practice_attrs()
-    def empty_get_alt_field_info(self): return {}
+    def empty_good_practice_attrs(self): self.form.has_call.append('good_practice_attrs'); return {}
+    def empty_get_overrides(self): self.form.has_call.append('get_overrides'); return self.form.good_practice_attrs()
+    def empty_get_alt_field_info(self): self.form.has_call.append('get_alt_field_info'); return {}
+    def skip_get_overrides(self): self.form.has_call.append('get_overrides'); return self.no_resize_override(empty=True)
 
     def setUp(self):
         # self.user = self.make_user()
         # self.form = self.make_form_request()
         super().setUp()
+        self.form.has_call = []
         self.original_good_practice_attrs = self.form.good_practice_attrs
         self.original_get_overrides = self.form.get_overrides
         self.original_get_alt_field_info = self.form.get_alt_field_info
@@ -2252,18 +2254,40 @@ class CountryTests(FormTests, TestCase):
         # self.test_initial = test_initial
         # self.test_data = test_data
 
+    def no_resize_override(self, empty=False, names='all'):
+        """Create or update override dict to force skipping resizing step of prep_fields for all or given fields. """
+        if names == 'all':
+            names = list(self.form.fields.keys())
+        overrides = {} if empty else getattr(self.form, 'formfield_attrs_overrides', {})
+        add_skip = {'no_size_override': True}
+        for name in names:
+            overrides[name] = overrides.get(name, {})
+            overrides[name].update(add_skip)
+        return overrides
+
     def test_setup(self):
         """Are the overriden methods the new empty versions? """
         self.assertIsNotNone(getattr(self, 'original_good_practice_attrs', None))
         self.assertIsNotNone(getattr(self, 'original_get_overrides', None))
         self.assertIsNotNone(getattr(self, 'original_get_alt_field_info', None))
         print("================ TEST SETUP ======================")
+        self.assertNotIn('good_practice_attrs', self.form.has_call)
+        self.assertNotIn('get_overrides', self.form.has_call)
+        self.assertNotIn('get_alt_field_info', self.form.has_call)
         print(self.form.good_practice_attrs())
         print(self.form.get_overrides())
         print(self.form.get_alt_field_info())
         print(self.form.good_practice_attrs.__name__)
         print(self.form.get_overrides.__name__)
         print(self.form.get_alt_field_info.__name__)
+        print("---------------------------------------------")
+        print(self.form.formfield_attrs_overrides)
+        print(self.form.autocomplete)
+        print(self.form.alt_field_info)
+        self.assertIn('good_practice_attrs', self.form.has_call)
+        self.assertIn('get_overrides', self.form.has_call)
+        self.assertIn('get_alt_field_info', self.form.has_call)
+        self.form.has_call = []
         self.assertEqual({}, self.form.good_practice_attrs())
         self.assertEqual({}, self.form.get_overrides())
         self.assertEqual({}, self.form.get_alt_field_info())
