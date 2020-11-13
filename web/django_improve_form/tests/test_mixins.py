@@ -2241,7 +2241,8 @@ class CountryTests(FormTests, TestCase):
         self.original_autocomplete = self.form.autocomplete
         self.original_alt_field_info = self.form.alt_field_info
         self.form.good_practice_attrs = self.empty_good_practice_attrs
-        self.form.get_overrides = self.empty_get_overrides
+        # self.form.get_overrides = self.empty_get_overrides
+        self.form.get_overrides = self.skip_get_overrides
         self.form.get_alt_field_info = self.empty_get_alt_field_info
         self.form.formfield_attrs_overrides = {}
         self.form.autocomplete = {}
