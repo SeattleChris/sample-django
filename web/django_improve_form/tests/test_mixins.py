@@ -2262,11 +2262,32 @@ class CountryTests(FormTests, TestCase):
         self.assertTrue(getattr(self.form, 'is_prepared', None))
         super().test_as_p(output=output)
 
-    @skip("Not Implemented")
     def test_condition_alt_country(self):
         """Returns True if form.country_optional and form.data['country_flag'] are True, else returns False. """
-        # self.form.condition_alt_country() => bool
-        pass
+        original_flag = self.form.country_optional
+        self.form.country_optional = True
+        original_data = getattr(self.form, 'data', None)
+        test_data = original_data.copy()
+        test_data['country_flag'] = True
+        self.form.data = test_data
+        first_expect = True
+        first_actual = self.form.condition_alt_country()
+        self.form.data['country_flag'] = False
+        second_expect = False
+        second_actual = self.form.condition_alt_country()
+        self.form.data['country_flag'] = True
+        self.form.country_optional = False
+        third_expect = False
+        third_actual = self.form.condition_alt_country()
+
+        self.assertEqual(first_expect, first_actual)
+        self.assertEqual(second_expect, second_actual)
+        self.assertEqual(third_expect, third_actual)
+
+        self.form.country_optional = original_flag
+        self.form.data = original_data
+        if original_data is None:
+            del self.form.data
 
     @skip("Not Implemented")
     def test_pass_through_prep_country_fields(self):
