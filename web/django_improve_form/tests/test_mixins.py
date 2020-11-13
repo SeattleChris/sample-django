@@ -2196,9 +2196,15 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 class BaseCountryTests:
     form_class = None
     overrides_empty_or_skip = 'skip'
+    initial_data = None
 
     def setUp(self):
-        super().setUp()
+        self.user = self.make_user()
+        test_data = self.get_initial_data()
+        if test_data:
+            self.form = self.make_form_request(method='POST', data=test_data)
+        else:
+            self.form = self.make_form_request()
         self.form.has_call = []
         self.original_good_practice_attrs = self.form.good_practice_attrs
         self.original_get_overrides = self.form.get_overrides
@@ -2216,10 +2222,33 @@ class BaseCountryTests:
         self.form.autocomplete = {}
         self.form.alt_field_info = {}
 
-    def empty_good_practice_attrs(self): self.form.has_call.append('good_practice_attrs'); return {}
-    def empty_get_overrides(self): self.form.has_call.append('get_overrides'); return self.form.good_practice_attrs()
-    def empty_get_alt_field_info(self): self.form.has_call.append('get_alt_field_info'); return {}
-    def skip_get_overrides(self): self.form.has_call.append('get_overrides'); return self.no_resize_override(empty=True)
+    def get_initial_data(self, removed=('billing_country_code', )):
+        """Can be overwritten to modify the initial_test_data used in a POST request. """
+        initial = getattr(self, 'initial_data', None) or {}
+        for ea in removed:
+            initial.pop(ea, None)
+        if not initial:
+            return initial
+        test_data = MultiValueDict()
+        test_data.update(initial)
+        self.test_data = test_data
+        return test_data
+
+    def empty_good_practice_attrs(self):
+        self.form.has_call.append('good_practice_attrs')
+        return {}
+
+    def empty_get_overrides(self):
+        self.form.has_call.append('get_overrides')
+        return self.form.good_practice_attrs()
+
+    def empty_get_alt_field_info(self):
+        self.form.has_call.append('get_alt_field_info')
+        return {}
+
+    def skip_get_overrides(self):
+        self.form.has_call.append('get_overrides')
+        return self.no_resize_override(empty=True)
 
     def no_resize_override(self, empty=False, names='all'):
         """Create or update override dict to force skipping resizing step of prep_fields for all or given fields. """
@@ -2260,6 +2289,8 @@ class BaseCountryTests:
         self.assertIn('get_alt_field_info', self.form.has_call)
         self.form.has_call = []
         self.assertEqual(self.form.good_practice_attrs.__name__, 'empty_good_practice_attrs')
+        if self.overrides_empty_or_skip == 'empty':
+            self.assertEqual(self.form.get_overrides.__name__, 'empty_get_overrides')
         self.assertEqual(self.form.get_overrides.__name__, 'skip_get_overrides')
         self.assertEqual(self.form.get_alt_field_info.__name__, 'empty_get_alt_field_info')
 
@@ -2269,10 +2300,13 @@ class BaseCountryTests:
         self.assertNotIn('get_alt_field_info', self.form.has_call)
         self.assertIsNone(getattr(self.form, 'is_prepared', None))
         output = self.form.as_p().strip()
-        # self.assertIn('good_practice_attrs', self.form.has_call)
-        self.assertIn('get_overrides', self.form.has_call)
+        if self.overrides_empty_or_skip == 'empty':
+            self.assertIn('good_practice_attrs', self.form.has_call)
+        elif self.overrides_empty_or_skip == 'skip':
+            self.assertIn('get_overrides', self.form.has_call)
         self.assertIn('get_alt_field_info', self.form.has_call)
         self.assertTrue(getattr(self.form, 'is_prepared', None))
+        self.form.has_call = []
         super().test_as_p(output=output)
 
 
