@@ -2193,8 +2193,9 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
             del self.form.cleaned_data
 
 
-class CountryTests(FormTests, TestCase):
-    form_class = CountryForm
+class BaseCountryTests:
+    form_class = None
+    overrides_empty_or_skip = 'skip'
 
     def setUp(self):
         super().setUp()
@@ -2206,8 +2207,10 @@ class CountryTests(FormTests, TestCase):
         self.original_autocomplete = self.form.autocomplete
         self.original_alt_field_info = self.form.alt_field_info
         self.form.good_practice_attrs = self.empty_good_practice_attrs
-        # self.form.get_overrides = self.empty_get_overrides
-        self.form.get_overrides = self.skip_get_overrides
+        if self.overrides_empty_or_skip == 'empty':
+            self.form.get_overrides = self.empty_get_overrides
+        elif self.overrides_empty_or_skip == 'skip':
+            self.form.get_overrides = self.skip_get_overrides
         self.form.get_alt_field_info = self.empty_get_alt_field_info
         self.form.formfield_attrs_overrides = {}
         self.form.autocomplete = {}
@@ -2229,6 +2232,14 @@ class CountryTests(FormTests, TestCase):
             overrides[name].update(add_skip)
         return overrides
 
+    def get_missing_field(self, name):
+        """Remove & return the named field if it had been moved from fields to removed_fields or computed_fields. """
+        source = getattr(self.form, 'removed_fields', {})
+        if issubclass(self.form.__class__, ComputedFieldsMixIn):
+            source = self.form.computed_fields
+        field = source.pop(name, None)
+        return field
+
     def test_setup(self):
         """Are the overridden methods the new empty versions? """
         self.assertIsNotNone(getattr(self, 'original_good_practice_attrs', None))
@@ -2239,8 +2250,10 @@ class CountryTests(FormTests, TestCase):
         self.assertNotIn('get_overrides', self.form.has_call)
         self.assertNotIn('get_alt_field_info', self.form.has_call)
         self.assertEqual({}, self.form.good_practice_attrs())
-        # self.assertEqual({}, self.form.get_overrides())
-        self.assertEqual(self.no_resize_override(), self.form.get_overrides())
+        if self.overrides_empty_or_skip == 'empty':
+            self.assertEqual({}, self.form.get_overrides())
+        elif self.overrides_empty_or_skip == 'skip':
+            self.assertEqual(self.no_resize_override(), self.form.get_overrides())
         self.assertEqual({}, self.form.get_alt_field_info())
         self.assertIn('good_practice_attrs', self.form.has_call)
         self.assertIn('get_overrides', self.form.has_call)
@@ -2261,6 +2274,10 @@ class CountryTests(FormTests, TestCase):
         self.assertIn('get_alt_field_info', self.form.has_call)
         self.assertTrue(getattr(self.form, 'is_prepared', None))
         super().test_as_p(output=output)
+
+
+class CountryTests(BaseCountryTests, FormTests, TestCase):
+    form_class = CountryForm
 
     def test_condition_alt_country(self):
         """Returns True if form.country_optional and form.data['country_flag'] are True, else returns False. """
@@ -2288,14 +2305,6 @@ class CountryTests(FormTests, TestCase):
         self.form.data = original_data
         if original_data is None:
             del self.form.data
-
-    def get_missing_field(self, name):
-        """Remove & return the named field if it had been moved from fields to removed_fields or computed_fields. """
-        source = getattr(self.form, 'removed_fields', {})
-        if issubclass(self.form.__class__, ComputedFieldsMixIn):
-            source = self.form.computed_fields
-        field = source.pop(name, None)
-        return field
 
     def test_pass_through_prep_country_fields(self):
         """Returns unmodified inputs if form.country_optional is False. """
@@ -2402,6 +2411,10 @@ class CountryTests(FormTests, TestCase):
             self.form.computed_fields = original_computed
         pass
 
+
+class CountryPostTests(BaseCountryTests, FormTests, TestCase):
+    form_class = CountryForm
+
     @skip("Not Implemented")
     def test_on_post_display_local_to_foreign(self):
         """If submitted form requested foreign display, but was showing local, set_alt_data is called as expected. """
@@ -2437,7 +2450,7 @@ class CountryTests(FormTests, TestCase):
         pass
 
 
-class ComputedCountryTests(CountryTests):
+class ComputedCountryTests(CountryPostTests):
     form_class = ComputedCountryForm
 
     @skip("Not Implemented")
