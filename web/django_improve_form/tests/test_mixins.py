@@ -237,7 +237,11 @@ class FormTests:
         expected = ''.join(form_list) % setup
         return expected.strip()
 
-    def log_html_diff(self, expected, actual, full=True):
+    def log_html_diff(self, expected, actual, as_type='unknown', full=True):
+        form_class = self.form.__class__.__name__
+        print(f"//////////////////////////////// {form_class} {as_type.upper()} /////////////////////////////////////")
+        if issubclass(self.form_class, ComputedUsernameMixIn):
+            print("*** is sub class of ComputedUsernameMixIn ***")
         exp = expected.split('\n')
         out = actual.split('\n')
         line_count = max(len(out), len(exp))
@@ -285,11 +289,7 @@ class FormTests:
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
         expected = self.get_expected_format(setup)
         if output != expected:
-            form_class = self.form.__class__.__name__
-            print(f"//////////////////////////////// {form_class} AS_TABLE /////////////////////////////////////")
-            if issubclass(self.form_class, ComputedUsernameMixIn):
-                print("*** is sub class of ComputedUsernameMixIn ***")
-            self.log_html_diff(expected, output, full=False)
+            self.log_html_diff(expected, output, as_type='as_table', full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
@@ -299,11 +299,7 @@ class FormTests:
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
         expected = self.get_expected_format(setup)
         if output != expected:
-            form_class = self.form.__class__.__name__
-            print(f"//////////////////////////////// {form_class} AS_UL /////////////////////////////////////")
-            if issubclass(self.form_class, ComputedUsernameMixIn):
-                print("*** is sub class of ComputedUsernameMixIn ***")
-            self.log_html_diff(expected, output, full=False)  # , full=False)
+            self.log_html_diff(expected, output, as_type='as_ul', full=False)  # , full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
@@ -313,11 +309,7 @@ class FormTests:
         setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
         expected = self.get_expected_format(setup)
         if output != expected:
-            form_class = self.form.__class__.__name__
-            print(f"//////////////////////////////// {form_class} AS_P /////////////////////////////////////")
-            if issubclass(self.form_class, ComputedUsernameMixIn):
-                print("*** is sub class of ComputedUsernameMixIn ***")
-            self.log_html_diff(expected, output, full=False)
+            self.log_html_diff(expected, output, as_type='as_p', full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
