@@ -2290,18 +2290,16 @@ class CountryTests(FormTests, TestCase):
         print(self.form.formfield_attrs_overrides)
         print(self.form.autocomplete)
         print(self.form.alt_field_info)
-        self.assertIn('good_practice_attrs', self.form.has_call)
+
+    def test_as_p(self):
+        # self.form.has_call = []
+        self.assertNotIn('good_practice_attrs', self.form.has_call)
+        self.assertNotIn('get_overrides', self.form.has_call)
+        self.assertNotIn('get_alt_field_info', self.form.has_call)
+        self.assertIsNone(getattr(self.form, 'is_prepared', None))
+        output = self.form.as_p().strip()
+        # self.assertIn('good_practice_attrs', self.form.has_call)
         self.assertIn('get_overrides', self.form.has_call)
         self.assertIn('get_alt_field_info', self.form.has_call)
-        self.form.has_call = []
-        self.assertEqual({}, self.form.good_practice_attrs())
-        self.assertEqual({}, self.form.get_overrides())
-        self.assertEqual({}, self.form.get_alt_field_info())
-
-    @skip("Hold for testing. ")
-    def test_as_table(self):
-        super().test_as_table()
-
-    @skip("Hold for testing. ")
-    def test_as_ul(self):
-        super().test_as_ul()
+        self.assertTrue(getattr(self.form, 'is_prepared', None))
+        super().test_as_p(output=output)
