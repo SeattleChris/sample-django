@@ -15,7 +15,7 @@ from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser,
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
 from .mixin_forms import ComputedCountryForm  # # MixIn Interactions # #
-from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
+from ..mixins import FormOverrideMixIn, ComputedFieldsMixIn, ComputedUsernameMixIn
 from copy import deepcopy
 
 
@@ -2315,12 +2315,34 @@ class CountryTests(FormTests, TestCase):
         self.form.country_optional = original_flag
         self.form.fields = original_fields
 
-    @skip("Not Implemented")
     def test_prep_country_fields(self):
         """Expected fields moved (or copied if kwargs['flat_fields']) from remaining_fields to field_rows. """
-        # self.form.prep_country_fields(self, opts, field_rows, remaining_fields, *args, **kwargs)
-        # field_names = (self.country_field_name, 'country_flag', )
-        pass
+        original_flag = self.form.country_optional
+        self.form.country_optional = True
+        original_fields = self.form.fields
+        self.form.fields = original_fields.copy()
+        remaining = original_fields.copy()
+        opts, field_rows = {'fake_opts': 'fake'}, [{'name': 'assigned_field'}]
+        args = ['arbitrary', 'input', 'args']
+        kwargs = {'test_1': 'data_1', 'test_2': 'data_2'}
+        field_names = (self.form.country_field_name, 'country_flag', )
+        # if len(missing) == len(field_names):
+        if not any(remaining.get(name, None) for name in field_names):
+            fix_fields = {name: self.get_missing_field(name) for name in field_names if name not in remaining}
+            remaining.update(fix_fields)
+        expected_add = [{name: remaining[name]} for name in field_names if name in remaining]
+        expected_field_rows = field_rows.copy()
+        expected_field_rows.extend(expected_add)
+        if issubclass(self.form.__class__, ComputedFieldsMixIn):
+            expected_remaining = {name: field for name, field in remaining.items() if name not in expected_add}
+        else:
+            expected_remaining = remaining.copy()
+        expected = (opts.copy(), expected_field_rows, expected_remaining, *args, kwargs.copy())
+        actual = self.form.prep_country_fields(opts, field_rows, remaining, *args, **kwargs)
+        self.assertEqual(expected, actual)
+
+        self.form.country_optional = original_flag
+        self.form.fields = original_fields
 
     @skip("Not Implemented")
     def test_prep_country_fields(self):
