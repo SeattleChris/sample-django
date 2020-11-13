@@ -2235,9 +2235,15 @@ class CountryTests(FormTests, TestCase):
         self.original_good_practice_attrs = self.form.good_practice_attrs
         self.original_get_overrides = self.form.get_overrides
         self.original_get_alt_field_info = self.form.get_alt_field_info
+        self.original_formfield_attrs_overrides = self.form.formfield_attrs_overrides
+        self.original_autocomplete = self.form.autocomplete
+        self.original_alt_field_info = self.form.alt_field_info
         self.form.good_practice_attrs = self.empty_good_practice_attrs
         self.form.get_overrides = self.empty_get_overrides
         self.form.get_alt_field_info = self.empty_get_alt_field_info
+        self.form.formfield_attrs_overrides = {}
+        self.form.autocomplete = {}
+        self.form.alt_field_info = {}
         # fd = self.form.fields
         # test_initial = {'first': fd['first'].initial, 'second': fd['second'].initial, 'last': fd['last'].initial}
         # test_initial['generic_field'] = fd['generic_field'].initial
