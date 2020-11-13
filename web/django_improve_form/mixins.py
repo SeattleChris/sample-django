@@ -634,9 +634,9 @@ class FormOverrideMixIn:
                 # print(initial_value)
                 # TODO: Manage the initial_value being selected.
                 pass
+            resize_allowed = not overrides.get(name, {}).pop('no_size_override', False)
             if name in overrides:
                 field.widget.attrs.update(overrides[name])
-            resize_allowed = not overrides.get(name, {}).pop('no_size_override', False)
             resize_allowed = False if isinstance(field.widget, (HiddenInput, MultipleHiddenInput)) else resize_allowed
             if resize_allowed:
                 if isinstance(field.widget, Textarea):
@@ -670,6 +670,7 @@ class FormOverrideMixIn:
                     setattr(field, prop, value)
         if new_data:
             self.set_alt_data(new_data)
+        self.is_prepared = True
         return fields
 
     def _html_output(self, *args, **kwargs):
