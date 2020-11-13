@@ -134,11 +134,10 @@ class FormTests:
 
     def get_format_attrs(self, name, field):
         """For the given named field, get the attrs as determined by the field and widget settings. """
-        result = []
-        attrs = field.widget_attrs(field.widget)
+        attrs, result = {}, []
         if field.initial and not isinstance(field.widget, Textarea):
             attrs['value'] = str(field.initial)
-        # attrs.update(field.widget.attrs)
+        attrs.update(field.widget_attrs(field.widget))
         result = ''.join(f'{key}="{val}" ' for key, val in attrs.items())
         if issubclass(self.form.__class__, FormOverrideMixIn):
             # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
