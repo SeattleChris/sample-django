@@ -63,6 +63,11 @@ OTHER_OPTION_TXT = '    <li><label for="id_%(name)s_%(num)s"><input type="%(inpu
 FIELD_FORMATS = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
 
 
+def get_html_name(form, name):
+    """Return the name used in the html form for the given form instance and field name. """
+    return form.add_prefix(name)
+
+
 class FormTests:
     form_class = None
     user_type = 'anonymous'  # 'superuser' | 'staff' | 'user' | 'anonymous'
@@ -136,6 +141,9 @@ class FormTests:
         attrs, result = {}, []
         if field.initial and not isinstance(field.widget, Textarea):
             attrs['value'] = str(field.initial)
+        html_name = get_html_name(self.form, name)
+        if html_name in getattr(self.form, 'data', {}):
+            attrs['value'] = self.form.data[html_name]
         attrs.update(field.widget_attrs(field.widget))
         result = ''.join(f'{key}="{val}" ' for key, val in attrs.items())
         if issubclass(self.form.__class__, FormOverrideMixIn):
