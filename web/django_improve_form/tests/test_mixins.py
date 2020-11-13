@@ -2266,7 +2266,7 @@ class CountryTests(FormTests, TestCase):
         return overrides
 
     def test_setup(self):
-        """Are the overriden methods the new empty versions? """
+        """Are the overridden methods the new empty versions? """
         self.assertIsNotNone(getattr(self, 'original_good_practice_attrs', None))
         self.assertIsNotNone(getattr(self, 'original_get_overrides', None))
         self.assertIsNotNone(getattr(self, 'original_get_alt_field_info', None))
@@ -2286,13 +2286,8 @@ class CountryTests(FormTests, TestCase):
         self.assertEqual(self.form.good_practice_attrs.__name__, 'empty_good_practice_attrs')
         self.assertEqual(self.form.get_overrides.__name__, 'skip_get_overrides')
         self.assertEqual(self.form.get_alt_field_info.__name__, 'empty_get_alt_field_info')
-        print("---------------------------------------------")
-        print(self.form.formfield_attrs_overrides)
-        print(self.form.autocomplete)
-        print(self.form.alt_field_info)
 
     def test_as_p(self):
-        # self.form.has_call = []
         self.assertNotIn('good_practice_attrs', self.form.has_call)
         self.assertNotIn('get_overrides', self.form.has_call)
         self.assertNotIn('get_alt_field_info', self.form.has_call)
