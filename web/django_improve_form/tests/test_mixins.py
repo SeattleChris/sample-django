@@ -2292,8 +2292,11 @@ class CountryTests(FormTests, TestCase):
     def test_pass_through_prep_country_fields(self):
         """Returns unmodified inputs if form.country_optional is False. """
         original_flag = self.form.country_optional
-        self.form.country_optional = False
-        opts, field_rows, remaining_fields = {'fake_opts': 'fake'}, [{'name': 'assigned_field'}], {'nm': 'field'}
+        self.form.country_optional = False  # True
+        original_fields = self.form.fields
+        self.form.fields = original_fields.copy()
+        remaining_fields = original_fields.copy()
+        opts, field_rows = {'fake_opts': 'fake'}, [{'name': 'assigned_field'}]
         args = ['arbitrary', 'input', 'args']
         kwargs = {'test_1': 'data_1', 'test_2': 'data_2'}
 
@@ -2302,6 +2305,7 @@ class CountryTests(FormTests, TestCase):
         self.assertEqual(expected, actual)
 
         self.form.country_optional = original_flag
+        self.form.fields = original_fields
 
     @skip("Not Implemented")
     def test_prep_country_fields(self):
