@@ -283,9 +283,9 @@ class FormTests:
         for key, value in user_attr.items():
             self.assertEqual(value, getattr(self.user, key, None))
 
-    def test_as_table(self):
+    def test_as_table(self, output=None):
         """All forms should return HTML table rows when .as_table is called. """
-        output = self.form.as_table().strip()
+        output = output or self.form.as_table().strip()
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
         expected = self.get_expected_format(setup)
         if output != expected:
@@ -293,9 +293,9 @@ class FormTests:
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    def test_as_ul(self):
+    def test_as_ul(self, output=None):
         """All forms should return HTML <li>s when .as_ul is called. """
-        output = self.form.as_ul().strip()
+        output = output or self.form.as_ul().strip()
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
         expected = self.get_expected_format(setup)
         if output != expected:
@@ -303,9 +303,9 @@ class FormTests:
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    def test_as_p(self):
+    def test_as_p(self, output=None):
         """All forms should return HTML <p>s when .as_p is called. """
-        output = self.form.as_p().strip()
+        output = output or self.form.as_p().strip()
         setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
         expected = self.get_expected_format(setup)
         if output != expected:
