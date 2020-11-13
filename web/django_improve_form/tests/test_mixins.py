@@ -71,8 +71,6 @@ class FormTests:
     def setUp(self):
         self.user = self.make_user()
         self.form = self.make_form_request()
-        # field_order = list(self.form.base_fields.keys())
-        # self.form.order_fields(field_order)
 
     def make_form_request(self, method='GET', **kwargs):
         """Constructs a mocked request object with the method, and applies the kwargs. """
@@ -711,7 +709,6 @@ class ComputedTests(FormTests, TestCase):
         actual_compute_errors = self.form._clean_computed_fields()
 
         self.assertDictEqual(expected_compute_errors, actual_compute_errors)
-
         self.form.test_func = original_func
 
     def test_validation_error_for_compute_error(self):
@@ -2238,7 +2235,6 @@ class CountryTests(FormTests, TestCase):
         self.assertIsNotNone(getattr(self, 'original_get_overrides', None))
         self.assertIsNotNone(getattr(self, 'original_get_alt_field_info', None))
         self.assertIsNone(getattr(self.form, 'is_prepared', None))
-        print("================ TEST SETUP ======================")
         self.assertNotIn('good_practice_attrs', self.form.has_call)
         self.assertNotIn('get_overrides', self.form.has_call)
         self.assertNotIn('get_alt_field_info', self.form.has_call)
