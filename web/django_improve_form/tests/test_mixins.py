@@ -14,6 +14,7 @@ from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
+from .mixin_forms import ComputedCountryForm  # # MixIn Interactions # #
 from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
 from copy import deepcopy
 
@@ -2264,3 +2265,85 @@ class CountryTests(FormTests, TestCase):
         self.assertIn('get_alt_field_info', self.form.has_call)
         self.assertTrue(getattr(self.form, 'is_prepared', None))
         super().test_as_p(output=output)
+
+    @skip("Not Implemented")
+    def test_condition_alt_country(self):
+        """Returns True if form.country_optional and form.data['country_flag'] are True, else returns False. """
+        # self.form.condition_alt_country() => bool
+        pass
+
+    @skip("Not Implemented")
+    def test_pass_through_prep_country_fields(self):
+        """Returns unmodified inputs if form.country_optional is False. """
+        # self.form.prep_country_fields(self, opts, field_rows, remaining_fields, *args, **kwargs)
+        pass
+
+    @skip("Not Implemented")
+    def test_prep_country_fields(self):
+        """Expected fields moved (or copied if kwargs['flat_fields']) from remaining_fields to field_rows. """
+        # self.form.prep_country_fields(self, opts, field_rows, remaining_fields, *args, **kwargs)
+        # field_names = (self.country_field_name, 'country_flag', )
+        pass
+
+    @skip("Not Implemented")
+    def test_prep_country_fields(self):
+        """When not 'flat_fields' in kwargs, the expected field_names are appended to opts['fields']. """
+        # self.form.prep_country_fields(self, opts, field_rows, remaining_fields, *args, **kwargs)
+        # field_names = (self.country_field_name, 'country_flag', )
+        pass
+
+    @skip("Not Implemented")
+    def test_on_post_display_local_to_foreign(self):
+        """If submitted form requested foreign display, but was showing local, set_alt_data is called as expected. """
+        # data.get('country_flag', None)
+        # address_display_version = 'foreign' if country_flag else 'local'
+        # form.set_alt_data(name='country_display', field=self.fields['country_display'], value=address_display_version)
+        pass
+
+    @skip("Not Implemented")
+    def test_on_post_display_foreign_to_foreign(self):
+        """If submitted form requested foreign display, and was showing foreign, shows correctly. """
+        # data.get('country_flag', None)
+        # address_display_version = 'foreign' if country_flag else 'local'
+        # form.set_alt_data(name='country_display', field=self.fields['country_display'], value=address_display_version)
+        pass
+
+    @skip("Not Implemented")
+    def test_on_post_display_foreign_to_local(self):
+        """If submitted form requested local display, but was showing foreign, set_alt_data corrects to local. """
+        # data.get('country_flag', None)
+        # address_display_version = 'foreign' if country_flag else 'local'
+        # form.set_alt_data(name='country_display', field=self.fields['country_display'], value=address_display_version)
+        pass
+
+    @skip("Not Implemented")
+    def test_clean_country_flag(self):
+        """If requested foreign display, raise ValidationError if country is initial or field not shown. """
+        # country_flag = self.cleaned_data.get('country_flag', None)
+        # field = self.fields.get(self.country_field_name, None)
+        # if not field and hasattr(self, 'computed_fields'):
+        #   field = self.computed_fields.get(self.country_field_name, None)
+        # if field.initial == self.cleaned_data.get(self.country_field_name, None)
+        pass
+
+
+class ComputedCountryTests(CountryTests):
+    form_class = ComputedCountryForm
+
+    @skip("Not Implemented")
+    def test_init_get_critical_for_needed(self):
+        """get_critical_field called if form.country_optional, country_field, and needed_names. """
+        # needed_names = [nf for nf in ('country_display', 'country_flag') if nf not in self.base_fields]
+        # for name in needed_names: name, field = self.get_critical_field(name, name)
+        pass
+
+    @skip("Not Implemented")
+    def test_init_update_computed_field_names(self):
+        """get_critical_field called if form.country_optional, country_field, and needed_names. """
+        # computed_field_names = [country_name]
+        # computed_field_names.extend(kwargs.get('computed_fields', []))
+        # kwargs['computed_fields'] = computed_field_names
+        pass
+
+
+# end test_mixins.py
