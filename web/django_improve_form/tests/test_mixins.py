@@ -14,7 +14,8 @@ from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
-from ..mixins import FormOverrideMixIn, ComputedUsernameMixIn
+from .mixin_forms import ComputedCountryForm  # # MixIn Interactions # #
+from ..mixins import FormOverrideMixIn, ComputedFieldsMixIn, ComputedUsernameMixIn
 from copy import deepcopy
 
 
@@ -70,8 +71,6 @@ class FormTests:
     def setUp(self):
         self.user = self.make_user()
         self.form = self.make_form_request()
-        # field_order = list(self.form.base_fields.keys())
-        # self.form.order_fields(field_order)
 
     def make_form_request(self, method='GET', **kwargs):
         """Constructs a mocked request object with the method, and applies the kwargs. """
@@ -134,11 +133,10 @@ class FormTests:
 
     def get_format_attrs(self, name, field):
         """For the given named field, get the attrs as determined by the field and widget settings. """
-        result = []
-        attrs = field.widget_attrs(field.widget)
+        attrs, result = {}, []
         if field.initial and not isinstance(field.widget, Textarea):
             attrs['value'] = str(field.initial)
-        # attrs.update(field.widget.attrs)
+        attrs.update(field.widget_attrs(field.widget))
         result = ''.join(f'{key}="{val}" ' for key, val in attrs.items())
         if issubclass(self.form.__class__, FormOverrideMixIn):
             # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
@@ -148,6 +146,13 @@ class FormTests:
         return result
 
     def get_expected_format(self, setup):
+        # override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
+        # setup.update(attrs=override_attrs)
+        setup.update(attrs='')
+        if issubclass(self.form_class, FormOverrideMixIn):
+            size_default = self.form.get_overrides().get('_default_', {}).get('size', None)
+            override_attrs = '' if not size_default else f'size="{size_default}" '
+            setup.update(attrs=override_attrs)
         field_formats = FIELD_FORMATS.copy()
         form_list = []
         if issubclass(self.form_class, ComputedUsernameMixIn):
@@ -231,7 +236,11 @@ class FormTests:
         expected = ''.join(form_list) % setup
         return expected.strip()
 
-    def log_html_diff(self, expected, actual, full=True):
+    def log_html_diff(self, expected, actual, as_type='unknown', full=True):
+        form_class = self.form.__class__.__name__
+        print(f"//////////////////////////////// {form_class} {as_type.upper()} /////////////////////////////////////")
+        if issubclass(self.form_class, ComputedUsernameMixIn):
+            print("*** is sub class of ComputedUsernameMixIn ***")
         exp = expected.split('\n')
         out = actual.split('\n')
         line_count = max(len(out), len(exp))
@@ -273,67 +282,33 @@ class FormTests:
         for key, value in user_attr.items():
             self.assertEqual(value, getattr(self.user, key, None))
 
-    def test_as_table(self):
+    def test_as_table(self, output=None):
         """All forms should return HTML table rows when .as_table is called. """
-        output = self.form.as_table().strip()
+        output = output or self.form.as_table().strip()
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
-        setup.update(attrs='')
-        # override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
-        # setup.update(attrs=override_attrs)
-        if issubclass(self.form_class, FormOverrideMixIn):
-            size_default = self.form.get_overrides().get('_default_', {}).get('size', None)
-            override_attrs = '' if not size_default else f'size="{size_default}" '
-            setup.update(attrs=override_attrs)
         expected = self.get_expected_format(setup)
         if output != expected:
-            form_class = self.form.__class__.__name__
-            print(f"//////////////////////////////// {form_class} AS_TABLE /////////////////////////////////////")
-            if issubclass(self.form_class, ComputedUsernameMixIn):
-                print("*** is sub class of ComputedUsernameMixIn ***")
-            self.log_html_diff(expected, output, full=False)
+            self.log_html_diff(expected, output, as_type='as_table', full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    def test_as_ul(self):
+    def test_as_ul(self, output=None):
         """All forms should return HTML <li>s when .as_ul is called. """
-        output = self.form.as_ul().strip()
-        setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' ', 'attrs': ''}
-        # override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
-        # setup.update(attrs=override_attrs)
-        if issubclass(self.form_class, FormOverrideMixIn):
-            size_default = self.form.get_overrides().get('_default_', {}).get('size', None)
-            override_attrs = '' if not size_default else f'size="{size_default}" '
-            setup.update(attrs=override_attrs)
+        output = output or self.form.as_ul().strip()
+        setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
         expected = self.get_expected_format(setup)
         if output != expected:
-            form_class = self.form.__class__.__name__
-            print(f"//////////////////////////////// {form_class} AS_UL /////////////////////////////////////")
-            if issubclass(self.form_class, ComputedUsernameMixIn):
-                print("*** is sub class of ComputedUsernameMixIn ***")
-            self.log_html_diff(expected, output, full=False)  # , full=False)
+            self.log_html_diff(expected, output, as_type='as_ul', full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    def test_as_p(self):
+    def test_as_p(self, output=None):
         """All forms should return HTML <p>s when .as_p is called. """
-        output = self.form.as_p().strip()
+        output = output or self.form.as_p().strip()
         setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
-        setup.update(attrs='')
-        # override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
-        # setup.update(attrs=override_attrs)
-        if issubclass(self.form_class, FormOverrideMixIn):
-            size_default = self.form.get_overrides().get('_default_', {}).get('size', None)
-            override_attrs = '' if not size_default else f'size="{size_default}" '
-            setup.update(attrs=override_attrs)
-        override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
-        setup.update(attrs=override_attrs)
         expected = self.get_expected_format(setup)
         if output != expected:
-            form_class = self.form.__class__.__name__
-            print(f"//////////////////////////////// {form_class} AS_P /////////////////////////////////////")
-            if issubclass(self.form_class, ComputedUsernameMixIn):
-                print("*** is sub class of ComputedUsernameMixIn ***")
-            self.log_html_diff(expected, output, full=False)
+            self.log_html_diff(expected, output, as_type='as_p', full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
@@ -734,7 +709,6 @@ class ComputedTests(FormTests, TestCase):
         actual_compute_errors = self.form._clean_computed_fields()
 
         self.assertDictEqual(expected_compute_errors, actual_compute_errors)
-
         self.form.test_func = original_func
 
     def test_validation_error_for_compute_error(self):
@@ -1266,10 +1240,8 @@ class OverrideTests(FormTests, TestCase):
         """False goal, adding takes precedence. Adding only triggered because a value is inserted in form data. """
         self.assertFalse(False)
 
-    # @skip("Not Implemented")
     def test_prep_overrides(self):
         """Applies overrides of field widget attrs if name is in overrides. """
-        # from pprint import pprint
         original_data = self.form.data
         test_data = original_data.copy()
         test_data._mutable = False
@@ -1319,7 +1291,7 @@ class OverrideTests(FormTests, TestCase):
             if possible_size and width_attr_name:
                 attrs[width_attr_name] = str(min(possible_size))
             expected_attrs[name] = attrs
-        # print("======================== test_prep_overrides ============================")
+        # Expected:
         # formfield_attrs_overrides = {
         #     '_default_': {'size': 15, 'cols': 20, 'rows': 4, },
         #     'first': {'maxlength': 191, 'size': 20, },
@@ -1334,21 +1306,16 @@ class OverrideTests(FormTests, TestCase):
         second_maxlength = expected_attrs['second']['maxlength']  # overrides['second']['maxlength']
         last_maxlength = expected_attrs['last']['maxlength']  # overrides['last']['maxlength']
         last_size = expected_attrs['last']['size']  # overrides['last']['size']
-        # tests
+
         self.assertEqual(first_maxlength, result_fields['first'].widget.attrs.get('maxlength', None))
         self.assertEqual(first_size, result_fields['first'].widget.attrs.get('size', None))
         self.assertEqual(second_maxlength, result_fields['second'].widget.attrs.get('maxlength', None))
         self.assertEqual(last_maxlength, result_fields['last'].widget.attrs.get('maxlength', None))
         self.assertEqual(last_size, result_fields['last'].widget.attrs.get('size', None))
         for key, val in expected_attrs.items():
-            # print(key, "\n")
-            # pprint(val)
-            # print("--------------------------------------------------------------------------------")
-            # pprint(result_attrs[key])
-            # print("********************************************************************************")
             self.assertEqual(val, result_attrs[key])
         self.assertDictEqual(expected_attrs, result_attrs)
-        # tear-down: reset back to original state.
+
         self.form.alt_field_info = original_alt_field_info
         if original_alt_field_info is None:
             del self.form.alt_field_info
@@ -1371,10 +1338,8 @@ class OverrideTests(FormTests, TestCase):
         """Does not apply measurements if it is not an appropriate form input type. """
         pass
 
-    # @skip("Not Implemented")
     def test_prep_field_properties(self):
         """If field name is in alt_field_info, the field properties are modified as expected (field.<thing>). """
-        # from pprint import pprint
         original_data = self.form.data
         test_data = original_data.copy()
         # modify values in data
@@ -1392,39 +1357,22 @@ class OverrideTests(FormTests, TestCase):
         self.form.alt_field_info = self.alt_field_info
         self.form.test_condition_response = True
         expected_fields_info = test_fields_info.copy()
-        # print("======================== test_prep_field_properties ============================")
-        # {'alt_test_feature': {
-        #     'first': {
-        #             'label': "Alt First Label",
-        #             'help_text': '',
-        #             'initial': 'alt_first_initial', },
-        #     'last': {
-        #             'label': None,
-        #             'initial': 'alt_last_initial',
-        #             'help_text': '', },
-        #     }}
         result_fields = self.form.prep_fields()
         result_fields_info = {name: field.__dict__.copy() for name, field in result_fields.items()}
-
         modified_info = self.alt_field_info['alt_test_feature']
         first_label = modified_info['first']['label']
         first_initial = modified_info['first']['initial']
         last_initial = modified_info['last']['initial']
         for name, opts in modified_info.items():
             expected_fields_info[name].update(opts)
-        # tests
+
         self.assertEqual(first_label, result_fields['first'].label)
         self.assertEqual(first_initial, result_fields['first'].initial)
         self.assertEqual(last_initial, result_fields['last'].initial)
         for key, val in expected_fields_info.items():
-            # print(key, "\n")
-            # pprint(val)
-            # print("--------------------------------------------------------------------------------")
-            # pprint(result_fields_info[key])
-            # print("********************************************************************************")
             self.assertEqual(val, result_fields_info[key])
         self.assertDictEqual(expected_fields_info, result_fields_info)
-        # tear-down: reset back to original state.
+
         self.form.test_condition_response = False
         self.form.alt_field_info = original_alt_field_info
         if original_alt_field_info is None:
@@ -2245,51 +2193,280 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
             del self.form.cleaned_data
 
 
-class CountryTests(FormTests, TestCase):
-    form_class = CountryForm
-
-    def empty_good_practice_attrs(self): return {}
-    def empty_get_overrides(self): return {}  # return self.form.good_practice_attrs()
-    def empty_get_alt_field_info(self): return {}
+class BaseCountryTests:
+    form_class = None
+    overrides_empty_or_skip = 'skip'
 
     def setUp(self):
-        # self.user = self.make_user()
-        # self.form = self.make_form_request()
         super().setUp()
+        self.form.has_call = []
         self.original_good_practice_attrs = self.form.good_practice_attrs
         self.original_get_overrides = self.form.get_overrides
         self.original_get_alt_field_info = self.form.get_alt_field_info
+        self.original_formfield_attrs_overrides = self.form.formfield_attrs_overrides
+        self.original_autocomplete = self.form.autocomplete
+        self.original_alt_field_info = self.form.alt_field_info
         self.form.good_practice_attrs = self.empty_good_practice_attrs
-        self.form.get_overrides = self.empty_get_overrides
+        if self.overrides_empty_or_skip == 'empty':
+            self.form.get_overrides = self.empty_get_overrides
+        elif self.overrides_empty_or_skip == 'skip':
+            self.form.get_overrides = self.skip_get_overrides
         self.form.get_alt_field_info = self.empty_get_alt_field_info
-        # fd = self.form.fields
-        # test_initial = {'first': fd['first'].initial, 'second': fd['second'].initial, 'last': fd['last'].initial}
-        # test_initial['generic_field'] = fd['generic_field'].initial
-        # test_data = MultiValueDict()
-        # test_data.update({name: f"test_value_{name}" for name in test_initial})
-        # self.test_initial = test_initial
-        # self.test_data = test_data
+        self.form.formfield_attrs_overrides = {}
+        self.form.autocomplete = {}
+        self.form.alt_field_info = {}
+
+    def empty_good_practice_attrs(self): self.form.has_call.append('good_practice_attrs'); return {}
+    def empty_get_overrides(self): self.form.has_call.append('get_overrides'); return self.form.good_practice_attrs()
+    def empty_get_alt_field_info(self): self.form.has_call.append('get_alt_field_info'); return {}
+    def skip_get_overrides(self): self.form.has_call.append('get_overrides'); return self.no_resize_override(empty=True)
+
+    def no_resize_override(self, empty=False, names='all'):
+        """Create or update override dict to force skipping resizing step of prep_fields for all or given fields. """
+        if names == 'all':
+            names = list(self.form.fields.keys())
+        overrides = {} if empty else getattr(self.form, 'formfield_attrs_overrides', {})
+        add_skip = {'no_size_override': True}
+        for name in names:
+            overrides[name] = overrides.get(name, {})
+            overrides[name].update(add_skip)
+        return overrides
+
+    def get_missing_field(self, name):
+        """Remove & return the named field if it had been moved from fields to removed_fields or computed_fields. """
+        source = getattr(self.form, 'removed_fields', {})
+        if issubclass(self.form.__class__, ComputedFieldsMixIn):
+            source = self.form.computed_fields
+        field = source.pop(name, None)
+        return field
 
     def test_setup(self):
-        """Are the overriden methods the new empty versions? """
+        """Are the overridden methods the new empty versions? """
         self.assertIsNotNone(getattr(self, 'original_good_practice_attrs', None))
         self.assertIsNotNone(getattr(self, 'original_get_overrides', None))
         self.assertIsNotNone(getattr(self, 'original_get_alt_field_info', None))
-        print("================ TEST SETUP ======================")
-        print(self.form.good_practice_attrs())
-        print(self.form.get_overrides())
-        print(self.form.get_alt_field_info())
-        print(self.form.good_practice_attrs.__name__)
-        print(self.form.get_overrides.__name__)
-        print(self.form.get_alt_field_info.__name__)
+        self.assertIsNone(getattr(self.form, 'is_prepared', None))
+        self.assertNotIn('good_practice_attrs', self.form.has_call)
+        self.assertNotIn('get_overrides', self.form.has_call)
+        self.assertNotIn('get_alt_field_info', self.form.has_call)
         self.assertEqual({}, self.form.good_practice_attrs())
-        self.assertEqual({}, self.form.get_overrides())
+        if self.overrides_empty_or_skip == 'empty':
+            self.assertEqual({}, self.form.get_overrides())
+        elif self.overrides_empty_or_skip == 'skip':
+            self.assertEqual(self.no_resize_override(), self.form.get_overrides())
         self.assertEqual({}, self.form.get_alt_field_info())
+        self.assertIn('good_practice_attrs', self.form.has_call)
+        self.assertIn('get_overrides', self.form.has_call)
+        self.assertIn('get_alt_field_info', self.form.has_call)
+        self.form.has_call = []
+        self.assertEqual(self.form.good_practice_attrs.__name__, 'empty_good_practice_attrs')
+        self.assertEqual(self.form.get_overrides.__name__, 'skip_get_overrides')
+        self.assertEqual(self.form.get_alt_field_info.__name__, 'empty_get_alt_field_info')
 
-    @skip("Hold for testing. ")
-    def test_as_table(self):
-        super().test_as_table()
+    def test_as_p(self):
+        self.assertNotIn('good_practice_attrs', self.form.has_call)
+        self.assertNotIn('get_overrides', self.form.has_call)
+        self.assertNotIn('get_alt_field_info', self.form.has_call)
+        self.assertIsNone(getattr(self.form, 'is_prepared', None))
+        output = self.form.as_p().strip()
+        # self.assertIn('good_practice_attrs', self.form.has_call)
+        self.assertIn('get_overrides', self.form.has_call)
+        self.assertIn('get_alt_field_info', self.form.has_call)
+        self.assertTrue(getattr(self.form, 'is_prepared', None))
+        super().test_as_p(output=output)
 
-    @skip("Hold for testing. ")
-    def test_as_ul(self):
-        super().test_as_ul()
+
+class CountryTests(BaseCountryTests, FormTests, TestCase):
+    form_class = CountryForm
+
+    def test_condition_alt_country(self):
+        """Returns True if form.country_optional and form.data['country_flag'] are True, else returns False. """
+        original_flag = self.form.country_optional
+        self.form.country_optional = True
+        original_data = getattr(self.form, 'data', None)
+        test_data = original_data.copy()
+        test_data['country_flag'] = True
+        self.form.data = test_data
+        first_expect = True
+        first_actual = self.form.condition_alt_country()
+        self.form.data['country_flag'] = False
+        second_expect = False
+        second_actual = self.form.condition_alt_country()
+        self.form.data['country_flag'] = True
+        self.form.country_optional = False
+        third_expect = False
+        third_actual = self.form.condition_alt_country()
+
+        self.assertEqual(first_expect, first_actual)
+        self.assertEqual(second_expect, second_actual)
+        self.assertEqual(third_expect, third_actual)
+
+        self.form.country_optional = original_flag
+        self.form.data = original_data
+        if original_data is None:
+            del self.form.data
+
+    def test_pass_through_prep_country_fields(self):
+        """Returns unmodified inputs if form.country_optional is False. """
+        original_flag = self.form.country_optional
+        self.form.country_optional = False  # True
+        original_fields = self.form.fields
+        self.form.fields = original_fields.copy()
+        remaining_fields = original_fields.copy()
+        opts, field_rows = {'fake_opts': 'fake'}, [{'name': 'assigned_field'}]
+        args = ['arbitrary', 'input', 'args']
+        kwargs = {'test_1': 'data_1', 'test_2': 'data_2'}
+
+        expected = (opts.copy(), field_rows.copy(), remaining_fields.copy(), *args, kwargs.copy())
+        actual = self.form.prep_country_fields(opts, field_rows, remaining_fields, *args, **kwargs)
+        self.assertEqual(expected, actual)
+
+        self.form.country_optional = original_flag
+        self.form.fields = original_fields
+
+    def test_prep_country_fields(self):
+        """Expected fields moved from remaining_fields to field_rows, attempted names appended to opts['fields']. """
+        original_flag = self.form.country_optional
+        self.form.country_optional = True
+        original_fields = self.form.fields
+        original_removed = getattr(self.form, 'removed_fields', None)
+        original_computed = getattr(self.form, 'computed_fields', None)
+        self.form.fields = original_fields.copy()
+        if original_removed is not None:
+            self.form.removed_fields = original_removed.copy()
+        if original_computed is not None:
+            self.form.computed_fields = original_computed.copy()
+        remaining = original_fields.copy()
+        opts, field_rows = {'fake_opts': 'fake', 'fields': ['nope']}, [{'name': 'assigned_field'}]
+        args = ['arbitrary', 'input', 'args']
+        kwargs = {'test_1': 'data_1', 'test_2': 'data_2'}
+        field_names = (self.form.country_field_name, 'country_flag', )
+        if not any(remaining.get(name, None) for name in field_names):
+            fix_fields = {name: self.get_missing_field(name) for name in field_names if name not in remaining}
+            remaining.update(fix_fields)
+        expected_add = {name: remaining[name] for name in field_names if name in remaining}
+        expected_field_rows = field_rows.copy()
+        expected_field_rows.append(expected_add)
+        expected_remaining = {name: field for name, field in remaining.items() if name not in expected_add}
+        expected_opts = deepcopy(opts)
+        expected_opts['fields'].append(field_names)
+
+        sent = (opts, field_rows, remaining, *args)
+        r_opts, r_rows, r_remaining, *r_args, r_kwargs = self.form.prep_country_fields(*sent, **kwargs)
+        self.assertEqual(expected_opts, r_opts)
+        self.assertEqual(expected_field_rows, r_rows)
+        self.assertEqual(expected_remaining, r_remaining)
+        self.assertEqual(args, r_args)
+        self.assertEqual(kwargs, r_kwargs)
+
+        self.form.country_optional = original_flag
+        self.form.fields = original_fields
+        if original_removed is not None:
+            self.form.removed_fields = original_removed
+        if original_computed is not None:
+            self.form.computed_fields = original_computed
+
+    def test_prep_country_fields_flat(self):
+        """When kwargs['flat_fields'] = True, the expected fields are put back into remaining_fields. """
+        original_flag = self.form.country_optional
+        self.form.country_optional = True
+        original_fields = self.form.fields
+        original_removed = getattr(self.form, 'removed_fields', None)
+        original_computed = getattr(self.form, 'computed_fields', None)
+        self.form.fields = original_fields.copy()
+        if original_removed is not None:
+            self.form.removed_fields = original_removed.copy()
+        if original_computed is not None:
+            self.form.computed_fields = original_computed.copy()
+        remaining = original_fields.copy()
+        opts, field_rows = {'fake_opts': 'fake', 'fields': ['nope']}, [{'name': 'assigned_field'}]
+        args = ['arbitrary', 'input', 'args']
+        kwargs = {'test_1': 'data_1', 'test_2': 'data_2'}
+        field_names = (self.form.country_field_name, 'country_flag', )
+        if not any(remaining.get(name, None) for name in field_names):
+            fix_fields = {name: self.get_missing_field(name) for name in field_names if name not in remaining}
+            remaining.update(fix_fields)
+        expected_add = {name: remaining[name] for name in field_names if name in remaining}
+        expected_field_rows = field_rows.copy()
+        expected_field_rows.append(expected_add)
+        expected_remaining = {name: field for name, field in remaining.items() if name not in expected_add}
+        expected_opts = deepcopy(opts)
+        # expected_opts['fields'].append(field_names)
+        kwargs['flat_fields'] = True
+        expected_remaining.update(expected_add)
+
+        sent = (opts, field_rows, remaining, *args)
+        r_opts, r_rows, r_remaining, *r_args, r_kwargs = self.form.prep_country_fields(*sent, **kwargs)
+        self.assertEqual(expected_opts, r_opts)
+        self.assertEqual(expected_field_rows, r_rows)
+        self.assertEqual(expected_remaining, r_remaining)
+        self.assertEqual(args, r_args)
+        self.assertEqual(kwargs, r_kwargs)
+
+        self.form.country_optional = original_flag
+        self.form.fields = original_fields
+        if original_removed is not None:
+            self.form.removed_fields = original_removed
+        if original_computed is not None:
+            self.form.computed_fields = original_computed
+        pass
+
+
+class CountryPostTests(BaseCountryTests, FormTests, TestCase):
+    form_class = CountryForm
+
+    @skip("Not Implemented")
+    def test_on_post_display_local_to_foreign(self):
+        """If submitted form requested foreign display, but was showing local, set_alt_data is called as expected. """
+        # data.get('country_flag', None)
+        # address_display_version = 'foreign' if country_flag else 'local'
+        # form.set_alt_data(name='country_display', field=self.fields['country_display'], value=address_display_version)
+        pass
+
+    @skip("Not Implemented")
+    def test_on_post_display_foreign_to_foreign(self):
+        """If submitted form requested foreign display, and was showing foreign, shows correctly. """
+        # data.get('country_flag', None)
+        # address_display_version = 'foreign' if country_flag else 'local'
+        # form.set_alt_data(name='country_display', field=self.fields['country_display'], value=address_display_version)
+        pass
+
+    @skip("Not Implemented")
+    def test_on_post_display_foreign_to_local(self):
+        """If submitted form requested local display, but was showing foreign, set_alt_data corrects to local. """
+        # data.get('country_flag', None)
+        # address_display_version = 'foreign' if country_flag else 'local'
+        # form.set_alt_data(name='country_display', field=self.fields['country_display'], value=address_display_version)
+        pass
+
+    @skip("Not Implemented")
+    def test_clean_country_flag(self):
+        """If requested foreign display, raise ValidationError if country is initial or field not shown. """
+        # country_flag = self.cleaned_data.get('country_flag', None)
+        # field = self.fields.get(self.country_field_name, None)
+        # if not field and hasattr(self, 'computed_fields'):
+        #   field = self.computed_fields.get(self.country_field_name, None)
+        # if field.initial == self.cleaned_data.get(self.country_field_name, None)
+        pass
+
+
+class ComputedCountryTests(CountryPostTests):
+    form_class = ComputedCountryForm
+
+    @skip("Not Implemented")
+    def test_init_get_critical_for_needed(self):
+        """get_critical_field called if form.country_optional, country_field, and needed_names. """
+        # needed_names = [nf for nf in ('country_display', 'country_flag') if nf not in self.base_fields]
+        # for name in needed_names: name, field = self.get_critical_field(name, name)
+        pass
+
+    @skip("Not Implemented")
+    def test_init_update_computed_field_names(self):
+        """get_critical_field called if form.country_optional, country_field, and needed_names. """
+        # computed_field_names = [country_name]
+        # computed_field_names.extend(kwargs.get('computed_fields', []))
+        # kwargs['computed_fields'] = computed_field_names
+        pass
+
+
+# end test_mixins.py

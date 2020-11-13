@@ -1,23 +1,21 @@
 from django.test import TestCase  # , Client, override_settings, modify_settings, TransactionTestCase, RequestFactory
-# from django.core.exceptions import ImproperlyConfigured  # , ValidationError
-# from django.utils.translation import gettext_lazy as _
-from django.contrib.auth import get_user_model
-# from .helper_general import AnonymousUser, MockUser  # MockRequest, UserModel, MockStaffUser, MockSuperUser, APP_NAME
 from django.forms import (Form, CharField, EmailField, BooleanField, ChoiceField, MultipleChoiceField,
                           HiddenInput, Textarea, RadioSelect, CheckboxSelectMultiple, CheckboxInput)
 # , ModelForm, BaseModelForm, ModelFormMetaclass
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm  # , UserChangeForm
+# from django.utils.translation import gettext_lazy as _
+from django_registration import validators
 from ..mixins import (
     DEFAULT_COUNTRY, FocusMixIn, CriticalFieldMixIn, ComputedFieldsMixIn, FormOverrideMixIn, FormFieldsetMixIn,
     ComputedUsernameMixIn, OverrideCountryMixIn,
     FieldsetOverrideMixIn,  # FieldsetOverrideComputedMixIn, FieldsetOverrideUsernameMixIn,
     # AddressMixIn, AddressUsernameMixIn,
     )
+# from .helper_general import AnonymousUser, MockUser  # MockRequest, UserModel, MockStaffUser, MockSuperUser, APP_NAME
 from .helper_views import BaseRegisterTests  # , USER_DEFAULTS, MimicAsView,
 from ..views import RegisterSimpleFlowView, RegisterActivateFlowView, ModifyUser
 from ..views import RegisterModelSimpleFlowView, RegisterModelActivateFlowView
-from django_registration import validators
-# from pprint import pprint
 
 # # Base MixIns # #
 
@@ -106,7 +104,7 @@ class ComputedUsernameForm(ComputedUsernameMixIn, UserCreationForm):
         fields = ['first_name', 'last_name', 'email', 'username', ]
 
 
-class CountryForm(OverrideCountryMixIn, Form):
+class BaseCountryForm(Form):
     DEFAULT_CITY = 'Seattle'
     DEFAULT_COUNTRY_AREA_STATE = 'WA'
     # Already imported DEFAULT_COUNTRY
@@ -135,6 +133,10 @@ class CountryForm(OverrideCountryMixIn, Form):
         return self.cleaned_data['billing_country_code']
 
 
+class CountryForm(OverrideCountryMixIn, BaseCountryForm):
+    pass
+
+
 # # MixIn Interactions # #
 
 
@@ -148,9 +150,9 @@ class UsernameFocusForm(FocusMixIn, ComputedUsernameMixIn, Form):
     generic_field = CharField()
 
 
-class ComputedCountryForm(OverrideCountryMixIn, ComputedFieldsMixIn):
+class ComputedCountryForm(OverrideCountryMixIn, ComputedFieldsMixIn, BaseCountryForm):
     """The Computed get_critical_field method & computed_fields property are used in OverrideCountryMixIn.__init__. """
-    generic_field = CharField()
+    pass
 
 
 class ModelSimpleFlowTests(BaseRegisterTests, TestCase):
