@@ -244,7 +244,6 @@ class FormTests:
             override_attrs = '' if not size_default else f'size="{size_default}" '
             setup.update(attrs=override_attrs)
         field_formats = FIELD_FORMATS.copy()
-        form_list = []
         if issubclass(self.form_class, ComputedUsernameMixIn):
             name_for_email = self.form.name_for_email or self.form._meta.model.get_email_field() or 'email'
             name_for_user = self.form.name_for_user or self.form._meta.model.USERNAME_FIELD or 'username'
@@ -254,8 +253,24 @@ class FormTests:
                 field_formats[name_for_user] = field_formats.pop('username')
             order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
             self.form.order_fields(order)
-        hidden_list = []
         # print("======================= GET EXPECTED FORMAT ===============================")
+        as_type = setup['as_type']
+        form_list, hidden_list = [], []
+        top_errors = self.form.non_field_errors().copy()  # If data not submitted, this will trigger full_clean method.
+        if issubclass(self.form_class, FormFieldsetMixIn):
+            setup['error_kwargs'] = self.make_error_kwargs(setup)
+            if top_errors:
+                html_args = setup['error_kwargs']['html_args']
+                col_attr = ' id="top_errors"'
+                row_attr = ''
+                data = ' '.join(top_errors)
+                form_col_count = setup['error_kwargs']['form_col_count']
+                error_row = self.form.make_headless_row(html_args, data, form_col_count, col_attr, row_attr)
+                form_list.append(error_row)
+        elif top_errors:
+            error_row = self.error_format(as_type, top_errors, **setup.get('error_kwargs', {}))
+            form_list.append(error_row)
+
         for name, field in self.form.fields.items():
             if isinstance(field.widget, (HiddenInput, MultipleHiddenInput, )):
                 hide_re = {'name': name, 'initial': field.initial}
@@ -314,7 +329,6 @@ class FormTests:
                 field_formats[name] = SELECT_TXT
             field_error = self.form.errors.get(name, None)  # self.form.error_class()
             if field_error:
-                as_type = setup['as_type']
                 error_string = self.error_format(as_type, field_error, **setup.get('error_kwargs', {}))
                 if issubclass(self.form.__class__, FormFieldsetMixIn):
                     if as_type == 'as_table':
