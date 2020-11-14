@@ -2412,6 +2412,8 @@ class BaseCountryTests:
             self.assertEqual(self.form.get_overrides.__name__, 'empty_get_overrides')
         self.assertEqual(self.form.get_overrides.__name__, 'skip_get_overrides')
         self.assertEqual(self.form.get_alt_field_info.__name__, 'empty_get_alt_field_info')
+        request_type = 'POST' if self.get_initial_data() else 'GET'
+        self.assertEqual(request_type, self.request.method)
 
     def test_as_p(self):
         self.assertNotIn('good_practice_attrs', self.form.has_call)
