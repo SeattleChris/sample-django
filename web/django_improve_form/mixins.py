@@ -19,6 +19,11 @@ from pprint import pprint  # TODO: Remove after debugging.
 DEFAULT_COUNTRY = getattr(settings, 'DEFAULT_COUNTRY', 'US')
 
 
+def get_html_name(form, name):
+    """Return the name used in the html form for the given form instance and field name. """
+    return form.add_prefix(name)
+
+
 class FocusMixIn:
     """Autofocus given to a field not hidden or disabled. Can limit to a fields subset, and prioritize a named one. """
     named_focus = None
@@ -206,6 +211,7 @@ class ComputedFieldsMixIn(CriticalFieldMixIn):
         """Must be called after self.fields constructed. Removes desired fields from self.fields. """
         computed_field_names = self.get_computed_field_names(computed_field_names, self.fields)
         if hasattr(self, 'data'):
+            # TODO: Deal with field name vs html_name
             computed_field_names = set(computed_field_names) - set(self.data.keys())
         computed_fields = {key: self.fields.pop(key, None) for key in computed_field_names}
         return computed_fields
@@ -398,6 +404,7 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         flag_value = 'False'
 
         data = self.data.copy()  # QueryDict datastructure, the copy is mutable. Has getlist and appendlist methods.
+        # TODO: Deal with field name vs html_name
         data.appendlist(name_for_email, email_value)
         data.appendlist(flag_name, flag_value)
         data.appendlist(name_for_user, user_value)
@@ -477,6 +484,7 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         cleaned_data = super().clean()  # compute fields, raise if confirmation needed, set unique validation boolean.
         username_value = self.cleaned_data.get(self.name_for_user, '')
         email_value = self.cleaned_data.get(self.name_for_email, None)
+        # TODO: Deal with field name vs html_name
         if self.name_for_user not in self.data and username_value != email_value:
             # print("- - - - - - - - - Confirmation Required - - - - - - - - - - - - - - -")
             marked_safe_translatable_html = self.configure_username_confirmation()
@@ -535,11 +543,12 @@ class FormOverrideMixIn:
         for name, field_val in data.items():
             field, value = field_val
             initial = self.get_initial_for_field(field, name)
-            data_name = self.add_prefix(name)
-            data_val = field.widget.value_from_datadict(self.data, self.files, data_name)
+            # TODO: Deal with field name vs html_name
+            html_name = self.add_prefix(name)
+            data_val = field.widget.value_from_datadict(self.data, self.files, html_name)
             if not field.has_changed(initial, data_val) and data_val != value:
                 self.initial[name] = value  # Only useful if current method called before self.initial used in __init__
-                new_data[data_name] = value
+                new_data[html_name] = value
         if new_data:
             data = self.data.copy()
             data.update(new_data)
@@ -605,7 +614,10 @@ class FormOverrideMixIn:
         if not hasattr(self, 'removed_fields'):
             self.removed_fields = {}
         data_names = set(getattr(self, 'data', {}).keys())
-        needed_names = data_names - set(fields.keys())
+        # TODO: Deal with field name vs html_name
+        # needed_names = data_names - set(fields.keys())
+        needed_names = data_names - set(get_html_name(self, name) for name in fields.keys())
+        # TODO: Translate field names to html_names to get collection, translate back for needed fields.
         add_fields = {name: self.removed_fields.pop(name) for name in needed_names if name in self.removed_fields}
         remove_names = set(self.remove_field_names) - data_names
         removed_fields = {name: fields.pop(name) for name in remove_names if name in fields}
@@ -713,8 +725,8 @@ class OverrideCountryMixIn(FormOverrideMixIn):
             computed_field_names = [country_name]
             data = kwargs.get('data', {})
             if data:  # The form has been submitted.
-                display = data.get('country_display', 'NOT FOUND')
-                country_flag = data.get('country_flag', None)
+                display = data.get(get_html_name(self, 'country_display'), 'NOT FOUND')
+                country_flag = data.get(get_html_name(self, 'country_flag'), None)
                 if country_flag:
                     computed_field_names = []
                     address_display_version = 'foreign'
@@ -739,7 +751,8 @@ class OverrideCountryMixIn(FormOverrideMixIn):
         # print(log)
         super().__init__(*args, **kwargs)
         name = 'country_display'
-        value = self.data.get(name, None)
+        # TODO: Deal with field name vs html_name
+        value = self.data.get(get_html_name(self, name), None)
         if value and address_display_version != value:
             self.set_alt_data(name=name, field=self.fields[name], value=address_display_version)
         # print("------------- FINISH OverrideCountryMixIn(FormOverrideMixIn).__init__ FINISH ------------------")
@@ -748,6 +761,7 @@ class OverrideCountryMixIn(FormOverrideMixIn):
         """Returns a boolean if the alt_field_info['alt_country'] field info should be applied. """
         alt_country = False
         if self.country_optional:
+            # TODO: Deal with field name vs html_name
             alt_country = self.data.get('country_flag', False)
         return bool(alt_country)
 
