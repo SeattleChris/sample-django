@@ -153,6 +153,70 @@ class FormTests:
             result = '%(attrs)s' + result  # '%(attrs)s' content
         return result
 
+    def error_format(self, as_type, error, **kwargs):
+        error, txt, attr = str(error), '', ''
+        context = 'default'
+        multi_field_row = None
+        errors_own_row = kwargs.get('errors_on_separate_row', None)
+        errors_own_row = True if as_type == 'as_p' and errors_own_row is None else errors_own_row
+        if issubclass(self.form.__class__, FormFieldsetMixIn):
+            context = 'special'
+            multi_field_row = kwargs.get('multi_field_row', False)
+            if errors_own_row:
+                context = 'row_multi' if multi_field_row else 'row'
+                tag = kwargs.get('col_tag', 'span') if multi_field_row else kwargs.get('single_col_tag', '')
+                if as_type in ('as_table', 'table'):
+                    tag = 'td'
+                    colspan = 2 if multi_field_row else 2 * kwargs.get('col_count', 1)
+                    attr += ' colspan="{}"'.format(colspan)
+                txt = error if not tag else self.form._html_tag(tag, error, attr)  # used if as_type not in format_error
+
+        format_error = {
+            'as_table': {
+                'default': '<tr><td colspan="2">%s</td></tr>',
+                'special': '%s',
+                'row': '<tr><td%s>%s</td></tr>',
+                'row_multi': '<td%s>%s</td>',
+                'col_data': '%(errors)s%(field)s%(help_text)s',
+                },
+            'as_ul': {
+                'default': '<li>%s</li>',
+                'special': '%s',
+                'row': '<li>%s</li>',
+                'row_multi': '<span>%s</span>',
+                'col_data': '%(errors)s%(label)s %(field)s%(help_text)s',
+                },
+            'as_p': {
+                'default': '%s',
+                'special': '%s',
+                'row': '<p>%s</p>',
+                'row_multi': '<span>%s</span>',
+                'col_data': '%(label)s %(field)s%(help_text)s',
+                # tag = 'span' if multi_field_row else ''
+                },
+            'as_fieldset': {
+                'default': '',
+                'special': '%s',
+                'row': '<p>%s</p>',
+                'row_multi': '<span>%s</span>',
+                'col_data': '%(errors)s%(label)s %(field)s%(help_text)s',
+                },
+            }
+        if as_type in format_error:
+            error = (attr, error) if attr else error
+            txt = format_error[as_type][context] % error
+        if errors_own_row and not multi_field_row:
+            txt += '\n'
+        return txt
+
+    def multi_col_error_format(self, as_type, errors, **kwargs):
+        """Only used in FormFieldsetMixIn on a multi_field_row and using errors_on_separate_row.  """
+        error_data = [self.error_format(as_type, error, **kwargs) for error in errors]
+        row_tag = 'tr' if as_type == 'as_table' else 'li' if as_type == 'ul' else 'p'
+        row_tag = kwargs.get('row_tag', row_tag)
+        error_row = self.form._html_tag(row_tag, ' '.join(error_data))
+        return error_row
+
     def get_expected_format(self, setup):
         # override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
         # setup.update(attrs=override_attrs)
@@ -230,7 +294,19 @@ class FormTests:
                     cur_replace['multiple'] = ''
                     cur_replace['required'] = ''
                 field_formats[name] = SELECT_TXT
-
+            field_error = self.form.errors.get(name, None)  # self.form.error_class()
+            if field_error:
+                as_type = setup['as_type']
+                error_string = self.error_format(as_type, field_error, **setup.get('error_kwargs', {}))
+                if issubclass(self.form.__class__, FormFieldsetMixIn):
+                    if as_type == 'as_table':
+                        cur_replace['label_end'] += error_string
+                    elif as_type in ('as_ul', 'as_p', 'as_fieldset'):
+                        cur_replace['start_tag'] += error_string
+                    else:
+                        cur_replace['error'] = error_string
+                else:
+                    cur_replace['start_tag'] = error_string + cur_replace['start_tag']
             txt = field_formats.get(name, DEFAULT_TXT) % cur_replace
             form_list.append(txt)
         str_hidden = ''.join(hidden_list)
