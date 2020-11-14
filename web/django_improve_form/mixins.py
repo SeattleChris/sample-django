@@ -529,6 +529,8 @@ class FormOverrideMixIn:
         """Modify the form submitted value if it matches a no longer accurate default value. """
         if not data:
             data = {name: (field, value, )}
+        elif any((name, field, value)):
+            raise ImproperlyConfigured("No other parameters expected if receiving data value in set_alt_data method. ")
         new_data = {}
         for name, field_val in data.items():
             field, value = field_val
@@ -779,7 +781,7 @@ class OverrideCountryMixIn(FormOverrideMixIn):
             pprint(value)
             print("---------------------------------------------------------------")
             if field.initial == self.cleaned_data.get(self.country_field_name, None):
-                raise forms.ValidationError("You can input your address. ")
+                raise ValidationError(_("You can input your address. "))
         return country_flag
 
 
@@ -924,7 +926,7 @@ class FormFieldsetMixIn:
         for index in reversed(remove_idx):
             fieldsets.pop(index)
         max_position += 1
-        if len(remaining_fields):
+        if len(remaining_fields):  # Probably only if self.handle_modifiers unexpectedly added fields.
             raise ImproperlyConfigured(_("Some unassigned fields, perhaps some added during make_fieldset. "))
         lookup = {'end': max_position + 2, 'remaining': max_position + 1, None: max_position}
         fieldsets = [(k, v) for k, v in sorted(fieldsets,
