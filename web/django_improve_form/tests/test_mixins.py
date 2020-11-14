@@ -217,6 +217,24 @@ class FormTests:
         error_row = self.form._html_tag(row_tag, ' '.join(error_data))
         return error_row
 
+    def make_error_kwargs(self, setup):
+        """Uses values found in setup, or creates typical defaults. """
+        as_type = setup['as_type']
+        kwargs = setup.get('error_kwargs', {})
+        kwargs.setdefault('col_tag', 'td' if as_type in ('as_table', 'table') else 'span')
+        kwargs.setdefault('single_col_tag', 'td' if as_type in ('as_table', 'table') else '')
+        kwargs.setdefault('col_head_tag', 'th' if as_type in ('as_table', 'table') else None)
+        row_tag = 'tr' if as_type in ('as_table', 'table') else 'li' if as_type in ('as_ul', 'ul') else 'p'
+        kwargs.setdefault('row_tag', row_tag)
+        guess_col_count = 4 if as_type in ('as_table', 'table') else 2
+        kwargs.setdefault('form_col_count', setup.get('form_col_count', guess_col_count))
+        if as_type in ('as_fieldset', 'fieldset'):
+            kwargs['form_col_count'] = 1
+        html_args = [kwargs[key] for key in ('row_tag', 'col_head_tag', 'col_tag', 'single_col_tag')]
+        html_args.extend((as_type, as_type == 'fieldset', ))
+        kwargs['html_args'] = html_args
+        return kwargs
+
     def get_expected_format(self, setup):
         # override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
         # setup.update(attrs=override_attrs)
