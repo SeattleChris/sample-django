@@ -2569,6 +2569,17 @@ class CountryTests(BaseCountryTests, FormTests, TestCase):
 
 class CountryPostTests(BaseCountryTests, FormTests, TestCase):
     form_class = CountryForm
+    initial_data = {
+        'generic_field': 'generic data input',
+        'billing_address_1': '1234 Main St, S',
+         'billing_address_2': 'Apt #42',
+         'billing_city': 'BestTown',
+         'billing_country_area': 'XX',
+         'billing_postcode': '98199',
+         'billing_country_code': 'FR',  # will not be submitted for intial form unless overwrite get_initial_data
+        'country_display': 'local',  # hidden field: initial='local' other option is 'foreign'
+        'country_flag': True,  # True or False: should it show a foreign address format.
+         }
 
     @skip("Not Implemented")
     def test_on_post_display_local_to_foreign(self):
