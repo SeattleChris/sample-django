@@ -9,13 +9,12 @@ from django.contrib.auth import get_user_model  # , views
 from django.urls import reverse  # , reverse_lazy
 from django.utils.datastructures import MultiValueDict
 from django.utils.html import format_html  # conditional_escape,
-# from django.utils.safestring import mark_safe
 from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
 from .mixin_forms import ComputedCountryForm  # # MixIn Interactions # #
-from ..mixins import FormOverrideMixIn, ComputedFieldsMixIn, ComputedUsernameMixIn
+from ..mixins import FormOverrideMixIn, ComputedFieldsMixIn, ComputedUsernameMixIn, FormFieldsetMixIn
 from copy import deepcopy
 
 
@@ -27,7 +26,7 @@ FOCUS = 'autofocus '  # TODO: Deal with HTML output for a field (besides usernam
 REQUIRED = 'required '
 MULTIPLE = ' multiple'
 DEFAULT_RE = {ea: f"%({ea})s" for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'pretty', 'attrs']}
-DEFAULT_RE['input_type'] = 'text'  # TODO: ? required ?
+DEFAULT_RE['input_type'] = 'text'
 USERNAME_TXT = '' + \
     '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" ' + \
     '%(name_length)s%(user_attrs)s%(focus)srequired id="id_username">' + \
@@ -177,29 +176,28 @@ class FormTests:
                 'special': '%s',
                 'row': '<tr><td%s>%s</td></tr>',
                 'row_multi': '<td%s>%s</td>',
-                'col_data': '%(errors)s%(field)s%(help_text)s',
+                'special_col_data': '%(errors)s%(field)s%(help_text)s',
                 },
             'as_ul': {
                 'default': '<li>%s</li>',
                 'special': '%s',
                 'row': '<li>%s</li>',
                 'row_multi': '<span>%s</span>',
-                'col_data': '%(errors)s%(label)s %(field)s%(help_text)s',
+                'special_col_data': '%(errors)s%(label)s %(field)s%(help_text)s',
                 },
             'as_p': {
                 'default': '%s',
                 'special': '%s',
                 'row': '<p>%s</p>',
                 'row_multi': '<span>%s</span>',
-                'col_data': '%(label)s %(field)s%(help_text)s',
-                # tag = 'span' if multi_field_row else ''
+                'special_col_data': '%(label)s %(field)s%(help_text)s',
                 },
             'as_fieldset': {
                 'default': '',
                 'special': '%s',
                 'row': '<p>%s</p>',
                 'row_multi': '<span>%s</span>',
-                'col_data': '%(errors)s%(label)s %(field)s%(help_text)s',
+                'special_col_data': '%(errors)s%(label)s %(field)s%(help_text)s',
                 },
             }
         if as_type in format_error:
@@ -236,8 +234,6 @@ class FormTests:
         return kwargs
 
     def get_expected_format(self, setup):
-        # override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
-        # setup.update(attrs=override_attrs)
         as_type = setup['as_type']
         setup.update(attrs='')
         if issubclass(self.form_class, FormOverrideMixIn):
@@ -275,7 +271,7 @@ class FormTests:
             if isinstance(field.widget, (HiddenInput, MultipleHiddenInput, )):
                 hide_re = {'name': name, 'initial': field.initial}
                 txt = HIDDEN_TXT % hide_re
-                hidden_list.append(txt)
+                hidden_list.append(txt)  # This is missing adding hidden field errors to the top_errors.
                 continue
             cur_replace = DEFAULT_RE.copy()
             cur_replace.update({'name': name, 'pretty': field.label or pretty_name(name)})
@@ -283,7 +279,6 @@ class FormTests:
             if field.disabled:
                 cur_replace['required'] += 'disabled '
             cur_replace['attrs'] = self.get_format_attrs(name, field)
-            # print(self.__class__.__name__, name, field.label, 'attrs:', cur_replace['attrs'], '|', field.widget.attrs, )
             if isinstance(field, EmailField) and name not in field_formats:
                 cur_replace['input_type'] = 'email'
             elif isinstance(field.widget, Textarea):
@@ -327,7 +322,7 @@ class FormTests:
                     cur_replace['multiple'] = ''
                     cur_replace['required'] = ''
                 field_formats[name] = SELECT_TXT
-            field_error = self.form.errors.get(name, None)  # self.form.error_class()
+            field_error = self.form.errors.get(name, None)
             if field_error:
                 error_string = self.error_format(as_type, field_error, **setup.get('error_kwargs', {}))
                 if issubclass(self.form.__class__, FormFieldsetMixIn):
@@ -835,7 +830,6 @@ class ComputedTests(FormTests, TestCase):
         name = 'test_field'
         message = "This is the test error on test_field. "
         response = ValidationError(message)
-        # expected_compute_errors = ErrorDict({name: response})  # similar to return of _clean_computed_fields
         original_errors = deepcopy(self.form._errors)
         expected_errors = ErrorDict()  # similar to Form.full_clean
         expected_errors[name] = self.form.error_class()
@@ -844,7 +838,6 @@ class ComputedTests(FormTests, TestCase):
         clean_error_on_compute_errors = ValidationError(clean_message_on_compute_errors)
         expected_errors[NON_FIELD_ERRORS] = self.form.error_class(error_class='nonfield')  # first add_error(None, err)
         expected_errors[NON_FIELD_ERRORS].append(clean_error_on_compute_errors)  # similar to add_error(None, string)
-
         original_func = deepcopy(self.form.test_func)
         def make_error(value): raise response
         self.form.test_func = make_error
@@ -891,7 +884,6 @@ class ComputedTests(FormTests, TestCase):
         with self.assertRaises(ValidationError):
             self.form.clean()
         final_cleaned_data = self.form.cleaned_data
-
         self.assertIn(name, computed_names)
         self.assertNotIn(name, field_names)
         self.assertIn(name, populated_cleaned_data)
@@ -1022,7 +1014,6 @@ class OverrideTests(FormTests, TestCase):
         name, value = 'generic_field', 'alt_data_value'
         field = self.form.fields.get(name, None)
         self.assertIsNotNone(field, "Unable to find the expected field in current fields. ")
-
         original_form_data = self.form.data
         test_data = self.test_data.copy()
         test_data.update({name: self.test_initial[name]})
@@ -1031,7 +1022,6 @@ class OverrideTests(FormTests, TestCase):
         initial_data = test_data.copy()
         expected_data = test_data.copy()
         expected_data.update({name: value})
-
         initial_val = self.form.get_initial_for_field(field, name)
         data_name = self.form.add_prefix(name)
         data_val = field.widget.value_from_datadict(self.form.data, self.form.files, data_name)
@@ -1055,7 +1045,6 @@ class OverrideTests(FormTests, TestCase):
         """Get expected results when passing data but not any for name, field, value. """
         names = list(self.test_data.keys())[1:-1]
         alt_values = {name: f"alt_value_{name}" for name in self.test_initial}  # some, but not all, will be used.
-
         original_form_data = self.form.data
         test_data = self.test_data.copy()
         test_data.update({name: val for name, val in self.test_initial.items() if name not in names})
@@ -1065,7 +1054,6 @@ class OverrideTests(FormTests, TestCase):
         expected_result = {name: val for name, val in alt_values.items() if name not in names}
         expected_data = test_data.copy()
         expected_data.update(expected_result)
-
         expect_updates = any(self.data_is_initial(name) for name in initial_data)
         test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
         result = self.form.set_alt_data(test_input)
@@ -1084,7 +1072,6 @@ class OverrideTests(FormTests, TestCase):
 
     def test_set_alt_data_mutable(self):
         """After running set_alt_data that triggers changes, the Form's data attribute should have _mutable = False. """
-        # from pprint import pprint
         original_test_initial = self.test_initial
         original_form_data = self.form.data
         initial = self.test_initial
@@ -1093,36 +1080,17 @@ class OverrideTests(FormTests, TestCase):
         test_data._mutable = False
         self.form.data = test_data
         initial_data = test_data.copy()
-
         alt_values = {name: f"alt_value_{name}" for name in initial}  # some, but not all, will be used.
         unchanged_fields = {name: val for name, val in test_data.items() if val == initial[name]}
         expected_result = {name: alt_values[name] for name in unchanged_fields}
         expected_data = test_data.copy()
         expected_data.update(expected_result)
-
         expect_updates = any(self.data_is_initial(name) for name in initial_data)
         test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
         result = self.form.set_alt_data(test_input)
         had_updates = any(value != self.form.data[name] for name, value in initial_data.items())
-        # print("====================== test_set_alt_data_mutable =======================")
-        # pprint(expected_result)
-        # print("--------------------------------------------------")
-        # pprint(result)
-        # print("--------------------------------------------------")
-        # pprint(expected_data)
-        # print("--------------------------------------------------")
-        # pprint(self.form.data)
-        # print("------------------END SECTION---------------------------")
-        # pprint(initial)
-        # print("--------------------------------------------------")
-        # pprint(test_data)
-        # print("========================= SET ALT DATA ==========================================")
+
         for name, val in expected_data.items():
-            # print(name, " :  ", initial[name], "\n")
-            # print(val)
-            # print("-----------------------------------------------")
-            # print(self.form.data[name])
-            # print("***********************************************")
             self.assertEqual(val, self.form.data[name])
         self.assertTrue(expect_updates)
         self.assertTrue(had_updates)
@@ -1140,7 +1108,6 @@ class OverrideTests(FormTests, TestCase):
         test_data._mutable = False
         self.form.data = test_data
         initial_data = test_data.copy()
-
         alt_values = {name: f"alt_value_{name}" for name in self.test_initial}
         test_input = {name: (self.form.fields[name], val) for name, val in alt_values.items()}
         expect_updates = any(self.data_is_initial(name) for name in initial_data)
@@ -1419,7 +1386,6 @@ class OverrideTests(FormTests, TestCase):
         #     }
         result_fields = self.form.prep_fields()
         result_attrs = {name: field.widget.attrs.copy() for name, field in result_fields.items()}
-
         first_maxlength = expected_attrs['first']['maxlength']  # overrides['first']['maxlength']
         first_size = expected_attrs['first']['size']  # overrides['first']['size']
         second_maxlength = expected_attrs['second']['maxlength']  # overrides['second']['maxlength']
@@ -1525,11 +1491,10 @@ class ComputedUsernameTests(FormTests, TestCase):
     user_type = 'user'  # 'superuser' | 'staff' | 'user' | 'anonymous'
     mock_users = False
 
-    def test_temp(self):
-        self.assertEqual('username', self.form._meta.model.USERNAME_FIELD)
-        self.assertEqual('email', self.form._meta.model.get_email_field_name())
-        self.assertEqual('username', self.form.name_for_user)
-        self.assertEqual('email', self.form.name_for_email)
+    def test_setup(self):
+        """Confirm the expected 'name_for_<field>' values are set.  """
+        self.assertEqual(self.form._meta.model.USERNAME_FIELD, self.form.name_for_user)
+        self.assertEqual(self.form._meta.model.get_email_field_name(), self.form.name_for_email)
         self.assertIn(self.form._meta.model.get_email_field_name(), self.form.fields)
         self.assertNotIn('email_field', self.form.fields)
 
@@ -1651,7 +1616,6 @@ class ComputedUsernameTests(FormTests, TestCase):
         self.form.data = test_data
         self.form.is_bound = True
         self.form.cleaned_data = new_info.copy()
-
         names = (new_info[field_name] for field_name in self.form.constructor_fields)
         expected = '_'.join(names).casefold()
         UserModel = get_user_model()
@@ -1674,7 +1638,6 @@ class ComputedUsernameTests(FormTests, TestCase):
         """When email is a valid username, username_from_email_or_names method returns email. """
         self.form.name_for_user = self.form._meta.model.USERNAME_FIELD
         self.form.name_for_email = self.form._meta.model.get_email_field_name()
-
         new_info = OTHER_USER.copy()
         original_data = self.form.data
         test_data = original_data.copy()
@@ -1683,7 +1646,6 @@ class ComputedUsernameTests(FormTests, TestCase):
         self.form.data = test_data
         self.form.is_bound = True
         self.form.cleaned_data = new_info.copy()
-
         expected = new_info['email']
         UserModel = get_user_model()
 
@@ -1750,10 +1712,8 @@ class ComputedUsernameTests(FormTests, TestCase):
 
     def test_message_link_only_no_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
         kwargs = dict(link_text=None, link_only=False, reset=False)
         kwargs['link_only'] = True
-        # print("============================ TEST MESSAGE LINK METHODS ===============================")
         urls = self.get_or_make_links(('login', 'password_reset'))
         for url in urls:
             self.assertIsNotNone(url)
@@ -1777,11 +1737,9 @@ class ComputedUsernameTests(FormTests, TestCase):
 
     def test_message_reset_link_only_no_text(self):
         """The get_login_message response for link_only and no text passed returns as expected. """
-        # self.form.get_login_message(link_text=None, link_only=False, reset=False)
         kwargs = dict(link_text=None, link_only=False, reset=False)
         kwargs['link_only'] = True
         kwargs['reset'] = True
-        # print("============================ TEST MESSAGE LINK METHODS ===============================")
         urls = self.get_or_make_links(('login', 'password_reset'))
         for url in urls:
             self.assertIsNotNone(url)
@@ -2572,11 +2530,11 @@ class CountryPostTests(BaseCountryTests, FormTests, TestCase):
     initial_data = {
         'generic_field': 'generic data input',
         'billing_address_1': '1234 Main St, S',
-         'billing_address_2': 'Apt #42',
-         'billing_city': 'BestTown',
-         'billing_country_area': 'XX',
-         'billing_postcode': '98199',
-         'billing_country_code': 'FR',  # will not be submitted for intial form unless overwrite get_initial_data
+        'billing_address_2': 'Apt #42',
+        'billing_city': 'BestTown',
+        'billing_country_area': 'XX',
+        'billing_postcode': '98199',
+        'billing_country_code': 'FR',  # will not be submitted for initial form unless overwrite get_initial_data
         'country_display': 'local',  # hidden field: initial='local' other option is 'foreign'
         'country_flag': True,  # True or False: should it show a foreign address format.
          }
