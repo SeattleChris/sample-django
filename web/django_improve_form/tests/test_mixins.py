@@ -238,6 +238,7 @@ class FormTests:
     def get_expected_format(self, setup):
         # override_attrs = 'size="15" ' if issubclass(self.form_class, FormOverrideMixIn) else ''
         # setup.update(attrs=override_attrs)
+        as_type = setup['as_type']
         setup.update(attrs='')
         if issubclass(self.form_class, FormOverrideMixIn):
             size_default = self.form.get_overrides().get('_default_', {}).get('size', None)
@@ -254,7 +255,6 @@ class FormTests:
             order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
             self.form.order_fields(order)
         # print("======================= GET EXPECTED FORMAT ===============================")
-        as_type = setup['as_type']
         form_list, hidden_list = [], []
         top_errors = self.form.non_field_errors().copy()  # If data not submitted, this will trigger full_clean method.
         if issubclass(self.form_class, FormFieldsetMixIn):
@@ -402,6 +402,7 @@ class FormTests:
         """All forms should return HTML table rows when .as_table is called. """
         output = output or self.form.as_table().strip()
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
+        setup['as_type'] = 'as_table'
         expected = self.get_expected_format(setup)
         if output != expected:
             self.log_html_diff(expected, output, as_type='as_table', full=False)
@@ -412,6 +413,7 @@ class FormTests:
         """All forms should return HTML <li>s when .as_ul is called. """
         output = output or self.form.as_ul().strip()
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
+        setup['as_type'] = 'as_ul'
         expected = self.get_expected_format(setup)
         if output != expected:
             self.log_html_diff(expected, output, as_type='as_ul', full=False)
@@ -422,6 +424,7 @@ class FormTests:
         """All forms should return HTML <p>s when .as_p is called. """
         output = output or self.form.as_p().strip()
         setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
+        setup['as_type'] = 'as_p'
         expected = self.get_expected_format(setup)
         if output != expected:
             self.log_html_diff(expected, output, as_type='as_p', full=False)
