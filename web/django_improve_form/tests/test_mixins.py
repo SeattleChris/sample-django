@@ -1051,8 +1051,8 @@ class OverrideTests(FormTests, TestCase):
         expected_data = test_data.copy()
         expected_data.update({name: value})
         initial_val = self.form.get_initial_for_field(field, name)
-        data_name = self.form.add_prefix(name)
-        data_val = field.widget.value_from_datadict(self.form.data, self.form.files, data_name)
+        html_name = self.form.add_prefix(name)
+        data_val = field.widget.value_from_datadict(self.form.data, self.form.files, html_name)
         use_alt_value = not field.has_changed(initial_val, data_val)
         expected_value = value if use_alt_value else initial_data.get(name)
         expected_result = {name: value} if use_alt_value else {}
@@ -1060,7 +1060,8 @@ class OverrideTests(FormTests, TestCase):
 
         self.assertEqual(self.test_initial[name], initial_val)
         self.assertEqual(initial_data[name], data_val)
-        self.assertEqual(expected_value, self.form.data[name])
+        self.assertEqual(expected_value, self.form.data[html_name])
+        self.assertEqual(expected_value, field.initial)
         self.assertDictEqual(expected_result, result)
         for key in initial_data:
             self.assertEqual(expected_data[key], self.form.data[key])
@@ -1075,11 +1076,11 @@ class OverrideTests(FormTests, TestCase):
         alt_values = {name: f"alt_value_{name}" for name in self.test_initial}  # some, but not all, will be used.
         original_form_data = self.form.data
         test_data = self.test_data.copy()
-        test_data.update({name: val for name, val in self.test_initial.items() if name not in names})
+        test_data.update({k: v for k, v in self.test_initial.items() if get_html_name(self.form, k) not in names})
         test_data._mutable = False
         self.form.data = test_data
         initial_data = test_data.copy()
-        expected_result = {name: val for name, val in alt_values.items() if name not in names}
+        expected_result = {k: v for k, v in alt_values.items() if get_html_name(self.form, k) not in names}
         expected_data = test_data.copy()
         expected_data.update(expected_result)
         expect_updates = any(self.data_is_initial(name) for name in initial_data)
@@ -1996,14 +1997,14 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 
         self.assertNotIn(self.form.name_for_user, original_data)
         self.assertNotIn(self.form.name_for_user, original_fields)
-        self.assertIn(self.form.name_for_user, self.form.data)
+        self.assertIn(get_html_name(self.form, self.form.name_for_user), self.form.data)
         self.assertIn(self.form.name_for_user, self.form.fields)
         self.assertNotIn(self.form.USERNAME_FLAG_FIELD, original_data)
         self.assertNotIn(self.form.USERNAME_FLAG_FIELD, original_fields)
-        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.data)
+        self.assertIn(get_html_name(self.form, self.form.USERNAME_FLAG_FIELD), self.form.data)
         self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.fields)
-        self.assertEqual(expected_name, self.form.data.get(self.form.name_for_user, None))
-        self.assertEqual(expected_flag, self.form.data.get(self.form.USERNAME_FLAG_FIELD, None))
+        self.assertEqual(expected_name, self.form.data.get(get_html_name(self.form, self.form.name_for_user), None))
+        self.assertEqual(expected_flag, self.form.data.get(get_html_name(self.form, self.form.USERNAME_FLAG_FIELD)))
 
         self.form.data = original_data
         self.form.fields = original_fields
@@ -2201,7 +2202,7 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 
         self.assertIsNotNone(email_val)
         self.assertIsNotNone(user_field)
-        self.assertEqual(email_val, self.form.data.get(self.form.name_for_email, None))
+        self.assertEqual(email_val, self.form.data.get(get_html_name(self.form, self.form.name_for_email), None))
         self.assertEqual(expected, actual)
 
         self.form.data = original_data
