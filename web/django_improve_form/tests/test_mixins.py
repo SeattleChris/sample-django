@@ -2295,7 +2295,15 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 class BaseCountryTests:
     form_class = None
     overrides_empty_or_skip = 'skip'
+    good_practice = 'empty'
+    alt_info = 'empty'
     initial_data = None
+
+    # # TODO: Refactor to use a function wrapper to trigger pushing to has_call.
+    # def record_wrapper(self, signal, func, *args, **kwargs):
+    #     self.form.has_call.push(signal)
+    #     response = func(*args, **kwargs)
+    #     return response
 
     def setUp(self):
         self.user = self.make_user()
@@ -2309,17 +2317,51 @@ class BaseCountryTests:
         self.original_get_overrides = self.form.get_overrides
         self.original_get_alt_field_info = self.form.get_alt_field_info
         self.original_formfield_attrs_overrides = self.form.formfield_attrs_overrides
-        self.original_autocomplete = self.form.autocomplete
         self.original_alt_field_info = self.form.alt_field_info
-        self.form.good_practice_attrs = self.empty_good_practice_attrs
+        if self.good_practice == 'empty':
+            self.form.good_practice_attrs = self.empty_good_practice_attrs
+        # else:
+        #     self.form.good_practice_attrs = self.record_wrapper('good_practice_attrs', self.form.good_practice_attrs)
         if self.overrides_empty_or_skip == 'empty':
             self.form.get_overrides = self.empty_get_overrides
+            self.form.formfield_attrs_overrides = {}
         elif self.overrides_empty_or_skip == 'skip':
             self.form.get_overrides = self.skip_get_overrides
-        self.form.get_alt_field_info = self.empty_get_alt_field_info
-        self.form.formfield_attrs_overrides = {}
-        self.form.autocomplete = {}
-        self.form.alt_field_info = {}
+            self.form.formfield_attrs_overrides = {}
+        if self.alt_info == 'empty':
+            self.form.get_alt_field_info = self.empty_get_alt_field_info
+            self.form.alt_field_info = {}
+
+    def test_setup(self):
+        """Are the overridden methods the new empty versions? """
+        self.assertIsNotNone(getattr(self, 'original_good_practice_attrs', None))
+        self.assertIsNotNone(getattr(self, 'original_get_overrides', None))
+        self.assertIsNotNone(getattr(self, 'original_get_alt_field_info', None))
+        self.assertIsNone(getattr(self.form, 'is_prepared', None))
+        self.assertNotIn('good_practice_attrs', self.form.has_call)
+        self.assertNotIn('get_overrides', self.form.has_call)
+        self.assertNotIn('get_alt_field_info', self.form.has_call)
+        good_practice = self.form.good_practice_attrs()
+        if self.good_practice == 'empty':
+            self.assertEqual({}, good_practice)
+        overrides = self.form.get_overrides()
+        if self.overrides_empty_or_skip == 'empty':
+            self.assertEqual({}, overrides)
+        elif self.overrides_empty_or_skip == 'skip':
+            self.assertEqual(self.no_resize_override(), overrides)
+        if self.alt_info == 'empty':
+            self.assertEqual({}, self.form.get_alt_field_info())
+            self.assertIn('get_alt_field_info', self.form.has_call)
+            self.assertEqual(self.form.get_alt_field_info.__name__, 'empty_get_alt_field_info')
+        self.assertIn('good_practice_attrs', self.form.has_call)
+        self.assertIn('get_overrides', self.form.has_call)
+        self.form.has_call = []
+        self.assertEqual(self.form.good_practice_attrs.__name__, 'empty_good_practice_attrs')
+        if self.overrides_empty_or_skip == 'empty':
+            self.assertEqual(self.form.get_overrides.__name__, 'empty_get_overrides')
+        self.assertEqual(self.form.get_overrides.__name__, 'skip_get_overrides')
+        request_type = 'POST' if self.get_initial_data() else 'GET'
+        self.assertEqual(request_type, self.request.method)
 
     def get_initial_data(self, removed=('billing_country_code', )):
         """Can be overwritten to modify the initial_test_data used in a POST request. """
@@ -2368,33 +2410,6 @@ class BaseCountryTests:
         field = source.pop(name, None)
         return field
 
-    def test_setup(self):
-        """Are the overridden methods the new empty versions? """
-        self.assertIsNotNone(getattr(self, 'original_good_practice_attrs', None))
-        self.assertIsNotNone(getattr(self, 'original_get_overrides', None))
-        self.assertIsNotNone(getattr(self, 'original_get_alt_field_info', None))
-        self.assertIsNone(getattr(self.form, 'is_prepared', None))
-        self.assertNotIn('good_practice_attrs', self.form.has_call)
-        self.assertNotIn('get_overrides', self.form.has_call)
-        self.assertNotIn('get_alt_field_info', self.form.has_call)
-        self.assertEqual({}, self.form.good_practice_attrs())
-        if self.overrides_empty_or_skip == 'empty':
-            self.assertEqual({}, self.form.get_overrides())
-        elif self.overrides_empty_or_skip == 'skip':
-            self.assertEqual(self.no_resize_override(), self.form.get_overrides())
-        self.assertEqual({}, self.form.get_alt_field_info())
-        self.assertIn('good_practice_attrs', self.form.has_call)
-        self.assertIn('get_overrides', self.form.has_call)
-        self.assertIn('get_alt_field_info', self.form.has_call)
-        self.form.has_call = []
-        self.assertEqual(self.form.good_practice_attrs.__name__, 'empty_good_practice_attrs')
-        if self.overrides_empty_or_skip == 'empty':
-            self.assertEqual(self.form.get_overrides.__name__, 'empty_get_overrides')
-        self.assertEqual(self.form.get_overrides.__name__, 'skip_get_overrides')
-        self.assertEqual(self.form.get_alt_field_info.__name__, 'empty_get_alt_field_info')
-        request_type = 'POST' if self.get_initial_data() else 'GET'
-        self.assertEqual(request_type, self.request.method)
-
     def test_as_p(self):
         self.assertNotIn('good_practice_attrs', self.form.has_call)
         self.assertNotIn('get_overrides', self.form.has_call)
@@ -2405,7 +2420,8 @@ class BaseCountryTests:
             self.assertIn('good_practice_attrs', self.form.has_call)
         elif self.overrides_empty_or_skip == 'skip':
             self.assertIn('get_overrides', self.form.has_call)
-        self.assertIn('get_alt_field_info', self.form.has_call)
+        if self.alt_info == 'empty':
+            self.assertIn('get_alt_field_info', self.form.has_call)
         self.assertTrue(getattr(self.form, 'is_prepared', None))
         self.form.has_call = []
         super().test_as_p(output=output)
@@ -2549,6 +2565,7 @@ class CountryTests(BaseCountryTests, FormTests, TestCase):
 
 class CountryPostTests(BaseCountryTests, FormTests, TestCase):
     form_class = CountryForm
+    alt_info = False
     initial_data = {
         'generic_field': 'generic data input',
         'billing_address_1': '1234 Main St, S',
