@@ -2640,13 +2640,20 @@ class ComputedCountryTests(CountryPostTests):
         # for name in needed_names: name, field = self.get_critical_field(name, name)
         pass
 
-    @skip("Not Implemented")
     def test_init_update_computed_field_names(self):
-        """get_critical_field called if form.country_optional, country_field, and needed_names. """
-        # computed_field_names = [country_name]
-        # computed_field_names.extend(kwargs.get('computed_fields', []))
-        # kwargs['computed_fields'] = computed_field_names
-        pass
+        """OverrideCountryMixIn uses computed_fields features if they are present. """
+        original_request = self.request
+        original_form = self.form
+        computed = getattr(self.form, 'computed_fields', None)
+        get_form = self.make_form_request()
+        computed_fields = getattr(get_form, 'computed_fields', None)
 
+        self.assertIsNotNone(computed)
+        self.assertIsNotNone(computed_fields)
+        self.assertIsNotNone(self.form.country_field_name)
+        self.assertIn(self.form.country_field_name, computed_fields)
+
+        self.request = original_request
+        self.form = original_form
 
 # end test_mixins.py
