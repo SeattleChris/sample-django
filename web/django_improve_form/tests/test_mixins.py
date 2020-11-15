@@ -82,15 +82,15 @@ class FormTests:
         initial = kwargs.pop('initial', {})
         prefix = kwargs.pop('prefix', None)
         data = kwargs.pop('data', {})
-        kwargs.setdefault('FILES', kwargs.pop('files', {}))
-        request = MockRequest(**kwargs)
-        request.method = method.upper()
+        files = kwargs.pop('files', {})
+        method = method.upper()
+        request = MockRequest(user=self.user, method=method, FILES=files, **kwargs)
         if request.method == 'PUT':
             method = 'POST'
         setattr(request, method, data)
-        request.user = self.user
         self.request = request
-        form_kwargs = {'initial': initial, 'prefix': prefix}
+        form_kwargs = deepcopy(kwargs)
+        form_kwargs.update({'initial': initial, 'prefix': prefix})
         if self.request.method in ('POST', 'PUT'):
             form_kwargs.update({'data': self.request.POST, 'files': self.request.FILES, })
         form = self.form_class(**form_kwargs)
