@@ -271,8 +271,10 @@ class FormTests:
 
         for name, field in form.fields.items():
             if isinstance(field.widget, (HiddenInput, MultipleHiddenInput, )):
-                hide_re = {'name': name, 'initial': field.initial}
-                txt = HIDDEN_TXT % hide_re
+                hide_re = DEFAULT_RE.copy()
+                hide_re.update({'name': name, 'input_type': 'hidden', 'end_tag': ''})
+                hide_re['attrs'] = f'value="{field.initial}" '
+                txt = BASE_INPUT % hide_re
                 hidden_list.append(txt)  # This is missing adding hidden field errors to the top_errors.
                 continue
             cur_replace = DEFAULT_RE.copy()
