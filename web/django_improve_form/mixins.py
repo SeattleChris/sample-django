@@ -547,6 +547,7 @@ class FormOverrideMixIn:
             html_name = self.add_prefix(name)
             data_val = field.widget.value_from_datadict(self.data, self.files, html_name)
             if not field.has_changed(initial, data_val) and data_val != value:
+                field.initial = value
                 self.initial[name] = value  # Only useful if current method called before self.initial used in __init__
                 new_data[html_name] = value
         if new_data:
@@ -710,6 +711,8 @@ class OverrideCountryMixIn(FormOverrideMixIn):
             'billing_postcode': {
                     'label': _("Postal Code"),
                     'help_text': '', },
+            'billing_country_code': {
+                    'initial': '', },
             },
         }
 
