@@ -604,6 +604,23 @@ class CriticalTests(FormTests, TestCase):
         self.assertIn(expected, all_validators)
 
 
+class TosCriticalTests(FormTests, TestCase):
+    form_class = CriticalForm
+
+    def setUp(self):
+        form_class = deepcopy(self.form_class)
+        form_class.tos_required = True
+        self.form_class = form_class
+        super().setUp()
+
+    def test_tos_setup(self):
+        """When tos_required, do the as_<type> displays work as expected. """
+        self.assertTrue(self.form.tos_required)
+        self.assertTrue(self.form.tos_required)
+        self.assertIsNotNone(self.form.name_for_tos)
+        self.assertIsNotNone(self.form.fields.get(self.form.name_for_tos, None))
+
+
 class ComputedTests(FormTests, TestCase):
     form_class = ComputedForm
 
