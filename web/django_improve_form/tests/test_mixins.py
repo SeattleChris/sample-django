@@ -150,6 +150,7 @@ class FormTests:
         return result
 
     def error_format(self, as_type, error, **kwargs):
+        """Used for constructing expected format for field & top errors for FormFieldsetMixIn or default html. """
         error, txt, attr = str(error), '', ''
         context = 'default'
         multi_field_row = None
@@ -271,7 +272,7 @@ class FormTests:
                 hide_re.update({'name': name, 'input_type': 'hidden', 'end_tag': ''})
                 hide_re['attrs'] = f'value="{field.initial}" '
                 txt = BASE_INPUT % hide_re
-                hidden_list.append(txt)  # This is missing adding hidden field errors to the top_errors.
+                hidden_list.append(txt)  # TODO: Account for hidden field errors being added to top errors.
                 continue
             cur_replace = DEFAULT_RE.copy()
             cur_replace.update({'name': name, 'pretty': field.label or pretty_name(name)})
@@ -316,7 +317,7 @@ class FormTests:
                 option_list = []
                 for num, each in enumerate(field.choices):
                     val, display = each
-                    option = OPTION_TXT % {'val': val, 'display_choice': display}
+                    option = OPTION_TXT % {'val': str(val), 'display_choice': str(display)}
                     option_list.append(option)
                 cur_replace['options'] = ''.join(option_list)
                 cur_replace['multiple'] = MULTIPLE
