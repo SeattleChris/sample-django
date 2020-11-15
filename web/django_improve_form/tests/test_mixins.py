@@ -26,8 +26,7 @@ FOCUS = 'autofocus '  # TODO: Deal with HTML output for a field (besides usernam
 REQUIRED = 'required '
 MULTIPLE = ' multiple'
 DEFAULT_RE = {ea: f"%({ea})s" for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'pretty', 'attrs']}
-DEFAULT_RE['input_type'] = 'text'
-DEFAULT_RE['last'] = ''
+DEFAULT_RE.update(input_type='text', last='', required='')
 USERNAME_TXT = '' + \
     '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" ' + \
     '%(name_length)s%(user_attrs)s%(focus)srequired id="id_username">' + \
@@ -44,12 +43,9 @@ PASSWORD2_TXT = '' + \
     '%(start_tag)s<label for="id_password2">Password confirmation:</label>%(label_end)s<input type="password" ' + \
     'name="password2" autocomplete="new-password" required id="id_password2">%(input_end)s<span class="helptext">' + \
     'Enter the same password as before, for verification.</span>%(end_tag)s\n'
-TOS_TXT = '%(start_tag)s<label for="id_tos_field">I have read and agree to the Terms of Service:</label>' + \
-    '%(label_end)s<input type="checkbox" name="tos_field" required id="id_tos_field">%(end_tag)s\n'
-HIDDEN_TXT = '<input type="hidden" name="%(name)s" value="%(initial)s" id="id_%(name)s">'
 START_LABEL = '%(start_tag)s<label for="id_%(name)s">%(pretty)s:</label>%(label_end)s'
-DEFAULT_TXT = START_LABEL + \
-    '<input type="%(input_type)s" name="%(name)s" %(attrs)s%(required)sid="id_%(name)s"%(last)s>%(end_tag)s\n'
+BASE_INPUT = '<input type="%(input_type)s" name="%(name)s" %(attrs)s%(required)sid="id_%(name)s"%(last)s>%(end_tag)s'
+DEFAULT_TXT = START_LABEL + BASE_INPUT + '\n'
 AREA_TXT = START_LABEL + \
     '<textarea name="%(name)s" %(attrs)s%(required)sid="id_%(name)s">\n%(initial)s</textarea>%(end_tag)s\n'
 SELECT_TXT = START_LABEL + \
@@ -60,7 +56,7 @@ RADIO_TXT = '%(start_tag)s<label for="id_%(name)s_0">%(pretty)s:</label>%(label_
     '<ul id="id_%(name)s">\n%(options)s</ul>%(end_tag)s\n'
 OTHER_OPTION_TXT = '    <li><label for="id_%(name)s_%(num)s"><input type="%(input_type)s" name="%(name)s" ' + \
     'value="%(val)s" %(required)sid="id_%(name)s_%(num)s">\n %(display_choice)s</label>\n\n</li>\n'  # TODO: checked?
-FIELD_FORMATS = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
+FIELD_FORMATS = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT}
 
 
 def get_html_name(form, name):
@@ -571,10 +567,8 @@ class CriticalTests(FormTests, TestCase):
         """Confirm tos_field is only present when configured to add the field. """
         name = self.form.name_for_tos or 'tos_field'
         initial_is_off = self.form.tos_required is False
-        name_in_initial = name in self.form.fields
         found = self.form.fields.get(name, None)
         original_critical = deepcopy(self.form.critical_fields)
-
         self.form.tos_required = True
         expected = deepcopy(original_critical)
         name = getattr(self.form, 'name_for_tos', None) or ''
@@ -586,7 +580,6 @@ class CriticalTests(FormTests, TestCase):
         actual = self.form.critical_fields
 
         self.assertTrue(initial_is_off)
-        self.assertFalse(name_in_initial)
         self.assertIsNone(found)
         self.assertDictEqual(initial_kwargs, returned_kwargs)
         self.assertDictEqual(expected, actual)
@@ -616,8 +609,7 @@ class TosCriticalTests(FormTests, TestCase):
         super().setUp()
 
     def test_tos_setup(self):
-        """When tos_required, do the as_<type> displays work as expected. """
-        self.assertTrue(self.form.tos_required)
+        """Confirm the form was instantiated with tos_required. """
         self.assertTrue(self.form.tos_required)
         self.assertIsNotNone(self.form.name_for_tos)
         self.assertIsNotNone(self.form.fields.get(self.form.name_for_tos, None))
