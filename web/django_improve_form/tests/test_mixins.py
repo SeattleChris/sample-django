@@ -132,14 +132,18 @@ class FormTests:
         user = type_lookup[user_type](**user_setup)
         return user
 
-    def get_format_attrs(self, name, field):
+    def get_format_attrs(self, name, field, alt_field_info={}):
         """For the given named field, get the attrs as determined by the field and widget settings. """
+        if name in alt_field_info:
+            for prop, value in alt_field_info[name].items():
+                setattr(field, prop, value)
+        initial = field.initial
+        initial = initial() if callable(initial) else initial
         attrs, result = {}, []
-        if field.initial and not isinstance(field.widget, Textarea) and not name == 'billing_country_code':
-            # TODO: Fix the country code patch. 
-            attrs['value'] = str(field.initial)
+        if initial and not isinstance(field.widget, Textarea):
+            attrs['value'] = str(initial)
         html_name = get_html_name(self.form, name)
-        if html_name in getattr(self.form, 'data', {}):
+        if html_name in getattr(self.form, 'data', {}) and self.form.data[html_name]:
             attrs['value'] = self.form.data[html_name]
         attrs.update(field.widget_attrs(field.widget))
         result = ''.join(f'{key}="{val}" ' for key, val in attrs.items())
@@ -235,11 +239,13 @@ class FormTests:
     def get_expected_format(self, setup):
         form = setup.pop('form', self.form)
         as_type = setup['as_type']
+        alt_field_info = {}
         setup.update(attrs='')
         if issubclass(self.form_class, FormOverrideMixIn):
             size_default = form.get_overrides().get('_default_', {}).get('size', None)
             override_attrs = '' if not size_default else f'size="{size_default}" '
             setup.update(attrs=override_attrs)
+            alt_field_info = self.form.get_alt_field_info()
         field_formats = FIELD_FORMATS.copy()
         if issubclass(self.form_class, ComputedUsernameMixIn):
             name_for_email = form.name_for_email or form._meta.model.get_email_field() or 'email'
@@ -280,7 +286,7 @@ class FormTests:
             cur_replace['required'] = REQUIRED if field.required else ''
             if field.disabled:
                 cur_replace['required'] += 'disabled '
-            cur_replace['attrs'] = self.get_format_attrs(name, field)
+            cur_replace['attrs'] = self.get_format_attrs(name, field, alt_field_info)
             if isinstance(field, EmailField) and name not in field_formats:
                 cur_replace['input_type'] = 'email'
             elif isinstance(field.widget, Textarea):
