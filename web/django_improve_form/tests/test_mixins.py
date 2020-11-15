@@ -26,8 +26,7 @@ FOCUS = 'autofocus '  # TODO: Deal with HTML output for a field (besides usernam
 REQUIRED = 'required '
 MULTIPLE = ' multiple'
 DEFAULT_RE = {ea: f"%({ea})s" for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'pretty', 'attrs']}
-DEFAULT_RE['input_type'] = 'text'
-DEFAULT_RE['last'] = ''
+DEFAULT_RE.update(input_type='text', last='', required='')
 USERNAME_TXT = '' + \
     '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" ' + \
     '%(name_length)s%(user_attrs)s%(focus)srequired id="id_username">' + \
@@ -44,12 +43,9 @@ PASSWORD2_TXT = '' + \
     '%(start_tag)s<label for="id_password2">Password confirmation:</label>%(label_end)s<input type="password" ' + \
     'name="password2" autocomplete="new-password" required id="id_password2">%(input_end)s<span class="helptext">' + \
     'Enter the same password as before, for verification.</span>%(end_tag)s\n'
-TOS_TXT = '%(start_tag)s<label for="id_tos_field">I have read and agree to the Terms of Service:</label>' + \
-    '%(label_end)s<input type="checkbox" name="tos_field" required id="id_tos_field">%(end_tag)s\n'
-HIDDEN_TXT = '<input type="hidden" name="%(name)s" value="%(initial)s" id="id_%(name)s">'
 START_LABEL = '%(start_tag)s<label for="id_%(name)s">%(pretty)s:</label>%(label_end)s'
-DEFAULT_TXT = START_LABEL + \
-    '<input type="%(input_type)s" name="%(name)s" %(attrs)s%(required)sid="id_%(name)s"%(last)s>%(end_tag)s\n'
+BASE_INPUT = '<input type="%(input_type)s" name="%(name)s" %(attrs)s%(required)sid="id_%(name)s"%(last)s>%(end_tag)s'
+DEFAULT_TXT = START_LABEL + BASE_INPUT + '\n'
 AREA_TXT = START_LABEL + \
     '<textarea name="%(name)s" %(attrs)s%(required)sid="id_%(name)s">\n%(initial)s</textarea>%(end_tag)s\n'
 SELECT_TXT = START_LABEL + \
@@ -60,7 +56,7 @@ RADIO_TXT = '%(start_tag)s<label for="id_%(name)s_0">%(pretty)s:</label>%(label_
     '<ul id="id_%(name)s">\n%(options)s</ul>%(end_tag)s\n'
 OTHER_OPTION_TXT = '    <li><label for="id_%(name)s_%(num)s"><input type="%(input_type)s" name="%(name)s" ' + \
     'value="%(val)s" %(required)sid="id_%(name)s_%(num)s">\n %(display_choice)s</label>\n\n</li>\n'  # TODO: checked?
-FIELD_FORMATS = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT, 'tos_field': TOS_TXT}
+FIELD_FORMATS = {'username': USERNAME_TXT, 'password1': PASSWORD1_TXT, 'password2': PASSWORD2_TXT}
 
 
 def get_html_name(form, name):
@@ -82,15 +78,15 @@ class FormTests:
         initial = kwargs.pop('initial', {})
         prefix = kwargs.pop('prefix', None)
         data = kwargs.pop('data', {})
-        kwargs.setdefault('FILES', kwargs.pop('files', {}))
-        request = MockRequest(**kwargs)
-        request.method = method.upper()
+        files = kwargs.pop('files', {})
+        method = method.upper()
+        request = MockRequest(user=self.user, method=method, FILES=files, **kwargs)
         if request.method == 'PUT':
             method = 'POST'
         setattr(request, method, data)
-        request.user = self.user
         self.request = request
-        form_kwargs = {'initial': initial, 'prefix': prefix}
+        form_kwargs = deepcopy(kwargs)
+        form_kwargs.update({'initial': initial, 'prefix': prefix})
         if self.request.method in ('POST', 'PUT'):
             form_kwargs.update({'data': self.request.POST, 'files': self.request.FILES, })
         form = self.form_class(**form_kwargs)
@@ -139,7 +135,8 @@ class FormTests:
     def get_format_attrs(self, name, field):
         """For the given named field, get the attrs as determined by the field and widget settings. """
         attrs, result = {}, []
-        if field.initial and not isinstance(field.widget, Textarea):
+        if field.initial and not isinstance(field.widget, Textarea) and not name == 'billing_country_code':
+            # TODO: Fix the country code patch. 
             attrs['value'] = str(field.initial)
         html_name = get_html_name(self.form, name)
         if html_name in getattr(self.form, 'data', {}):
@@ -154,6 +151,7 @@ class FormTests:
         return result
 
     def error_format(self, as_type, error, **kwargs):
+        """Used for constructing expected format for field & top errors for FormFieldsetMixIn or default html. """
         error, txt, attr = str(error), '', ''
         context = 'default'
         multi_field_row = None
@@ -235,25 +233,26 @@ class FormTests:
         return kwargs
 
     def get_expected_format(self, setup):
+        form = setup.pop('form', self.form)
         as_type = setup['as_type']
         setup.update(attrs='')
         if issubclass(self.form_class, FormOverrideMixIn):
-            size_default = self.form.get_overrides().get('_default_', {}).get('size', None)
+            size_default = form.get_overrides().get('_default_', {}).get('size', None)
             override_attrs = '' if not size_default else f'size="{size_default}" '
             setup.update(attrs=override_attrs)
         field_formats = FIELD_FORMATS.copy()
         if issubclass(self.form_class, ComputedUsernameMixIn):
-            name_for_email = self.form.name_for_email or self.form._meta.model.get_email_field() or 'email'
-            name_for_user = self.form.name_for_user or self.form._meta.model.USERNAME_FIELD or 'username'
+            name_for_email = form.name_for_email or form._meta.model.get_email_field() or 'email'
+            name_for_user = form.name_for_user or form._meta.model.USERNAME_FIELD or 'username'
             if 'email' in field_formats:
                 field_formats[name_for_email] = field_formats.pop('email')
             if 'username' in field_formats:
                 field_formats[name_for_user] = field_formats.pop('username')
             order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
-            self.form.order_fields(order)
+            form.order_fields(order)
         # print("======================= GET EXPECTED FORMAT ===============================")
         form_list, hidden_list = [], []
-        top_errors = self.form.non_field_errors().copy()  # If data not submitted, this will trigger full_clean method.
+        top_errors = form.non_field_errors().copy()  # If data not submitted, this will trigger full_clean method.
         if issubclass(self.form_class, FormFieldsetMixIn):
             setup['error_kwargs'] = self.make_error_kwargs(setup)
             if top_errors:
@@ -262,17 +261,19 @@ class FormTests:
                 row_attr = ''
                 data = ' '.join(top_errors)
                 form_col_count = setup['error_kwargs']['form_col_count']
-                error_row = self.form.make_headless_row(html_args, data, form_col_count, col_attr, row_attr)
+                error_row = form.make_headless_row(html_args, data, form_col_count, col_attr, row_attr)
                 form_list.append(error_row)
         elif top_errors:
             error_row = self.error_format(as_type, top_errors, **setup.get('error_kwargs', {}))
             form_list.append(error_row)
 
-        for name, field in self.form.fields.items():
+        for name, field in form.fields.items():
             if isinstance(field.widget, (HiddenInput, MultipleHiddenInput, )):
-                hide_re = {'name': name, 'initial': field.initial}
-                txt = HIDDEN_TXT % hide_re
-                hidden_list.append(txt)  # This is missing adding hidden field errors to the top_errors.
+                hide_re = DEFAULT_RE.copy()
+                hide_re.update({'name': name, 'input_type': 'hidden', 'end_tag': ''})
+                hide_re['attrs'] = f'value="{field.initial}" '
+                txt = BASE_INPUT % hide_re
+                hidden_list.append(txt)  # TODO: Account for hidden field errors being added to top errors.
                 continue
             cur_replace = DEFAULT_RE.copy()
             cur_replace.update({'name': name, 'pretty': field.label or pretty_name(name)})
@@ -311,13 +312,13 @@ class FormTests:
             elif isinstance(field, BooleanField) or isinstance(field.widget, CheckboxInput):
                 cur_replace['input_type'] = 'checkbox'
                 cur_replace['attrs'] = ''
-                if field.initial or self.form.data.get(get_html_name(self.form, name), None):
+                if field.initial or form.data.get(get_html_name(form, name), None):
                     cur_replace['last'] = ' checked'
             elif isinstance(field.widget, (Select, SelectMultiple)):
                 option_list = []
                 for num, each in enumerate(field.choices):
                     val, display = each
-                    option = OPTION_TXT % {'val': val, 'display_choice': display}
+                    option = OPTION_TXT % {'val': str(val), 'display_choice': str(display)}
                     option_list.append(option)
                 cur_replace['options'] = ''.join(option_list)
                 cur_replace['multiple'] = MULTIPLE
@@ -325,10 +326,10 @@ class FormTests:
                     cur_replace['multiple'] = ''
                     cur_replace['required'] = ''
                 field_formats[name] = SELECT_TXT
-            field_error = self.form.errors.get(name, None)
+            field_error = form.errors.get(name, None)
             if field_error:
                 error_string = self.error_format(as_type, field_error, **setup.get('error_kwargs', {}))
-                if issubclass(self.form.__class__, FormFieldsetMixIn):
+                if issubclass(form.__class__, FormFieldsetMixIn):
                     if as_type == 'as_table':
                         cur_replace['label_end'] += error_string
                     elif as_type in ('as_ul', 'as_p', 'as_fieldset'):
@@ -397,11 +398,12 @@ class FormTests:
             self.assertEqual(value, getattr(self.user, key, None))
 
     @skip("Hold test for debugging. ")
-    def test_as_table(self, output=None):
+    def test_as_table(self, output=None, form=None):
         """All forms should return HTML table rows when .as_table is called. """
-        output = output or self.form.as_table().strip()
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
         setup['as_type'] = 'as_table'
+        setup['form'] = form or self.form
+        output = output or setup['form'].as_table().strip()
         expected = self.get_expected_format(setup)
         if output != expected:
             self.log_html_diff(expected, output, as_type='as_table', full=False)
@@ -409,22 +411,24 @@ class FormTests:
         self.assertEqual(expected, output)
 
     @skip("Hold test for debugging. ")
-    def test_as_ul(self, output=None):
+    def test_as_ul(self, output=None, form=None):
         """All forms should return HTML <li>s when .as_ul is called. """
-        output = output or self.form.as_ul().strip()
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
         setup['as_type'] = 'as_ul'
+        setup['form'] = form or self.form
+        output = output or setup['form'].as_ul().strip()
         expected = self.get_expected_format(setup)
         if output != expected:
             self.log_html_diff(expected, output, as_type='as_ul', full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    def test_as_p(self, output=None):
+    def test_as_p(self, output=None, form=None):
         """All forms should return HTML <p>s when .as_p is called. """
-        output = output or self.form.as_p().strip()
         setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
         setup['as_type'] = 'as_p'
+        setup['form'] = form or self.form
+        output = output or setup['form'].as_p().strip()
         expected = self.get_expected_format(setup)
         if output != expected:
             self.log_html_diff(expected, output, as_type='as_p', full=False)
@@ -565,10 +569,8 @@ class CriticalTests(FormTests, TestCase):
         """Confirm tos_field is only present when configured to add the field. """
         name = self.form.name_for_tos or 'tos_field'
         initial_is_off = self.form.tos_required is False
-        name_in_initial = name in self.form.fields
         found = self.form.fields.get(name, None)
         original_critical = deepcopy(self.form.critical_fields)
-
         self.form.tos_required = True
         expected = deepcopy(original_critical)
         name = getattr(self.form, 'name_for_tos', None) or ''
@@ -580,7 +582,6 @@ class CriticalTests(FormTests, TestCase):
         actual = self.form.critical_fields
 
         self.assertTrue(initial_is_off)
-        self.assertFalse(name_in_initial)
         self.assertIsNone(found)
         self.assertDictEqual(initial_kwargs, returned_kwargs)
         self.assertDictEqual(expected, actual)
@@ -598,6 +599,22 @@ class CriticalTests(FormTests, TestCase):
         field = self.form.fields.get(field_name, None)
         all_validators = field.validators if field else []
         self.assertIn(expected, all_validators)
+
+
+class TosCriticalTests(FormTests, TestCase):
+    form_class = CriticalForm
+
+    def setUp(self):
+        form_class = deepcopy(self.form_class)
+        form_class.tos_required = True
+        self.form_class = form_class
+        super().setUp()
+
+    def test_tos_setup(self):
+        """Confirm the form was instantiated with tos_required. """
+        self.assertTrue(self.form.tos_required)
+        self.assertIsNotNone(self.form.name_for_tos)
+        self.assertIsNotNone(self.form.fields.get(self.form.name_for_tos, None))
 
 
 class ComputedTests(FormTests, TestCase):
