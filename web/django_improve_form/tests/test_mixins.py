@@ -235,25 +235,26 @@ class FormTests:
         return kwargs
 
     def get_expected_format(self, setup):
+        form = setup.pop('form', self.form)
         as_type = setup['as_type']
         setup.update(attrs='')
         if issubclass(self.form_class, FormOverrideMixIn):
-            size_default = self.form.get_overrides().get('_default_', {}).get('size', None)
+            size_default = form.get_overrides().get('_default_', {}).get('size', None)
             override_attrs = '' if not size_default else f'size="{size_default}" '
             setup.update(attrs=override_attrs)
         field_formats = FIELD_FORMATS.copy()
         if issubclass(self.form_class, ComputedUsernameMixIn):
-            name_for_email = self.form.name_for_email or self.form._meta.model.get_email_field() or 'email'
-            name_for_user = self.form.name_for_user or self.form._meta.model.USERNAME_FIELD or 'username'
+            name_for_email = form.name_for_email or form._meta.model.get_email_field() or 'email'
+            name_for_user = form.name_for_user or form._meta.model.USERNAME_FIELD or 'username'
             if 'email' in field_formats:
                 field_formats[name_for_email] = field_formats.pop('email')
             if 'username' in field_formats:
                 field_formats[name_for_user] = field_formats.pop('username')
             order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
-            self.form.order_fields(order)
+            form.order_fields(order)
         # print("======================= GET EXPECTED FORMAT ===============================")
         form_list, hidden_list = [], []
-        top_errors = self.form.non_field_errors().copy()  # If data not submitted, this will trigger full_clean method.
+        top_errors = form.non_field_errors().copy()  # If data not submitted, this will trigger full_clean method.
         if issubclass(self.form_class, FormFieldsetMixIn):
             setup['error_kwargs'] = self.make_error_kwargs(setup)
             if top_errors:
@@ -262,13 +263,13 @@ class FormTests:
                 row_attr = ''
                 data = ' '.join(top_errors)
                 form_col_count = setup['error_kwargs']['form_col_count']
-                error_row = self.form.make_headless_row(html_args, data, form_col_count, col_attr, row_attr)
+                error_row = form.make_headless_row(html_args, data, form_col_count, col_attr, row_attr)
                 form_list.append(error_row)
         elif top_errors:
             error_row = self.error_format(as_type, top_errors, **setup.get('error_kwargs', {}))
             form_list.append(error_row)
 
-        for name, field in self.form.fields.items():
+        for name, field in form.fields.items():
             if isinstance(field.widget, (HiddenInput, MultipleHiddenInput, )):
                 hide_re = {'name': name, 'initial': field.initial}
                 txt = HIDDEN_TXT % hide_re
@@ -311,7 +312,7 @@ class FormTests:
             elif isinstance(field, BooleanField) or isinstance(field.widget, CheckboxInput):
                 cur_replace['input_type'] = 'checkbox'
                 cur_replace['attrs'] = ''
-                if field.initial or self.form.data.get(get_html_name(self.form, name), None):
+                if field.initial or form.data.get(get_html_name(form, name), None):
                     cur_replace['last'] = ' checked'
             elif isinstance(field.widget, (Select, SelectMultiple)):
                 option_list = []
@@ -325,10 +326,10 @@ class FormTests:
                     cur_replace['multiple'] = ''
                     cur_replace['required'] = ''
                 field_formats[name] = SELECT_TXT
-            field_error = self.form.errors.get(name, None)
+            field_error = form.errors.get(name, None)
             if field_error:
                 error_string = self.error_format(as_type, field_error, **setup.get('error_kwargs', {}))
-                if issubclass(self.form.__class__, FormFieldsetMixIn):
+                if issubclass(form.__class__, FormFieldsetMixIn):
                     if as_type == 'as_table':
                         cur_replace['label_end'] += error_string
                     elif as_type in ('as_ul', 'as_p', 'as_fieldset'):
@@ -397,11 +398,12 @@ class FormTests:
             self.assertEqual(value, getattr(self.user, key, None))
 
     @skip("Hold test for debugging. ")
-    def test_as_table(self, output=None):
+    def test_as_table(self, output=None, form=None):
         """All forms should return HTML table rows when .as_table is called. """
-        output = output or self.form.as_table().strip()
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
         setup['as_type'] = 'as_table'
+        setup['form'] = form or self.form
+        output = output or setup['form'].as_table().strip()
         expected = self.get_expected_format(setup)
         if output != expected:
             self.log_html_diff(expected, output, as_type='as_table', full=False)
@@ -409,22 +411,24 @@ class FormTests:
         self.assertEqual(expected, output)
 
     @skip("Hold test for debugging. ")
-    def test_as_ul(self, output=None):
+    def test_as_ul(self, output=None, form=None):
         """All forms should return HTML <li>s when .as_ul is called. """
-        output = output or self.form.as_ul().strip()
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
         setup['as_type'] = 'as_ul'
+        setup['form'] = form or self.form
+        output = output or setup['form'].as_ul().strip()
         expected = self.get_expected_format(setup)
         if output != expected:
             self.log_html_diff(expected, output, as_type='as_ul', full=False)
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    def test_as_p(self, output=None):
+    def test_as_p(self, output=None, form=None):
         """All forms should return HTML <p>s when .as_p is called. """
-        output = output or self.form.as_p().strip()
         setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
         setup['as_type'] = 'as_p'
+        setup['form'] = form or self.form
+        output = output or setup['form'].as_p().strip()
         expected = self.get_expected_format(setup)
         if output != expected:
             self.log_html_diff(expected, output, as_type='as_p', full=False)
