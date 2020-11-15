@@ -1037,6 +1037,16 @@ class OverrideTests(FormTests, TestCase):
         self.test_initial = test_initial
         self.test_data = test_data
 
+    def test_raises_set_alt_data(self):
+        """Raises ImproperlyConfigured if set_alt_data get both collection and single data input. """
+        name, value = 'generic_field', 'alt_data_value'
+        field = self.form.fields.get(name, None)
+        self.assertIsNotNone(field, "Unable to find the expected field in current fields. ")
+        data = {name: (field, value)}
+
+        with self.assertRaises(ImproperlyConfigured):
+            self.form.set_alt_data(data=data, name=name, field=field, value=value)
+
     def test_set_alt_data_single(self):
         """Get expected results when passing name, field, value, but not data. """
         name, value = 'generic_field', 'alt_data_value'
