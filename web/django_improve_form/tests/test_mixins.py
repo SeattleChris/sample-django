@@ -2656,4 +2656,29 @@ class ComputedCountryTests(CountryPostTests):
         self.request = original_request
         self.form = original_form
 
+    def test_clean_uses_computed(self):
+        """The clean_country_flag method will look for country field in computed_fields if not in fields. """
+        original_request = self.request
+        original_form = self.form
+        original_cleaned = getattr(self.form, 'cleaned_data', None)
+        self.form = self.make_form_request()
+        name = self.form.country_field_name
+        initial = self.form.base_fields[name].initial
+        cleaned = {'country_flag': True, name: initial}
+        self.form.cleaned_data = cleaned
+
+        self.assertNotIn(name, self.form.fields)
+        self.assertIn(name, self.form.computed_fields)
+        with self.assertRaisesMessage(ValidationError, "You can input your address. "):
+            clean_flag = self.form.clean_country_flag()
+        self.form.cleaned_data[name] = ''
+        clean_flag = self.form.clean_country_flag()
+        self.assertEqual(True, clean_flag)
+
+        self.request = original_request
+        self.form = original_form
+        self.form.cleaned_data = original_cleaned
+        if original_cleaned is None:
+            del self.form.cleaned_data
+
 # end test_mixins.py
