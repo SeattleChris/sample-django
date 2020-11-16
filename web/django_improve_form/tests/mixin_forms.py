@@ -122,6 +122,8 @@ class FormFieldsetForm(FormFieldsetMixIn, Form):
     another_field = CharField(initial='initial_data')
     last = CharField(initial='last_value')
 
+    adjust_label_width = False
+
 
 # # Extended MixIns # #
 

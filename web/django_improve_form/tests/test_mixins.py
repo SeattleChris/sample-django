@@ -519,6 +519,36 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fields = original_fields
 
+    # @skip("Hold for testing")
+    def test_as_table(self, output=None, form=None):
+        output = output or self.form.as_table_old()
+        super().test_as_table(output, form)
+
+    # @skip("Hold for testing")
+    def test_as_ul(self, output=None, form=None):
+        output = output or self.form.as_ul_old()
+        super().test_as_ul(output, form)
+
+    # @skip("Hold for testing")
+    def test_as_p(self, output=None, form=None):
+        output = output or self.form.as_p_old()
+        super().test_as_p(output, form)
+
+    @skip("Hold for testing")
+    def test_as_table_new(self, output=None, form=None):
+        # output = output or self.form.as_table_old()
+        super().test_as_table(output, form)
+
+    @skip("Hold for testing")
+    def test_as_ul_new(self, output=None, form=None):
+        # output = output or self.form.as_ul_old()
+        super().test_as_ul(output, form)
+
+    @skip("Hold for testing")
+    def test_as_p_new(self, output=None, form=None):
+        # output = output or self.form.as_p_old()
+        super().test_as_p(output, form)
+
     def test_label_width_not_enough_single_field_rows(self):
         """The determine_label_width method returns empty values if there are not multiple rows of a single field. """
         name, *names = list(self.form.fields.keys())
