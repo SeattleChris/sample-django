@@ -626,12 +626,21 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.max_label_width = original_max
 
-    @skip("Not Implemented")
     def test_determine_label_width(self):
         """Happy path for determine_label_width method returns inline style attribute and list of field names. """
-        # form.determine_label_width(self, field_rows):
-        # expected: {'style': 'width: {}rem; display: inline-block'.format(width)}, [n for n, field in visual_group]
-        pass
+        allowed_fields = self.get_allowed_width_fields()
+        test_fields = allowed_fields.copy()  # TODO: ? Try an input with some double and some single column rows?
+        labels = [field.label or pretty_name(name) for name, field in test_fields.items()]
+        full_width = (max(len(ea) for ea in labels) + 1) // 2  # * 0.85 ch
+        word_width = max(len(word) for label in labels for word in label.split()) // 2
+        expected_width = full_width if full_width < self.form.max_label_width else word_width
+        expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(expected_width)}
+        expected_names = list(test_fields.keys())
+        actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
+
+        self.assertLess(word_width, self.form.max_label_width)
+        self.assertEqual(expected_attrs, actual_attrs)
+        self.assertEqual(expected_names, actual_names)
 
     @skip("Not Implemented")
     def test_make_fieldsets_uses_prep_fields(self):
