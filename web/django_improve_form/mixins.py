@@ -55,9 +55,8 @@ class FocusMixIn:
 
     def _html_output(self, *args, **kwargs):
         # print("************************** Autofocus FOR _HTML_OUTPUT *************************************")
-        content = super()._html_output(*args, **kwargs)
-        # print("--------- GIVE FOCUS ----------------")
         self.named_focus = self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
+        content = super()._html_output(*args, **kwargs)
         return content
 
     def as_test(self):
