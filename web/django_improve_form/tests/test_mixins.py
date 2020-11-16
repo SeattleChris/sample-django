@@ -514,7 +514,7 @@ class FormFieldsetTests(FormTests, TestCase):
         kwargs = {'test_1': 'data_1', 'test_2': 'data_2'}
 
         expected = (opts.copy(), field_rows.copy(), remaining_fields.copy(), *args, kwargs.copy())
-        actual = self.form.prep_country_fields(opts, field_rows, remaining_fields, *args, **kwargs)
+        actual = self.form.prep_remaining(opts, field_rows, remaining_fields, *args, **kwargs)
         self.assertEqual(expected, actual)
 
         self.form.fields = original_fields
