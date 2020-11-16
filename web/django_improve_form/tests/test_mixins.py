@@ -519,18 +519,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fields = original_fields
 
-    @skip("Hold for testing")
-    def test_as_table(self, output=None, form=None):
-        super().test_as_table(output, form)
-
-    @skip("Hold for testing")
-    def test_as_ul(self, output=None, form=None):
-        super().test_as_ul(output, form)
-
-    @skip("Hold for testing")
-    def test_as_p(self, output=None, form=None):
-        super().test_as_p(output, form)
-
     def test_label_width_not_enough_single_field_rows(self):
         """The determine_label_width method returns empty values if there are not multiple rows of a single field. """
         name, *names = list(self.form.fields.keys())
@@ -567,11 +555,14 @@ class FormFieldsetTests(FormTests, TestCase):
 
     def test_only_correct_widget_classes(self):
         """If all excluded based on accepted & rejected widgets, determine_label_width method returns empty values. """
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = True
         allowed = self.get_allowed_width_fields()
         reject_fields = {name: field for name, field in self.form.fields.items() if name not in allowed}
         expected = ({}, [])
         actual = self.form.determine_label_width(reject_fields)
         self.assertEqual(expected, actual)
+        self.form.adjust_label_width = original_setting
 
     @skip("Redundant. Not Implemented")
     def test_table_not_adjust_label_width(self):
@@ -582,6 +573,8 @@ class FormFieldsetTests(FormTests, TestCase):
     def test_raises_too_wide_label_width(self):
         """The determine_label_width method raises ImproperlyConfigured if the computed width is greater than max. """
         original_max = self.form.max_label_width
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = True
         max_width = 2
         self.form.max_label_width = max_width
         allowed_fields = self.get_allowed_width_fields()
@@ -592,16 +585,19 @@ class FormFieldsetTests(FormTests, TestCase):
             self.form.determine_label_width(self.form.fields)
 
         self.form.max_label_width = original_max
+        self.form.adjust_label_width = original_setting
 
     def test_word_wrap_label_width(self):
         """The determine_label_width method sets width based on word length if full label would exceed the max. """
+        original_max = self.form.max_label_width
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = True
         allowed_fields = self.get_allowed_width_fields()
         labels = [field.label or pretty_name(name) for name, field in allowed_fields.items()]
         full_label_width = (max(len(ea) for ea in labels) + 1) // 2  # * 0.85 ch
         word_width = max(len(word) for label in labels for word in label.split()) // 2
         expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(word_width)}
         max_width = word_width + 1
-        original_max = self.form.max_label_width
         self.form.max_label_width = max_width
         actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
 
@@ -609,15 +605,18 @@ class FormFieldsetTests(FormTests, TestCase):
         self.assertEqual(expected_attrs, actual_attrs)
 
         self.form.max_label_width = original_max
+        self.form.adjust_label_width = original_setting
 
     def test_label_width_fits_full_label_if_small_enough(self):
         """If all row labels are small enough, The determine_label_width method sets width to fit labels on a line. """
+        original_max = self.form.max_label_width
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = True
         allowed_fields = self.get_allowed_width_fields()
         labels = [field.label or pretty_name(name) for name, field in allowed_fields.items()]
         full_label_width = (max(len(ea) for ea in labels) + 1) // 2  # * 0.85 ch
         expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(full_label_width)}
         max_width = full_label_width + 5
-        original_max = self.form.max_label_width
         self.form.max_label_width = max_width
         actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
 
@@ -625,9 +624,12 @@ class FormFieldsetTests(FormTests, TestCase):
         self.assertEqual(expected_attrs, actual_attrs)
 
         self.form.max_label_width = original_max
+        self.form.adjust_label_width = original_setting
 
     def test_determine_label_width(self):
         """Happy path for determine_label_width method returns inline style attribute and list of field names. """
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = True
         allowed_fields = self.get_allowed_width_fields()
         test_fields = allowed_fields.copy()  # TODO: ? Try an input with some double and some single column rows?
         labels = [field.label or pretty_name(name) for name, field in test_fields.items()]
@@ -641,6 +643,8 @@ class FormFieldsetTests(FormTests, TestCase):
         self.assertLess(word_width, self.form.max_label_width)
         self.assertEqual(expected_attrs, actual_attrs)
         self.assertEqual(expected_names, actual_names)
+
+        self.form.adjust_label_width = original_setting
 
     @skip("Not Implemented")
     def test_make_fieldsets_uses_prep_fields(self):
