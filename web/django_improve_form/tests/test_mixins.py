@@ -2633,12 +2633,37 @@ class CountryPostTests(BaseCountryTests, FormTests, TestCase):
 class ComputedCountryTests(CountryPostTests):
     form_class = ComputedCountryForm
 
+    def get_critical_field_signal(self, names, alt_name=''):
+        self.get_critical_call = getattr(self, 'get_critical_call', {})
+        self.get_critical_call.update({'names': names, 'alt_name': alt_name})
+        # result = super(self.form).get_critical_field(names, alt_name)
+        # return result
+        pass
+
     @skip("Not Implemented")
     def test_init_get_critical_for_needed(self):
         """get_critical_field called if form.country_optional, country_field, and needed_names. """
-        # needed_names = [nf for nf in ('country_display', 'country_flag') if nf not in self.base_fields]
+        # needed_names = [nf for nf in ('country_display', 'country_flag') if nf not in self.form.base_fields]
         # for name in needed_names: name, field = self.get_critical_field(name, name)
-        pass
+        # original_get_critical_field = self.form.get_critical_field
+        # self.form.get_critical_field = self.get_critical_field_signal
+        print("================ TEST INIT GET CRITICAL FOR NEEDED ==================")
+        print(self.form.get_critical_field.__name__)
+        # print(getattr(self, 'get_critical_call', 'NOT FOUND'))
+        # print(getattr(self.form, 'get_critical_call', 'NOT FOUND'))
+        name = 'country_display'
+        expected = {'names': name, 'alt_name': name}
+        field = self.form.fields.get(name, None) or self.form.computed_fields(name, None)
+        response = self.form.get_critical_field(name, name)
+        actual = getattr(self, 'get_critical_call', 'NOT FOUND')
+        print("----------------------------------------")
+        print(response)
+        print(expected)
+        print(actual)
+        # self.assertDictEqual(expected, actual)
+        self.assertEqual((name, field), response)
+
+        # self.get_critical_field = original_get_critical_field
 
     def test_init_update_computed_field_names(self):
         """OverrideCountryMixIn uses computed_fields features if they are present. """
