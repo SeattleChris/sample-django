@@ -136,7 +136,9 @@ class FormTests:
 
     def get_format_attrs(self, name, field, alt_field_info={}):
         """For the given named field, get the attrs as determined by the field and widget settings. """
+        # important_props = ('initial', 'autofocus', 'widget')
         if name in alt_field_info:
+            field = deepcopy(field)
             for prop, value in alt_field_info[name].items():
                 setattr(field, prop, value)
         initial = field.initial
@@ -144,11 +146,13 @@ class FormTests:
         attrs, result = {}, []
         if initial and not isinstance(field.widget, Textarea):
             attrs['value'] = str(initial)
-        html_name = get_html_name(self.form, name)
-        if html_name in getattr(self.form, 'data', {}) and self.form.data[html_name]:
-            attrs['value'] = self.form.data[html_name]
+        data_val = self.form.data.get(get_html_name(self.form, name), None)
+        if data_val not in ('', None):
+            attrs['value'] = data_val
         attrs.update(field.widget_attrs(field.widget))
         result = ''.join(f'{key}="{val}" ' for key, val in attrs.items())
+        if getattr(field, 'autofocus', None):
+            result += 'autofocus '
         if issubclass(self.form.__class__, FormOverrideMixIn):
             # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
             result += '%(attrs)s'  # content '%(attrs)s'
@@ -250,13 +254,23 @@ class FormTests:
         """Should be called after actual format is obtained. Returns a string of the expected HTML output. """
         form = setup.pop('form', self.form)
         as_type = setup['as_type']
-        alt_field_info = {}
         setup.update(attrs='')
+        alt_field_info = {}
         if issubclass(self.form_class, FormOverrideMixIn):
             size_default = form.get_overrides().get('_default_', {}).get('size', None)
             override_attrs = '' if not size_default else f'size="{size_default}" '
             setup.update(attrs=override_attrs)
             alt_field_info = self.form.get_alt_field_info()
+        if hasattr(self.form, 'assign_focus_field'):
+            # self.form.named_focus = self.assign_focus_field(name=self.form.named_focus, fields=self.form.fields_focus)
+            focused = getattr(self.form, 'given_focus', None) or getattr(self.form, 'named_focus', None)
+            if not focused:
+                ls = [name for name, field in self.form.fields.items()
+                      if not field.disabled and not isinstance(field.widget, (HiddenInput, MultipleHiddenInput))]
+                focused = ls[0] if ls else None
+            if focused:  # Using alt_field_info to track assigning focus here, but 'autofocus' is not a field property.
+                alt_field_info[focused] = alt_field_info.get(focused, {})
+                alt_field_info[focused].update({'autofocus': True})
         field_formats = FIELD_FORMATS.copy()
         if issubclass(self.form_class, ComputedUsernameMixIn):
             name_for_email = form.name_for_email or form._meta.model.get_email_field() or 'email'
