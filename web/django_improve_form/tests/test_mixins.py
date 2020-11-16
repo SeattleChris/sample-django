@@ -670,6 +670,55 @@ class FormFieldsetTests(FormTests, TestCase):
         # result: form._fieldsets.update(form.fs_summary)
         pass
 
+    @skip("Redundant. Not Implemented")
+    def test_html_tag(self):
+        """The _html_tag method returns the HTML element with the given contents and attributes. """
+        # form._html_tag(self, tag, contents, attr_string='')
+        # result: '<tag%(attr_string)s>%(contents)s</tag>'
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_column_formats(self):
+        """The column_formats method returns the column and single_column strings with formatting placeholders. """
+        # form.column_formats(self, col_head_tag, col_tag, single_col_tag, col_head_data, col_data)
+        pass
+
+    @skip("Not Implemented")
+    def test_make_row(self):
+        """If there are errors, the make_row method returns a list of 2 strings, with errors first. """
+        # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_make_row_no_errors(self):
+        """The make_row method returns a list of 1 string if no errors but has columns_data. """
+        # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
+        pass
+
+    @skip("Not Implemented")
+    def test_make_headless_row(self):
+        """If there are errors, the make_row method returns a list of 2 strings, with errors first. """
+        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows(self):
+        """Expected list of formatted strings for each main form 'row'. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_html_fieldset(self):
+        """Creates HTML fieldset element containing rows data and HTML legend element. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_all_fieldsets(self):
+        """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
     @skip("Currently Unused feature. Not Implemented")
     def test_html_output_error_lines_in_table(self):
         """The _html_output method, if errors_on_separate_row for as_table, configures colspan appropriately. """
@@ -778,6 +827,13 @@ class FormFieldsetTests(FormTests, TestCase):
     @skip("Redundant? Not Implemented")
     def test_hidden_fields_at_bottom(self):
         """The FormFieldsetMixIn._html_output method mimics the default behavior for including hidden fields. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_as_fieldset(self):
+        """The as_fieldset method successfully calles the _html_output and generates the expected HTML. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         pass
