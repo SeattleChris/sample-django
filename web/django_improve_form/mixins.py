@@ -789,7 +789,7 @@ class FormFieldsetMixIn:
     max_label_width = 12
     adjust_label_width = True
     label_width_widgets = (Input, Textarea, )  # Base classes for the field.widgets we want to line up their lables.
-    label_exclude_widgets = (CheckboxInput, HiddenInput)  # classes for the field.widgets we do NOT want aligned.
+    label_exclude_widgets = (CheckboxInput, HiddenInput, MultipleHiddenInput)  # field.widget classes to be skipped.
     # ignored_base_widgets: ChoiceWidget, MultiWidget, SelectDateWidget
     # ChoiceWidget is the base for RadioSelect, Select, and variations.
     fieldsets = (
@@ -832,7 +832,7 @@ class FormFieldsetMixIn:
     def determine_label_width(self, field_rows):
         """Returns a attr_dict and list of names of fields whose labels should apply these attributes. """
         if isinstance(field_rows, dict):  # such as self.fields
-            single_field_rows = [{name: field} for name, field in field_rows]
+            single_field_rows = [{name: field} for name, field in field_rows.items()]
         else:
             single_field_rows = [row for row in field_rows if len(row) == 1]
         visual_group, styled_labels, label_attrs_dict = [], [], {}
