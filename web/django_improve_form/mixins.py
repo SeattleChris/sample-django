@@ -7,7 +7,7 @@ from django.contrib.auth.forms import UsernameField
 from django.forms.widgets import Input, CheckboxInput, CheckboxSelectMultiple, RadioSelect, Textarea
 from django.forms.widgets import HiddenInput, MultipleHiddenInput
 from django.forms.fields import Field, CharField
-from django.forms.utils import ErrorDict  # , ErrorList
+from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
 from django.utils.translation import gettext as _
 from django.utils.html import conditional_escape, format_html
 from django.utils.safestring import mark_safe
@@ -846,14 +846,14 @@ class FormFieldsetMixIn:
                not issubclass(klass, getattr(self, 'label_exclude_widgets', [])):
                 visual_group.append((name, field, ))
         if len(visual_group) > 1:
-            max_label_length = max(len(field.label) for name, field in visual_group)
+            max_label_length = max(len(field.label or pretty_name(name)) for name, field in visual_group)
             width = (max_label_length + 1) // 2  # * 0.85 ch
             if width > self.max_label_width:
-                max_word_length = max(len(w) for name, field in visual_group for w in field.label.split())
+                max_word_length = max(len(w) for n, fd in visual_group for w in (fd.label or pretty_name(n)).split())
                 width = max_word_length // 2
                 if width > self.max_label_width:
                     message = "The max_label_width of {} is not enough for the fields: {} ".format(
-                        self.max_label_width, visual_group.keys())
+                        self.max_label_width, [name for name, field in visual_group])
                     raise ImproperlyConfigured(_(message))
             style_text = 'width: {}rem; display: inline-block'.format(width)
             label_attrs_dict = {'style': style_text}
