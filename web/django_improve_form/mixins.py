@@ -997,8 +997,8 @@ class FormFieldsetMixIn:
                 output.extend(row_data)
         return output
 
-    def _html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-                     help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
+    def _html_output_new(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+                         help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
         """Overriding BaseForm._html_output. Output HTML. Used by as_table(), as_ul(), as_p(), etc. """
         help_tag = 'span'
         allow_colspan = not strict_columns and as_type == 'table'
@@ -1121,7 +1121,7 @@ class FormFieldsetMixIn:
 
     def as_table(self):
         """Overwrite BaseForm.as_table. Return this form rendered as HTML <tr>s -- excluding the <table></table>. """
-        return self._html_output(
+        return self._html_output_new(
             row_tag='tr',
             col_head_tag='th',
             col_tag='td',
@@ -1136,7 +1136,7 @@ class FormFieldsetMixIn:
 
     def as_ul(self):
         """Overwrite BaseForm.as_ul. Return this form rendered as HTML <li>s -- excluding the <ul></ul>. """
-        return self._html_output(
+        return self._html_output_new(
             row_tag='li',
             col_head_tag=None,
             col_tag='span',
@@ -1150,7 +1150,7 @@ class FormFieldsetMixIn:
 
     def as_p(self):
         """Overwrite BaseForm.as_p. Return this form rendered as HTML <p>s. """
-        return self._html_output(
+        return self._html_output_new(
             row_tag='p',
             col_head_tag=None,
             col_tag='span',
@@ -1164,7 +1164,7 @@ class FormFieldsetMixIn:
 
     def as_fieldset(self):
         """Return this form rendered as, or in, HTML <fieldset>s. Untitled fieldsets will be borderless. """
-        return self._html_output(
+        return self._html_output_new(
             row_tag='p',
             col_head_tag=None,
             col_tag='span',
@@ -1175,6 +1175,15 @@ class FormFieldsetMixIn:
             errors_on_separate_row=False,
             as_type='fieldset',
         )
+
+    def as_table_old(self):
+        return super().as_table()
+
+    def as_ul_old(self):
+        return super().as_ul()
+
+    def as_p_old(self):
+        return super().as_p()
 
 
 class FieldsetOverrideMixIn(FocusMixIn, FormFieldsetMixIn, FormOverrideMixIn):
