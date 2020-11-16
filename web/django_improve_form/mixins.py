@@ -1000,6 +1000,8 @@ class FormFieldsetMixIn:
     def _html_output_new(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
                          help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
         """Overriding BaseForm._html_output. Output HTML. Used by as_table(), as_ul(), as_p(), etc. """
+        if issubclass(self.__class__, FocusMixIn):
+            self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
         help_tag = 'span'
         allow_colspan = not strict_columns and as_type == 'table'
         adjust_label_width = getattr(self, 'adjust_label_width', True) and hasattr(self, 'determine_label_width')
