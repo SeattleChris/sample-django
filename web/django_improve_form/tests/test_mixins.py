@@ -503,6 +503,127 @@ class FormTests:
 class FormFieldsetTests(FormTests, TestCase):
     form_class = FormFieldsetForm
 
+    def test_prep_remaining(self):
+        """The prep_remaining method exists. Unchanged, it returns parameters unmodified. """
+        self.assertTrue(hasattr(self.form, 'prep_remaining'))
+        original_fields = self.form.fields
+        self.form.fields = original_fields.copy()
+        remaining_fields = original_fields.copy()
+        opts, field_rows = {'fake_opts': 'fake', 'fields': ['nope']}, [{'name': 'assigned_field'}]
+        args = ['arbitrary', 'input', 'args']
+        kwargs = {'test_1': 'data_1', 'test_2': 'data_2'}
+
+        expected = (opts.copy(), field_rows.copy(), remaining_fields.copy(), *args, kwargs.copy())
+        actual = self.form.prep_country_fields(opts, field_rows, remaining_fields, *args, **kwargs)
+        self.assertEqual(expected, actual)
+
+        self.form.fields = original_fields
+
+    @skip("Not Implemented")
+    def test_label_width_not_enough_single_field_rows(self):
+        """The determine_label_width method returns empty values if there are not multiple rows of a single field. """
+        pass
+
+    @skip("Not Implemented")
+    def test_not_adjust_label_width(self):
+        """The determine_label_width method returns empty values if form.adjust_label_width is not True. """
+        pass
+
+    @skip("Not Implemented")
+    def test_only_correct_widget_classes(self):
+        """If all excluded based on accepted & rejected widgets, determine_label_width method returns empty values. """
+        pass
+
+    @skip("Not Implemented")
+    def test_raises_too_wide_label_width(self):
+        """The determine_label_width method raises ImproperlyConfigured if the computed width is greater than max. """
+        pass
+
+    @skip("Not Implemented")
+    def test_raises_too_wide_label_width(self):
+        """The determine_label_width method raises ImproperlyConfigured if the computed width is greater than max. """
+        pass
+
+    @skip("Not Implemented")
+    def test_word_wrap_label_width(self):
+        """The determine_label_width method sets width based on word length if full label would exceed the max. """
+        pass
+
+    @skip("Not Implemented")
+    def test_label_width_fits_full_label_if_small_enough(self):
+        """If all row labels are small enough, The determine_label_width method sets width to fit labels on a line. """
+        pass
+
+    @skip("Not Implemented")
+    def test_determine_label_width(self):
+        """Happy path for determine_label_width method returns inline style attribute and list of field names. """
+        pass
+
+    @skip("Not Implemented")
+    def test_make_fieldsets_uses_prep_fields(self):
+        """The make_fieldsets method calls the prep_fields method (from FormOverrideMixIn) if it is present. """
+        pass
+
+    @skip("Not Implemented")
+    def test_raises_if_initial_fieldsets_error(self):
+        """The make_fieldsets method raises ImproperlyConfigured if initial fieldset is missing fields or position. """
+        pass
+
+    @skip("Not Implemented")
+    def test_make_fieldsets_names_can_be_coded(self):
+        """The make_fieldsets method recognizes field name in opts['fields'] if coded with leading underscore. """
+        pass
+
+    @skip("Not Implemented")
+    def test_no_duplicate_fields_in_fieldsets(self):
+        """If a field is defined in two fieldsets, the field only shows up in the first fieldset. """
+        pass
+
+    @skip("Not Implemented")
+    def test_top_errors_has_hidden_field_errors(self):
+        """The make_fieldsets appends the top_errors with any errors found for hidden fields. """
+        pass
+
+    @skip("Not Implemented")
+    def test_make_fieldsets_uses_handle_modifiers(self):
+        """The make_fieldsets method calls the handle_modifiers method (from FormOverrideMixIn) if it is present. """
+        pass
+
+    @skip("Not Implemented")
+    def test_make_fieldsets_saves_results(self):
+        """The make_fieldsets method saves the computed fieldsets to form._fieldsets, and saves a form.fs_summary. """
+        pass
+
+    @skip("Not Implemented")
+    def test_no_empty_rows_in_computed_fieldsets(self):
+        """Any empty rows defined in the initial fieldset settings are removed in the computed fieldset settings. """
+        pass
+
+    @skip("Not Implemented")
+    def test_no_empty_sets_in_computed_fieldsets(self):
+        """Any empty fieldset defined in initial fieldset settings are removed in the computed fieldset settings. """
+        pass
+
+    @skip("Not Implemented")
+    def test_computed_fieldsets_structure(self):
+        """The each fieldset in the computed fieldset settings have all the expected keys in their options. """
+        pass
+
+    @skip("Not Implemented")
+    def test_raises_if_missed_fields(self):
+        """The make_fieldsets method raises ImproperlyConfigured if somehow some fields are not accounted for. """
+        pass
+
+    @skip("Not Implemented")
+    def test_make_fieldsets_outcome_order(self):
+        """The make_fieldsets method assigns and sorts according to the expected order. """
+        pass
+
+    @skip("Not Implemented")
+    def test_happy_path_make_fieldsets(self):
+        """The make_fieldsets method returns the expected response. """
+        pass
+
 
 class FocusTests(FormTests, TestCase):
     form_class = FocusForm
