@@ -999,7 +999,7 @@ class FormFieldsetMixIn:
 
     def _html_output_new(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
                          help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
-        """Overriding BaseForm._html_output. Output HTML. Used by as_table(), as_ul(), as_p(), etc. """
+        """Default for HTML output, an alternative to BaseForm._html_output. Used by as_table, as_ul, as_p, etc. """
         if issubclass(self.__class__, FocusMixIn):
             self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
         help_tag = 'span'
@@ -1179,12 +1179,15 @@ class FormFieldsetMixIn:
         )
 
     def as_table_old(self):
+        """Returns the original default for as_table. Calls the default _html_output method inherited from BaseForm. """
         return super().as_table()
 
     def as_ul_old(self):
+        """Returns the original default for as_ul. Calls the default _html_output method inherited from BaseForm. """
         return super().as_ul()
 
     def as_p_old(self):
+        """Returns the original default for as_p. Calls the default _html_output method inherited from BaseForm. """
         return super().as_p()
 
 
