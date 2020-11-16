@@ -519,48 +519,53 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fields = original_fields
 
-    @skip("Not Implemented")
+    @skip("Hold for testing")
+    def test_as_table(self, output=None, form=None):
+        super().test_as_table(output, form)
+
+    @skip("Hold for testing")
+    def test_as_ul(self, output=None, form=None):
+        super().test_as_ul(output, form)
+
+    @skip("Hold for testing")
+    def test_as_p(self, output=None, form=None):
+        super().test_as_p(output, form)
+
     def test_label_width_not_enough_single_field_rows(self):
         """The determine_label_width method returns empty values if there are not multiple rows of a single field. """
-        # form.determine_label_width(self, field_rows):
-        # if isinstance(field_rows, dict): single_field_rows = [{name: field} for name, field in field_rows]
-        pass
+        name, *names = list(self.form.fields.keys())
+        field_rows = [{name: self.form.fields[name]}]
+        if len(names) > 1:
+            double_row = {name: self.form.fields[name] for name in names[:2]}
+            field_rows.append(double_row)
+        expected = ({}, [])
+        actual = self.form.determine_label_width(field_rows)
 
-    @skip("Redundant. Not Implemented")
-    def test_table_not_adjust_label_width(self):
-        """Regardless of form.adjust_label_width, determine_label_width is not needed for as_table display. """
-        # if as_type == 'table': adjust_label_width = False
-        pass
+        self.assertEqual(expected, actual)
 
-    # @skip("Not Implemented")
     def test_not_adjust_label_width(self):
         """The determine_label_width method returns empty values if form.adjust_label_width is not True. """
         original_setting = self.form.adjust_label_width
         self.form.adjust_label_width = False
-        remove_fieldsets = False
-        if not hasattr(self.form, '_fieldsets'):
-            remove_fieldsets = True
-            self.form.make_fieldsets()
-        fieldsets = self.form._fieldsets
-        # expected, actual = [], []
-        actual = [self.form.determine_label_width(opts['rows']) for label, opts in fieldsets]
-        expected = [({}, []) * len(fieldsets)]
-        # for fieldset_label, opts in fieldsets:
-        #     actual.append(self.determine_label_width(opts['rows']))
-        #     expected.append(({}, []))
+        expected = ({}, [])
+        actual = self.form.determine_label_width(self.form.fields)
 
+        self.assertFalse(self.form.adjust_label_width)
         self.assertEqual(expected, actual)
 
         self.form.adjust_label_width = original_setting
-        if remove_fieldsets:
-            del self.form._fieldsets
-            del self.form._fs_summary
 
     @skip("Not Implemented")
     def test_only_correct_widget_classes(self):
         """If all excluded based on accepted & rejected widgets, determine_label_width method returns empty values. """
         # form.determine_label_width(self, field_rows):
         # self.label_width_widgets, form.label_exclude_widgets
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_table_not_adjust_label_width(self):
+        """Regardless of form.adjust_label_width, determine_label_width is not needed for as_table display. """
+        # if as_type == 'table': adjust_label_width = False
         pass
 
     @skip("Not Implemented")
