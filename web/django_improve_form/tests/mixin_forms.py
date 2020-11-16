@@ -90,7 +90,39 @@ class OverrideForm(FormOverrideMixIn, Form):
 
 
 class FormFieldsetForm(FormFieldsetMixIn, Form):
-    generic_field = CharField()
+    single_choices = [('A', 'Option A'), ('B', 'Option B'), ('C', 'Option C'), ]
+    multi_choices = [('A', 'Include A'), ('B', 'Include B'), ('C', 'Include C'), ]
+    DEFAULT_CITY = 'Seattle'
+    DEFAULT_COUNTRY_AREA_STATE = 'WA'
+    # Already imported DEFAULT_COUNTRY
+
+    first = CharField(initial='first_value')
+    second = CharField(initial='second_value')
+    first_name = CharField(initial='first_name')
+    last_name = CharField(initial='last_name')
+    generic_field = CharField(initial='original_value')
+    billing_address_1 = CharField(label='street address (line 1)', max_length=191, required=False, )
+    billing_address_2 = CharField(label='street address (continued)', max_length=191, required=False, )
+    billing_city = CharField(label='city', max_length=191, initial=DEFAULT_CITY, required=False, )
+    billing_country_area = CharField(label='state', max_length=2, initial=DEFAULT_COUNTRY_AREA_STATE, required=False, )
+    billing_postcode = CharField(label='zipcode', max_length=10, required=False, )
+    billing_country_code = CharField(label='country', initial=DEFAULT_COUNTRY, max_length=2, required=False,)
+    large_comment = CharField(initial='initial large comment', widget=Textarea(attrs={"rows": 10, "cols": 40}))
+    small_comment = CharField(widget=Textarea(attrs={"rows": 2, "cols": 10}))
+    simple_comment = CharField(widget=Textarea())
+    hide_field = CharField(widget=HiddenInput(), initial='hide_data')
+    bool_field = BooleanField(required=False)  # single checkbox
+    single_select = ChoiceField(choices=single_choices)  # default widget select
+    multi_select = MultipleChoiceField(choices=multi_choices)  # SelectMultiple
+    radio_select = ChoiceField(choices=single_choices, widget=RadioSelect)
+    single_check = ChoiceField(choices=single_choices, required=False, widget=CheckboxInput)  # single/boolean choice
+    multi_check = MultipleChoiceField(choices=multi_choices, widget=CheckboxSelectMultiple)
+    email_test = EmailField()  # like CharField, can have: max_length, min_length, and empty_value
+    disable_field = CharField(disabled=True, initial='disable_data')
+    another_field = CharField(initial='initial_data')
+    last = CharField(initial='last_value')
+
+    adjust_label_width = False
 
 
 # # Extended MixIns # #

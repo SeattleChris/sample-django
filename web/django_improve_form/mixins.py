@@ -7,7 +7,7 @@ from django.contrib.auth.forms import UsernameField
 from django.forms.widgets import Input, CheckboxInput, CheckboxSelectMultiple, RadioSelect, Textarea
 from django.forms.widgets import HiddenInput, MultipleHiddenInput
 from django.forms.fields import Field, CharField
-from django.forms.utils import ErrorDict  # , ErrorList
+from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
 from django.utils.translation import gettext as _
 from django.utils.html import conditional_escape, format_html
 from django.utils.safestring import mark_safe
@@ -789,7 +789,7 @@ class FormFieldsetMixIn:
     max_label_width = 12
     adjust_label_width = True
     label_width_widgets = (Input, Textarea, )  # Base classes for the field.widgets we want to line up their lables.
-    label_exclude_widgets = (CheckboxInput, HiddenInput)  # classes for the field.widgets we do NOT want aligned.
+    label_exclude_widgets = (CheckboxInput, HiddenInput, MultipleHiddenInput)  # field.widget classes to be skipped.
     # ignored_base_widgets: ChoiceWidget, MultiWidget, SelectDateWidget
     # ChoiceWidget is the base for RadioSelect, Select, and variations.
     fieldsets = (
@@ -832,7 +832,7 @@ class FormFieldsetMixIn:
     def determine_label_width(self, field_rows):
         """Returns a attr_dict and list of names of fields whose labels should apply these attributes. """
         if isinstance(field_rows, dict):  # such as self.fields
-            single_field_rows = [{name: field} for name, field in field_rows]
+            single_field_rows = [{name: field} for name, field in field_rows.items()]
         else:
             single_field_rows = [row for row in field_rows if len(row) == 1]
         visual_group, styled_labels, label_attrs_dict = [], [], {}
@@ -846,14 +846,14 @@ class FormFieldsetMixIn:
                not issubclass(klass, getattr(self, 'label_exclude_widgets', [])):
                 visual_group.append((name, field, ))
         if len(visual_group) > 1:
-            max_label_length = max(len(field.label) for name, field in visual_group)
+            max_label_length = max(len(field.label or pretty_name(name)) for name, field in visual_group)
             width = (max_label_length + 1) // 2  # * 0.85 ch
             if width > self.max_label_width:
-                max_word_length = max(len(w) for name, field in visual_group for w in field.label.split())
+                max_word_length = max(len(w) for n, fd in visual_group for w in (fd.label or pretty_name(n)).split())
                 width = max_word_length // 2
                 if width > self.max_label_width:
                     message = "The max_label_width of {} is not enough for the fields: {} ".format(
-                        self.max_label_width, visual_group.keys())
+                        self.max_label_width, [name for name, field in visual_group])
                     raise ImproperlyConfigured(_(message))
             style_text = 'width: {}rem; display: inline-block'.format(width)
             label_attrs_dict = {'style': style_text}
@@ -997,9 +997,11 @@ class FormFieldsetMixIn:
                 output.extend(row_data)
         return output
 
-    def _html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-                     help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
-        """Overriding BaseForm._html_output. Output HTML. Used by as_table(), as_ul(), as_p(), etc. """
+    def _html_output_new(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+                         help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
+        """Default for HTML output, an alternative to BaseForm._html_output. Used by as_table, as_ul, as_p, etc. """
+        if issubclass(self.__class__, FocusMixIn):
+            self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
         help_tag = 'span'
         allow_colspan = not strict_columns and as_type == 'table'
         adjust_label_width = getattr(self, 'adjust_label_width', True) and hasattr(self, 'determine_label_width')
@@ -1121,7 +1123,7 @@ class FormFieldsetMixIn:
 
     def as_table(self):
         """Overwrite BaseForm.as_table. Return this form rendered as HTML <tr>s -- excluding the <table></table>. """
-        return self._html_output(
+        return self._html_output_new(
             row_tag='tr',
             col_head_tag='th',
             col_tag='td',
@@ -1136,7 +1138,7 @@ class FormFieldsetMixIn:
 
     def as_ul(self):
         """Overwrite BaseForm.as_ul. Return this form rendered as HTML <li>s -- excluding the <ul></ul>. """
-        return self._html_output(
+        return self._html_output_new(
             row_tag='li',
             col_head_tag=None,
             col_tag='span',
@@ -1150,7 +1152,7 @@ class FormFieldsetMixIn:
 
     def as_p(self):
         """Overwrite BaseForm.as_p. Return this form rendered as HTML <p>s. """
-        return self._html_output(
+        return self._html_output_new(
             row_tag='p',
             col_head_tag=None,
             col_tag='span',
@@ -1164,7 +1166,7 @@ class FormFieldsetMixIn:
 
     def as_fieldset(self):
         """Return this form rendered as, or in, HTML <fieldset>s. Untitled fieldsets will be borderless. """
-        return self._html_output(
+        return self._html_output_new(
             row_tag='p',
             col_head_tag=None,
             col_tag='span',
@@ -1175,6 +1177,18 @@ class FormFieldsetMixIn:
             errors_on_separate_row=False,
             as_type='fieldset',
         )
+
+    def as_table_old(self):
+        """Returns the original default for as_table. Calls the default _html_output method inherited from BaseForm. """
+        return super().as_table()
+
+    def as_ul_old(self):
+        """Returns the original default for as_ul. Calls the default _html_output method inherited from BaseForm. """
+        return super().as_ul()
+
+    def as_p_old(self):
+        """Returns the original default for as_p. Calls the default _html_output method inherited from BaseForm. """
+        return super().as_p()
 
 
 class FieldsetOverrideMixIn(FocusMixIn, FormFieldsetMixIn, FormOverrideMixIn):

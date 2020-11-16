@@ -514,114 +514,435 @@ class FormFieldsetTests(FormTests, TestCase):
         kwargs = {'test_1': 'data_1', 'test_2': 'data_2'}
 
         expected = (opts.copy(), field_rows.copy(), remaining_fields.copy(), *args, kwargs.copy())
-        actual = self.form.prep_country_fields(opts, field_rows, remaining_fields, *args, **kwargs)
+        actual = self.form.prep_remaining(opts, field_rows, remaining_fields, *args, **kwargs)
         self.assertEqual(expected, actual)
 
         self.form.fields = original_fields
 
-    @skip("Not Implemented")
+    # @skip("Hold for testing")
+    def test_as_table(self, output=None, form=None):
+        output = output or self.form.as_table_old()
+        super().test_as_table(output, form)
+
+    # @skip("Hold for testing")
+    def test_as_ul(self, output=None, form=None):
+        output = output or self.form.as_ul_old()
+        super().test_as_ul(output, form)
+
+    # @skip("Hold for testing")
+    def test_as_p(self, output=None, form=None):
+        output = output or self.form.as_p_old()
+        super().test_as_p(output, form)
+
+    @skip("Hold for testing")
+    def test_as_table_new(self, output=None, form=None):
+        # output = output or self.form.as_table_old()
+        super().test_as_table(output, form)
+
+    @skip("Hold for testing")
+    def test_as_ul_new(self, output=None, form=None):
+        # output = output or self.form.as_ul_old()
+        super().test_as_ul(output, form)
+
+    @skip("Hold for testing")
+    def test_as_p_new(self, output=None, form=None):
+        # output = output or self.form.as_p_old()
+        super().test_as_p(output, form)
+
     def test_label_width_not_enough_single_field_rows(self):
         """The determine_label_width method returns empty values if there are not multiple rows of a single field. """
-        pass
+        name, *names = list(self.form.fields.keys())
+        field_rows = [{name: self.form.fields[name]}]
+        if len(names) > 1:
+            double_row = {name: self.form.fields[name] for name in names[:2]}
+            field_rows.append(double_row)
+        expected = ({}, [])
+        actual = self.form.determine_label_width(field_rows)
 
-    @skip("Not Implemented")
+        self.assertEqual(expected, actual)
+
     def test_not_adjust_label_width(self):
         """The determine_label_width method returns empty values if form.adjust_label_width is not True. """
-        pass
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = False
+        expected = ({}, [])
+        actual = self.form.determine_label_width(self.form.fields)
 
-    @skip("Not Implemented")
+        self.assertFalse(self.form.adjust_label_width)
+        self.assertEqual(expected, actual)
+
+        self.form.adjust_label_width = original_setting
+
+    def get_allowed_width_fields(self, fields=None):
+        """Returns a dict of fields that are allowed to have a label_width with the current Form settings. """
+        fields = fields or self.form.fields
+        allowed_fields = {}
+        for name, field in fields.items():
+            if isinstance(field.widget, self.form.label_width_widgets):
+                if not isinstance(field.widget, self.form.label_exclude_widgets):
+                    allowed_fields[name] = field
+        return allowed_fields
+
     def test_only_correct_widget_classes(self):
         """If all excluded based on accepted & rejected widgets, determine_label_width method returns empty values. """
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = True
+        allowed = self.get_allowed_width_fields()
+        reject_fields = {name: field for name, field in self.form.fields.items() if name not in allowed}
+        expected = ({}, [])
+        actual = self.form.determine_label_width(reject_fields)
+        self.assertEqual(expected, actual)
+        self.form.adjust_label_width = original_setting
+
+    @skip("Redundant. Not Implemented")
+    def test_table_not_adjust_label_width(self):
+        """Regardless of form.adjust_label_width, determine_label_width is not needed for as_table display. """
+        # if as_type == 'table': adjust_label_width = False
         pass
 
-    @skip("Not Implemented")
     def test_raises_too_wide_label_width(self):
         """The determine_label_width method raises ImproperlyConfigured if the computed width is greater than max. """
-        pass
+        original_max = self.form.max_label_width
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = True
+        max_width = 2
+        self.form.max_label_width = max_width
+        allowed_fields = self.get_allowed_width_fields()
+        group_keys = list(allowed_fields.keys())
+        message = "The max_label_width of {} is not enough for the fields: {} ".format(max_width, group_keys)
 
-    @skip("Not Implemented")
-    def test_raises_too_wide_label_width(self):
-        """The determine_label_width method raises ImproperlyConfigured if the computed width is greater than max. """
-        pass
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.determine_label_width(self.form.fields)
 
-    @skip("Not Implemented")
+        self.form.max_label_width = original_max
+        self.form.adjust_label_width = original_setting
+
     def test_word_wrap_label_width(self):
         """The determine_label_width method sets width based on word length if full label would exceed the max. """
-        pass
+        original_max = self.form.max_label_width
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = True
+        allowed_fields = self.get_allowed_width_fields()
+        labels = [field.label or pretty_name(name) for name, field in allowed_fields.items()]
+        full_label_width = (max(len(ea) for ea in labels) + 1) // 2  # * 0.85 ch
+        word_width = max(len(word) for label in labels for word in label.split()) // 2
+        expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(word_width)}
+        max_width = word_width + 1
+        self.form.max_label_width = max_width
+        actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
 
-    @skip("Not Implemented")
+        self.assertLess(max_width, full_label_width)
+        self.assertEqual(expected_attrs, actual_attrs)
+
+        self.form.max_label_width = original_max
+        self.form.adjust_label_width = original_setting
+
     def test_label_width_fits_full_label_if_small_enough(self):
         """If all row labels are small enough, The determine_label_width method sets width to fit labels on a line. """
-        pass
+        original_max = self.form.max_label_width
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = True
+        allowed_fields = self.get_allowed_width_fields()
+        labels = [field.label or pretty_name(name) for name, field in allowed_fields.items()]
+        full_label_width = (max(len(ea) for ea in labels) + 1) // 2  # * 0.85 ch
+        expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(full_label_width)}
+        max_width = full_label_width + 5
+        self.form.max_label_width = max_width
+        actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
 
-    @skip("Not Implemented")
+        self.assertGreater(max_width, full_label_width)
+        self.assertEqual(expected_attrs, actual_attrs)
+
+        self.form.max_label_width = original_max
+        self.form.adjust_label_width = original_setting
+
     def test_determine_label_width(self):
         """Happy path for determine_label_width method returns inline style attribute and list of field names. """
-        pass
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = True
+        allowed_fields = self.get_allowed_width_fields()
+        test_fields = allowed_fields.copy()  # TODO: ? Try an input with some double and some single column rows?
+        labels = [field.label or pretty_name(name) for name, field in test_fields.items()]
+        full_width = (max(len(ea) for ea in labels) + 1) // 2  # * 0.85 ch
+        word_width = max(len(word) for label in labels for word in label.split()) // 2
+        expected_width = full_width if full_width < self.form.max_label_width else word_width
+        expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(expected_width)}
+        expected_names = list(test_fields.keys())
+        actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
+
+        self.assertLess(word_width, self.form.max_label_width)
+        self.assertEqual(expected_attrs, actual_attrs)
+        self.assertEqual(expected_names, actual_names)
+
+        self.form.adjust_label_width = original_setting
 
     @skip("Not Implemented")
     def test_make_fieldsets_uses_prep_fields(self):
         """The make_fieldsets method calls the prep_fields method (from FormOverrideMixIn) if it is present. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
         pass
 
     @skip("Not Implemented")
     def test_raises_if_initial_fieldsets_error(self):
         """The make_fieldsets method raises ImproperlyConfigured if initial fieldset is missing fields or position. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
+        # initial: form.fieldsets
         pass
 
     @skip("Not Implemented")
     def test_make_fieldsets_names_can_be_coded(self):
         """The make_fieldsets method recognizes field name in opts['fields'] if coded with leading underscore. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
+        # used to lookup special field names, like: '_name_for_email', '_name_for_user', '_USERNAME_FLAG_FIELD'
+        # initial: form.fieldsets
+        # computed: form._fieldsets
         pass
 
     @skip("Not Implemented")
     def test_no_duplicate_fields_in_fieldsets(self):
         """If a field is defined in two fieldsets, the field only shows up in the first fieldset. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
         pass
 
     @skip("Not Implemented")
     def test_top_errors_has_hidden_field_errors(self):
         """The make_fieldsets appends the top_errors with any errors found for hidden fields. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
+        # top_errors = self.non_field_errors().copy()  # If data not submitted, this will trigger full_clean method.
+        # The hidden field errors are not in non_field_errors, but are only added to the the HTML result.
         pass
 
     @skip("Not Implemented")
     def test_make_fieldsets_uses_handle_modifiers(self):
         """The make_fieldsets method calls the handle_modifiers method (from FormOverrideMixIn) if it is present. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
+        # args = [opts, field_rows, remaining_fields, *fs_args]
+        # opts, field_rows, remaining_fields, *fs_args, kwargs = self.handle_modifiers(*args, **kwargs)
         pass
 
     @skip("Not Implemented")
     def test_make_fieldsets_saves_results(self):
-        """The make_fieldsets method saves the computed fieldsets to form._fieldsets, and saves a form.fs_summary. """
+        """The make_fieldsets method saves the computed fieldsets to form._fieldsets, and saves a form._fs_summary. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
+        # initial: form.fieldsets
+        # computed: form._fieldsets
+        # summary: form._fs_summary
         pass
 
     @skip("Not Implemented")
     def test_no_empty_rows_in_computed_fieldsets(self):
         """Any empty rows defined in the initial fieldset settings are removed in the computed fieldset settings. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
+        # initial: form.fieldsets
+        # computed: form._fieldsets
         pass
 
     @skip("Not Implemented")
     def test_no_empty_sets_in_computed_fieldsets(self):
         """Any empty fieldset defined in initial fieldset settings are removed in the computed fieldset settings. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
+        # initial: form.fieldsets
+        # computed: form._fieldsets
         pass
 
     @skip("Not Implemented")
     def test_computed_fieldsets_structure(self):
         """The each fieldset in the computed fieldset settings have all the expected keys in their options. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
+        # initial: form.fieldsets
+        # computed: form._fieldsets
         pass
 
     @skip("Not Implemented")
     def test_raises_if_missed_fields(self):
         """The make_fieldsets method raises ImproperlyConfigured if somehow some fields are not accounted for. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
+        # Probably only if self.handle_modifiers unexpectedly added fields.
         pass
 
     @skip("Not Implemented")
     def test_make_fieldsets_outcome_order(self):
         """The make_fieldsets method assigns and sorts according to the expected order. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
+        # initial: form.fieldsets. ((label, {'position': <int> or 'end' or None}))
+        # lookup = {'end': max_position + 2, 'remaining': max_position + 1, None: max_position}
         pass
 
     @skip("Not Implemented")
     def test_happy_path_make_fieldsets(self):
         """The make_fieldsets method returns the expected response. """
+        # method: form.make_fieldsets(self, *fs_args, **kwargs)
+        # computed: form._fieldsets
+        # summary: form._fs_summary
+        # result: form._fieldsets.update(form._fs_summary)
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_html_tag(self):
+        """The _html_tag method returns the HTML element with the given contents and attributes. """
+        # form._html_tag(self, tag, contents, attr_string='')
+        # result: '<tag%(attr_string)s>%(contents)s</tag>'
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_column_formats(self):
+        """The column_formats method returns the column and single_column strings with formatting placeholders. """
+        # form.column_formats(self, col_head_tag, col_tag, single_col_tag, col_head_data, col_data)
+        pass
+
+    @skip("Not Implemented")
+    def test_make_row(self):
+        """If there are errors, the make_row method returns a list of 2 strings, with errors first. """
+        # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_make_row_no_errors(self):
+        """The make_row method returns a list of 1 string if no errors but has columns_data. """
+        # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
+        pass
+
+    @skip("Not Implemented")
+    def test_make_headless_row(self):
+        """If there are errors, the make_row method returns a list of 2 strings, with errors first. """
+        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows(self):
+        """Expected list of formatted strings for each main form 'row'. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_html_fieldset(self):
+        """Creates HTML fieldset element containing rows data and HTML legend element. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_all_fieldsets(self):
+        """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
+    @skip("Currently Unused feature. Not Implemented")
+    def test_html_output_error_lines_in_table(self):
+        """The _html_output method, if errors_on_separate_row for as_table, configures colspan appropriately. """
+        # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
+        pass
+
+    @skip("Not Implemented")
+    def test_no_wrap_class_multi_field_row(self):
+        """The _html_output method makes the first html class 'nowrap' on multi_field_row. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # css_classes = ' '.join(['nowrap', css_classes])
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_html_output_expected_labels(self):
+        """The _html_output method uses boundfield label. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # label = conditional_escape(bf.label)
+        # label = bf.label_tag(label, attrs) or ''
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_width_labels_on_expected_fields(self):
+        """The _html_output method uses boundfield label, adding width_attrs for multi_field_row fields. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # attrs = label_width_attrs_dict if name in width_labels else {}
+        # label = conditional_escape(bf.label)
+        # label = bf.label_tag(label, attrs) or ''
+
+    @skip("Not Implemented")
+    def test_raises_no_label(self):
+        """The _html_output method raises ImproperlyConfigured if the boundfield has an empty label. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # label = conditional_escape(bf.label)
+        # label = bf.label_tag(label, attrs) or ''
+        # message = "Visible Bound Fields must have a non-empty label. "
+
+    @skip("Not Implemented")
+    def test_help_text_included(self):
+        """The _html_output method includes help_text content with expected format, if present. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_help_aria(self):
+        """If help_text provided, the input field will have the aria-describedby set to id of help text span. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # field_attrs_dict.update({'aria-describedby': help_id})
+        # field_display = bf.as_widget(attrs=field_attrs_dict)
+        pass
+
+    @skip("Not Implemented")
+    def test_colspan(self):
+        """If a table has a single field row that should span multiple columns, the needed html_col_attr is applied. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # if allow_colspan and not multi_field_row and col_count > 1:
+        # colspan = col_count * 2 - 1 if col_double else col_count
+        pass
+
+    @skip("Not Implemented")
+    def test_colspan(self):
+        """If a table has a single field row that should span multiple columns, the needed html_col_attr is applied. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # if allow_colspan and not multi_field_row and col_count > 1:
+        # colspan = col_count * 2 - 1 if col_double else col_count
+        pass
+
+    @skip("Currently UNTESTED to match normal output. Not Implemented")
+    def test_html_output_show_hidden_initial(self):
+        """The _html_output method correctly implements output for fields with show_hidden_initial. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # if field.show_hidden_initial:
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_multiple_fields_same_row(self):
+        """If a tuple of field names is given in fieldsets, those fields are on the same row in the form. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # columns_data.append(col_html % format_kwargs)
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_html_output_formfieldset(self):
+        """The _html_output method ... """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        pass
+
+    @skip("Redundant? Not Implemented")
+    def test_top_errors_at_top(self):
+        """The FormFieldsetMixIn._html_output method mimics the default behavior for including top_errors. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        pass
+
+    @skip("Redundant? Not Implemented")
+    def test_hidden_fields_at_bottom(self):
+        """The FormFieldsetMixIn._html_output method mimics the default behavior for including hidden fields. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_as_fieldset(self):
+        """The as_fieldset method successfully calles the _html_output and generates the expected HTML. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         pass
 
 
