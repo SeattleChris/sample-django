@@ -26,7 +26,7 @@ FOCUS = 'autofocus '  # TODO: Deal with HTML output for a field (besides usernam
 REQUIRED = 'required '
 MULTIPLE = ' multiple'
 DEFAULT_RE = {ea: f"%({ea})s" for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'pretty', 'attrs']}
-DEFAULT_RE.update(input_type='text', last='', required='')
+DEFAULT_RE.update(input_type='text', last='', required='', error='')
 USERNAME_TXT = '' + \
     '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" ' + \
     '%(name_length)s%(user_attrs)s%(focus)srequired id="id_username">' + \
@@ -156,11 +156,11 @@ class FormTests:
 
     def error_format(self, as_type, error, **kwargs):
         """Used for constructing expected format for field & top errors for FormFieldsetMixIn or default html. """
-        error, txt, attr = str(error), '', ''
-        context = 'default'
-        multi_field_row = None
+        error = str(error)
+        multi_field_row, txt, attr = None, '', ''
         errors_own_row = kwargs.get('errors_on_separate_row', None)
         errors_own_row = True if as_type == 'as_p' and errors_own_row is None else errors_own_row
+        context = 'default_row' if errors_own_row else 'default'
         if issubclass(self.form.__class__, FormFieldsetMixIn):
             context = 'special'
             multi_field_row = kwargs.get('multi_field_row', False)
@@ -175,14 +175,18 @@ class FormTests:
 
         format_error = {
             'as_table': {
-                'default': '<tr><td colspan="2">%s</td></tr>',
+                'default': '%s',
+                'default_row': '<tr><td colspan="2">%s</td></tr>',
+                'normal_row': '<tr%(html_class_attr)s><th>%(label)s</th><td>%(errors)s%(field)s%(help_text)s</td></tr>',
                 'special': '%s',
                 'row': '<tr><td%s>%s</td></tr>',
                 'row_multi': '<td%s>%s</td>',
                 'special_col_data': '%(errors)s%(field)s%(help_text)s',
                 },
             'as_ul': {
-                'default': '<li>%s</li>',
+                'default': '%s',
+                'default_row': '<li>%s</li>',
+                'normal_row': '<li%(html_class_attr)s>%(errors)s%(label)s %(field)s%(help_text)s</li>',
                 'special': '%s',
                 'row': '<li>%s</li>',
                 'row_multi': '<span>%s</span>',
@@ -190,6 +194,8 @@ class FormTests:
                 },
             'as_p': {
                 'default': '%s',
+                'default_row': '%s',  # errors_on_separate_row=True is the default only for 'as_p'.
+                'normal_row': '<p%(html_class_attr)s>%(label)s %(field)s%(help_text)s</p>',
                 'special': '%s',
                 'row': '<p>%s</p>',
                 'row_multi': '<span>%s</span>',
@@ -197,6 +203,8 @@ class FormTests:
                 },
             'as_fieldset': {
                 'default': '',
+                'default_row': '',
+                'normal_row': '',
                 'special': '%s',
                 'row': '<p>%s</p>',
                 'row_multi': '<span>%s</span>',
@@ -208,6 +216,14 @@ class FormTests:
             txt = format_error[as_type][context] % error
         if errors_own_row and not multi_field_row:
             txt += '\n'
+        # if as_type == 'as_table':
+        #     cur_replace['label_end'] += error_string
+        # elif as_type in ('as_ul', 'as_p', 'as_fieldset'):
+        #     cur_replace['start_tag'] += error_string
+        # else:
+        #     cur_replace['error'] = error_string
+        # else:
+        #     cur_replace['start_tag'] = error_string + cur_replace['start_tag']
         return txt
 
     def multi_col_error_format(self, as_type, errors, **kwargs):
@@ -335,15 +351,15 @@ class FormTests:
             field_error = form.errors.get(name, None)
             if field_error:
                 error_string = self.error_format(as_type, field_error, **setup.get('error_kwargs', {}))
-                if issubclass(form.__class__, FormFieldsetMixIn):
-                    if as_type == 'as_table':
-                        cur_replace['label_end'] += error_string
-                    elif as_type in ('as_ul', 'as_p', 'as_fieldset'):
-                        cur_replace['start_tag'] += error_string
-                    else:
-                        cur_replace['error'] = error_string
-                else:
+                # if issubclass(form.__class__, FormFieldsetMixIn):
+                if as_type == 'as_table':
+                    cur_replace['label_end'] += error_string
+                elif as_type in ('as_ul', 'as_fieldset'):
+                    cur_replace['start_tag'] += error_string
+                elif as_type == 'as_p':
                     cur_replace['start_tag'] = error_string + cur_replace['start_tag']
+                else:
+                    cur_replace['error'] = error_string
             txt = field_formats.get(name, DEFAULT_TXT) % cur_replace
             form_list.append(txt)
         str_hidden = ''.join(hidden_list)
@@ -403,7 +419,7 @@ class FormTests:
         for key, value in user_attr.items():
             self.assertEqual(value, getattr(self.user, key, None))
 
-    @skip("Hold test for debugging. ")
+    # @skip("Hold test for debugging. ")
     def test_as_table(self, output=None, form=None):
         """All forms should return HTML table rows when .as_table is called. """
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
@@ -416,7 +432,7 @@ class FormTests:
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    @skip("Hold test for debugging. ")
+    # @skip("Hold test for debugging. ")
     def test_as_ul(self, output=None, form=None):
         """All forms should return HTML <li>s when .as_ul is called. """
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
@@ -476,6 +492,10 @@ class FormTests:
         focus_list = self.find_focus_field()
         self.assertEqual(1, len(focus_list))
         self.assertEqual(expected, focus_list[0])
+
+
+class FormFieldsetTests(FormTests, TestCase):
+    form_class = FormFieldsetForm
 
 
 class FocusTests(FormTests, TestCase):
@@ -1519,10 +1539,6 @@ class OverrideTests(FormTests, TestCase):
     def test_prep_fields_called_html_output(self):
         """The prep_fields method is called by _html_output because of definition in FormOverrideMixIn. """
         pass
-
-
-class FormFieldsetTests(FormTests, TestCase):
-    form_class = FormFieldsetForm
 
 
 class ComputedUsernameTests(FormTests, TestCase):
