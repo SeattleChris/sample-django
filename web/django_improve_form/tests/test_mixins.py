@@ -529,7 +529,26 @@ class FormFieldsetTests(FormTests, TestCase):
     @skip("Not Implemented")
     def test_not_adjust_label_width(self):
         """The determine_label_width method returns empty values if form.adjust_label_width is not True. """
-        pass
+        original_setting = self.form.adjust_label_width
+        self.form.adjust_label_width = False
+        remove_fieldsets = False
+        if not hasattr(self.form, '_fieldsets'):
+            remove_fieldsets = True
+            self.form.make_fieldsets()
+        fieldsets = self.form._fieldsets
+        # expected, actual = [], []
+        actual = [self.form.determine_label_width(opts['rows']) for label, opts in fieldsets]
+        expected = [({}, []) * len(fieldsets)]
+        # for fieldset_label, opts in fieldsets:
+        #     actual.append(self.determine_label_width(opts['rows']))
+        #     expected.append(({}, []))
+
+        self.assertEqual(expected, actual)
+
+        self.form.adjust_label_width = original_setting
+        if remove_fieldsets:
+            del self.form._fieldsets
+            del self.form._fs_summary
 
     @skip("Not Implemented")
     def test_only_correct_widget_classes(self):
