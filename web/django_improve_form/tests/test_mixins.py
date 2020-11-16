@@ -93,25 +93,27 @@ class FormTests:
         return form
 
     def _make_real_user(self, user_type=None, **user_setup):
+        """Creates, saves, and returns a user created with the User model found with 'get_user_model'. """
         UserModel = get_user_model()
+        user_type = user_type or self.user_type
         user = None
         if 'username' not in user_setup:
             user_setup['username'] = user_setup.get('email', '')
-        if self.user_type == 'anonymous':  # Technically already handled.
+        if user_type == 'anonymous':
             return AnonymousUser()
-        elif self.user_type == 'superuser':
+        elif user_type == 'superuser':
             temp = {'is_staff': True, 'is_superuser': True}
             user_setup.update(temp)
             user = UserModel.objects.create_superuser(**user_setup)
-        elif self.user_type == 'staff':
+        elif user_type == 'staff':
             temp = {'is_staff': True, 'is_superuser': False}
             user_setup.update(temp)
             user = UserModel.objects.create_user(**user_setup)
-        elif self.user_type == 'user':
+        elif user_type == 'user':
             temp = {'is_staff': False, 'is_superuser': False}
             user_setup.update(temp)
             user = UserModel.objects.create_user(**user_setup)
-        elif self.user_type == 'inactive':
+        elif user_type == 'inactive':  # Assume normal 'user' type, but inactive.
             temp = {'is_staff': False, 'is_superuser': False, 'is_active': False}
             user_setup.update(temp)
             user = UserModel.objects.create_user(**user_setup)
@@ -216,14 +218,6 @@ class FormTests:
             txt = format_error[as_type][context] % error
         if errors_own_row and not multi_field_row:
             txt += '\n'
-        # if as_type == 'as_table':
-        #     cur_replace['label_end'] += error_string
-        # elif as_type in ('as_ul', 'as_p', 'as_fieldset'):
-        #     cur_replace['start_tag'] += error_string
-        # else:
-        #     cur_replace['error'] = error_string
-        # else:
-        #     cur_replace['start_tag'] = error_string + cur_replace['start_tag']
         return txt
 
     def multi_col_error_format(self, as_type, errors, **kwargs):
@@ -253,6 +247,7 @@ class FormTests:
         return kwargs
 
     def get_expected_format(self, setup):
+        """Should be called after actual format is obtained. Returns a string of the expected HTML output. """
         form = setup.pop('form', self.form)
         as_type = setup['as_type']
         alt_field_info = {}
@@ -351,7 +346,6 @@ class FormTests:
             field_error = form.errors.get(name, None)
             if field_error:
                 error_string = self.error_format(as_type, field_error, **setup.get('error_kwargs', {}))
-                # if issubclass(form.__class__, FormFieldsetMixIn):
                 if as_type == 'as_table':
                     cur_replace['label_end'] += error_string
                 elif as_type in ('as_ul', 'as_fieldset'):
@@ -419,7 +413,6 @@ class FormTests:
         for key, value in user_attr.items():
             self.assertEqual(value, getattr(self.user, key, None))
 
-    # @skip("Hold test for debugging. ")
     def test_as_table(self, output=None, form=None):
         """All forms should return HTML table rows when .as_table is called. """
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
@@ -432,7 +425,6 @@ class FormTests:
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    # @skip("Hold test for debugging. ")
     def test_as_ul(self, output=None, form=None):
         """All forms should return HTML <li>s when .as_ul is called. """
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
