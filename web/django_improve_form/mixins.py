@@ -28,6 +28,7 @@ class FocusMixIn:
     """Autofocus given to a field not hidden or disabled. Can limit to a fields subset, and prioritize a named one. """
     named_focus = None
     fields_focus = None
+    given_focus = None
 
     def __init__(self, *args, **kwargs):
         # print("======================= Focus MixIn =================================")
@@ -39,7 +40,7 @@ class FocusMixIn:
     def assign_focus_field(self, name=None, fields=None):
         """Autofocus only on the non-hidden, non-disabled named or first form field from the given or self fields. """
         name = name() if callable(name) else name
-        fields = fields or self.fields
+        fields = {name: self.fields[name] for name in fields if name in self.fields} if fields else self.fields
         found = fields.get(name, None) if name else None
         found_name = name if found else None
         if found and (found.disabled or isinstance(found.widget, (HiddenInput, MultipleHiddenInput))):
@@ -51,11 +52,12 @@ class FocusMixIn:
                 field.widget.attrs.pop('autofocus', None)
         if found:
             found.widget.attrs['autofocus'] = True
+            self.given_focus = found_name
         return found_name
 
     def _html_output(self, *args, **kwargs):
         # print("************************** Autofocus FOR _HTML_OUTPUT *************************************")
-        self.named_focus = self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
+        self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
         content = super()._html_output(*args, **kwargs)
         return content
 
