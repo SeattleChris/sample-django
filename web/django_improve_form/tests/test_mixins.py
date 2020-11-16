@@ -670,6 +670,118 @@ class FormFieldsetTests(FormTests, TestCase):
         # result: form._fieldsets.update(form.fs_summary)
         pass
 
+    @skip("Currently Unused feature. Not Implemented")
+    def test_html_output_error_lines_in_table(self):
+        """The _html_output method, if errors_on_separate_row for as_table, configures colspan appropriately. """
+        # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
+        pass
+
+    @skip("Not Implemented")
+    def test_no_wrap_class_multi_field_row(self):
+        """The _html_output method makes the first html class 'nowrap' on multi_field_row. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # css_classes = ' '.join(['nowrap', css_classes])
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_html_output_expected_labels(self):
+        """The _html_output method uses boundfield label. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # label = conditional_escape(bf.label)
+        # label = bf.label_tag(label, attrs) or ''
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_width_labels_on_expected_fields(self):
+        """The _html_output method uses boundfield label, adding width_attrs for multi_field_row fields. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # attrs = label_width_attrs_dict if name in width_labels else {}
+        # label = conditional_escape(bf.label)
+        # label = bf.label_tag(label, attrs) or ''
+
+    @skip("Not Implemented")
+    def test_raises_no_label(self):
+        """The _html_output method raises ImproperlyConfigured if the boundfield has an empty label. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # label = conditional_escape(bf.label)
+        # label = bf.label_tag(label, attrs) or ''
+        # message = "Visible Bound Fields must have a non-empty label. "
+
+    @skip("Not Implemented")
+    def test_help_text_included(self):
+        """The _html_output method includes help_text content with expected format, if present. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        pass
+
+    @skip("Not Implemented")
+    def test_help_aria(self):
+        """If help_text provided, the input field will have the aria-describedby set to id of help text span. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # field_attrs_dict.update({'aria-describedby': help_id})
+        # field_display = bf.as_widget(attrs=field_attrs_dict)
+        pass
+
+    @skip("Not Implemented")
+    def test_colspan(self):
+        """If a table has a single field row that should span multiple columns, the needed html_col_attr is applied. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # if allow_colspan and not multi_field_row and col_count > 1:
+        # colspan = col_count * 2 - 1 if col_double else col_count
+        pass
+
+    @skip("Not Implemented")
+    def test_colspan(self):
+        """If a table has a single field row that should span multiple columns, the needed html_col_attr is applied. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # if allow_colspan and not multi_field_row and col_count > 1:
+        # colspan = col_count * 2 - 1 if col_double else col_count
+        pass
+
+    @skip("Currently UNTESTED to match normal output. Not Implemented")
+    def test_html_output_show_hidden_initial(self):
+        """The _html_output method correctly implements output for fields with show_hidden_initial. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # if field.show_hidden_initial:
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_multiple_fields_same_row(self):
+        """If a tuple of field names is given in fieldsets, those fields are on the same row in the form. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        # columns_data.append(col_html % format_kwargs)
+        pass
+
+    @skip("Redundant. Not Implemented")
+    def test_html_output_formfieldset(self):
+        """The _html_output method ... """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        pass
+
+    @skip("Redundant? Not Implemented")
+    def test_top_errors_at_top(self):
+        """The FormFieldsetMixIn._html_output method mimics the default behavior for including top_errors. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        pass
+
+    @skip("Redundant? Not Implemented")
+    def test_hidden_fields_at_bottom(self):
+        """The FormFieldsetMixIn._html_output method mimics the default behavior for including hidden fields. """
+        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
+        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
+        pass
+
 
 class FocusTests(FormTests, TestCase):
     form_class = FocusForm
