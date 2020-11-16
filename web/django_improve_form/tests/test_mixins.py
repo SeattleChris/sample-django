@@ -555,12 +555,23 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.adjust_label_width = original_setting
 
-    @skip("Not Implemented")
+    def get_allowed_width_fields(self, fields=None):
+        """Returns a dict of fields that are allowed to have a label_width with the current Form settings. """
+        fields = fields or self.form.fields
+        allowed_fields = {}
+        for name, field in fields.items():
+            if isinstance(field.widget, self.form.label_width_widgets):
+                if not isinstance(field.widget, self.form.label_exclude_widgets):
+                    allowed_fields[name] = field
+        return allowed_fields
+
     def test_only_correct_widget_classes(self):
         """If all excluded based on accepted & rejected widgets, determine_label_width method returns empty values. """
-        # form.determine_label_width(self, field_rows):
-        # self.label_width_widgets, form.label_exclude_widgets
-        pass
+        allowed = self.get_allowed_width_fields()
+        reject_fields = {name: field for name, field in self.form.fields.items() if name not in allowed}
+        expected = ({}, [])
+        actual = self.form.determine_label_width(reject_fields)
+        self.assertEqual(expected, actual)
 
     @skip("Redundant. Not Implemented")
     def test_table_not_adjust_label_width(self):
