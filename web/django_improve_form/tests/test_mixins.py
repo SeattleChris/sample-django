@@ -579,13 +579,19 @@ class FormFieldsetTests(FormTests, TestCase):
         # if as_type == 'table': adjust_label_width = False
         pass
 
-    @skip("Not Implemented")
     def test_raises_too_wide_label_width(self):
         """The determine_label_width method raises ImproperlyConfigured if the computed width is greater than max. """
-        # form.determine_label_width(self, field_rows):
-        # form.max_label_width
-        # message = "The max_label_width of {} is not enough for the fields: {} ".format(max_width, group_keys)
-        pass
+        original_max = self.form.max_label_width
+        max_width = 2
+        self.form.max_label_width = max_width
+        allowed_fields = self.get_allowed_width_fields()
+        group_keys = list(allowed_fields.keys())
+        message = "The max_label_width of {} is not enough for the fields: {} ".format(max_width, group_keys)
+
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.determine_label_width(self.form.fields)
+
+        self.form.max_label_width = original_max
 
     @skip("Not Implemented")
     def test_word_wrap_label_width(self):
