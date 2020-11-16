@@ -526,7 +526,13 @@ class FormFieldsetTests(FormTests, TestCase):
         # if isinstance(field_rows, dict): single_field_rows = [{name: field} for name, field in field_rows]
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant. Not Implemented")
+    def test_table_not_adjust_label_width(self):
+        """Regardless of form.adjust_label_width, determine_label_width is not needed for as_table display. """
+        # if as_type == 'table': adjust_label_width = False
+        pass
+
+    # @skip("Not Implemented")
     def test_not_adjust_label_width(self):
         """The determine_label_width method returns empty values if form.adjust_label_width is not True. """
         original_setting = self.form.adjust_label_width
@@ -634,11 +640,11 @@ class FormFieldsetTests(FormTests, TestCase):
 
     @skip("Not Implemented")
     def test_make_fieldsets_saves_results(self):
-        """The make_fieldsets method saves the computed fieldsets to form._fieldsets, and saves a form.fs_summary. """
+        """The make_fieldsets method saves the computed fieldsets to form._fieldsets, and saves a form._fs_summary. """
         # method: form.make_fieldsets(self, *fs_args, **kwargs)
         # initial: form.fieldsets
         # computed: form._fieldsets
-        # summary: form.fs_summary
+        # summary: form._fs_summary
         pass
 
     @skip("Not Implemented")
@@ -685,8 +691,8 @@ class FormFieldsetTests(FormTests, TestCase):
         """The make_fieldsets method returns the expected response. """
         # method: form.make_fieldsets(self, *fs_args, **kwargs)
         # computed: form._fieldsets
-        # summary: form.fs_summary
-        # result: form._fieldsets.update(form.fs_summary)
+        # summary: form._fs_summary
+        # result: form._fieldsets.update(form._fs_summary)
         pass
 
     @skip("Redundant. Not Implemented")
