@@ -553,6 +553,31 @@ class FocusTests(FormTests, TestCase):
         self.assertEqual(target_2, focused_2[0])
         self.assertEqual(target_2, result_2)
 
+    def test_focus_on_limited_fields(self):
+        """Focus assignment can be limited to a subset of form fields by setting 'fields_focus' on form. """
+        original_named_focus = self.form.named_focus
+        original_fields_focus = self.form.fields_focus
+        original_given_focus = self.form.given_focus
+        original_fields = self.form.fields
+        self.form.named_focus = None
+        self.form.given_focus = None
+        # all_field_names = list(self.form.fields.keys())
+        allowed = [name for name, field in self.form.fields.items()
+                   if not field.disabled and not isinstance(field.widget, (HiddenInput, MultipleHiddenInput))]
+        self.assertGreater(len(allowed), 1)
+        fields_focus = allowed[1:]
+        self.form.fields_focus = fields_focus
+        expected = fields_focus[0]
+        actual = self.form.assign_focus_field(None, fields=self.form.fields_focus)
+
+        self.assertEqual(expected, actual)
+        self.assertEqual(self.form.given_focus, actual)
+
+        self.form.name_focus = original_named_focus
+        self.form.fields_focus = original_fields_focus
+        self.form.given_focus = original_given_focus
+        self.form.fields = original_fields
+
 
 class CriticalTests(FormTests, TestCase):
     form_class = CriticalForm
