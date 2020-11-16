@@ -26,7 +26,7 @@ FOCUS = 'autofocus '  # TODO: Deal with HTML output for a field (besides usernam
 REQUIRED = 'required '
 MULTIPLE = ' multiple'
 DEFAULT_RE = {ea: f"%({ea})s" for ea in ['start_tag', 'label_end', 'input_end', 'end_tag', 'name', 'pretty', 'attrs']}
-DEFAULT_RE.update(input_type='text', last='', required='')
+DEFAULT_RE.update(input_type='text', last='', required='', error='')
 USERNAME_TXT = '' + \
     '%(start_tag)s<label for="id_username">Username:</label>%(label_end)s<input type="text" name="username" ' + \
     '%(name_length)s%(user_attrs)s%(focus)srequired id="id_username">' + \
@@ -93,25 +93,27 @@ class FormTests:
         return form
 
     def _make_real_user(self, user_type=None, **user_setup):
+        """Creates, saves, and returns a user created with the User model found with 'get_user_model'. """
         UserModel = get_user_model()
+        user_type = user_type or self.user_type
         user = None
         if 'username' not in user_setup:
             user_setup['username'] = user_setup.get('email', '')
-        if self.user_type == 'anonymous':  # Technically already handled.
+        if user_type == 'anonymous':
             return AnonymousUser()
-        elif self.user_type == 'superuser':
+        elif user_type == 'superuser':
             temp = {'is_staff': True, 'is_superuser': True}
             user_setup.update(temp)
             user = UserModel.objects.create_superuser(**user_setup)
-        elif self.user_type == 'staff':
+        elif user_type == 'staff':
             temp = {'is_staff': True, 'is_superuser': False}
             user_setup.update(temp)
             user = UserModel.objects.create_user(**user_setup)
-        elif self.user_type == 'user':
+        elif user_type == 'user':
             temp = {'is_staff': False, 'is_superuser': False}
             user_setup.update(temp)
             user = UserModel.objects.create_user(**user_setup)
-        elif self.user_type == 'inactive':
+        elif user_type == 'inactive':  # Assume normal 'user' type, but inactive.
             temp = {'is_staff': False, 'is_superuser': False, 'is_active': False}
             user_setup.update(temp)
             user = UserModel.objects.create_user(**user_setup)
@@ -132,17 +134,25 @@ class FormTests:
         user = type_lookup[user_type](**user_setup)
         return user
 
-    def get_format_attrs(self, name, field):
+    def get_format_attrs(self, name, field, alt_field_info={}):
         """For the given named field, get the attrs as determined by the field and widget settings. """
+        # important_props = ('initial', 'autofocus', 'widget')
+        if name in alt_field_info:
+            field = deepcopy(field)
+            for prop, value in alt_field_info[name].items():
+                setattr(field, prop, value)
+        initial = field.initial
+        initial = initial() if callable(initial) else initial
         attrs, result = {}, []
-        if field.initial and not isinstance(field.widget, Textarea) and not name == 'billing_country_code':
-            # TODO: Fix the country code patch. 
-            attrs['value'] = str(field.initial)
-        html_name = get_html_name(self.form, name)
-        if html_name in getattr(self.form, 'data', {}):
-            attrs['value'] = self.form.data[html_name]
+        if initial and not isinstance(field.widget, Textarea):
+            attrs['value'] = str(initial)
+        data_val = self.form.data.get(get_html_name(self.form, name), None)
+        if data_val not in ('', None):
+            attrs['value'] = data_val
         attrs.update(field.widget_attrs(field.widget))
         result = ''.join(f'{key}="{val}" ' for key, val in attrs.items())
+        if getattr(field, 'autofocus', None):
+            result += 'autofocus '
         if issubclass(self.form.__class__, FormOverrideMixIn):
             # TODO: Expand for actual output when using FormOverrideMixIn, or a sub-class of it.
             result += '%(attrs)s'  # content '%(attrs)s'
@@ -152,11 +162,11 @@ class FormTests:
 
     def error_format(self, as_type, error, **kwargs):
         """Used for constructing expected format for field & top errors for FormFieldsetMixIn or default html. """
-        error, txt, attr = str(error), '', ''
-        context = 'default'
-        multi_field_row = None
+        error = str(error)
+        multi_field_row, txt, attr = None, '', ''
         errors_own_row = kwargs.get('errors_on_separate_row', None)
         errors_own_row = True if as_type == 'as_p' and errors_own_row is None else errors_own_row
+        context = 'default_row' if errors_own_row else 'default'
         if issubclass(self.form.__class__, FormFieldsetMixIn):
             context = 'special'
             multi_field_row = kwargs.get('multi_field_row', False)
@@ -171,14 +181,18 @@ class FormTests:
 
         format_error = {
             'as_table': {
-                'default': '<tr><td colspan="2">%s</td></tr>',
+                'default': '%s',
+                'default_row': '<tr><td colspan="2">%s</td></tr>',
+                'normal_row': '<tr%(html_class_attr)s><th>%(label)s</th><td>%(errors)s%(field)s%(help_text)s</td></tr>',
                 'special': '%s',
                 'row': '<tr><td%s>%s</td></tr>',
                 'row_multi': '<td%s>%s</td>',
                 'special_col_data': '%(errors)s%(field)s%(help_text)s',
                 },
             'as_ul': {
-                'default': '<li>%s</li>',
+                'default': '%s',
+                'default_row': '<li>%s</li>',
+                'normal_row': '<li%(html_class_attr)s>%(errors)s%(label)s %(field)s%(help_text)s</li>',
                 'special': '%s',
                 'row': '<li>%s</li>',
                 'row_multi': '<span>%s</span>',
@@ -186,6 +200,8 @@ class FormTests:
                 },
             'as_p': {
                 'default': '%s',
+                'default_row': '%s',  # errors_on_separate_row=True is the default only for 'as_p'.
+                'normal_row': '<p%(html_class_attr)s>%(label)s %(field)s%(help_text)s</p>',
                 'special': '%s',
                 'row': '<p>%s</p>',
                 'row_multi': '<span>%s</span>',
@@ -193,6 +209,8 @@ class FormTests:
                 },
             'as_fieldset': {
                 'default': '',
+                'default_row': '',
+                'normal_row': '',
                 'special': '%s',
                 'row': '<p>%s</p>',
                 'row_multi': '<span>%s</span>',
@@ -233,13 +251,26 @@ class FormTests:
         return kwargs
 
     def get_expected_format(self, setup):
+        """Should be called after actual format is obtained. Returns a string of the expected HTML output. """
         form = setup.pop('form', self.form)
         as_type = setup['as_type']
         setup.update(attrs='')
+        alt_field_info = {}
         if issubclass(self.form_class, FormOverrideMixIn):
             size_default = form.get_overrides().get('_default_', {}).get('size', None)
             override_attrs = '' if not size_default else f'size="{size_default}" '
             setup.update(attrs=override_attrs)
+            alt_field_info = self.form.get_alt_field_info()
+        if hasattr(self.form, 'assign_focus_field'):
+            # self.form.named_focus = self.assign_focus_field(name=self.form.named_focus, fields=self.form.fields_focus)
+            focused = getattr(self.form, 'given_focus', None) or getattr(self.form, 'named_focus', None)
+            if not focused:
+                ls = [name for name, field in self.form.fields.items()
+                      if not field.disabled and not isinstance(field.widget, (HiddenInput, MultipleHiddenInput))]
+                focused = ls[0] if ls else None
+            if focused:  # Using alt_field_info to track assigning focus here, but 'autofocus' is not a field property.
+                alt_field_info[focused] = alt_field_info.get(focused, {})
+                alt_field_info[focused].update({'autofocus': True})
         field_formats = FIELD_FORMATS.copy()
         if issubclass(self.form_class, ComputedUsernameMixIn):
             name_for_email = form.name_for_email or form._meta.model.get_email_field() or 'email'
@@ -280,7 +311,7 @@ class FormTests:
             cur_replace['required'] = REQUIRED if field.required else ''
             if field.disabled:
                 cur_replace['required'] += 'disabled '
-            cur_replace['attrs'] = self.get_format_attrs(name, field)
+            cur_replace['attrs'] = self.get_format_attrs(name, field, alt_field_info)
             if isinstance(field, EmailField) and name not in field_formats:
                 cur_replace['input_type'] = 'email'
             elif isinstance(field.widget, Textarea):
@@ -329,15 +360,14 @@ class FormTests:
             field_error = form.errors.get(name, None)
             if field_error:
                 error_string = self.error_format(as_type, field_error, **setup.get('error_kwargs', {}))
-                if issubclass(form.__class__, FormFieldsetMixIn):
-                    if as_type == 'as_table':
-                        cur_replace['label_end'] += error_string
-                    elif as_type in ('as_ul', 'as_p', 'as_fieldset'):
-                        cur_replace['start_tag'] += error_string
-                    else:
-                        cur_replace['error'] = error_string
-                else:
+                if as_type == 'as_table':
+                    cur_replace['label_end'] += error_string
+                elif as_type in ('as_ul', 'as_fieldset'):
+                    cur_replace['start_tag'] += error_string
+                elif as_type == 'as_p':
                     cur_replace['start_tag'] = error_string + cur_replace['start_tag']
+                else:
+                    cur_replace['error'] = error_string
             txt = field_formats.get(name, DEFAULT_TXT) % cur_replace
             form_list.append(txt)
         str_hidden = ''.join(hidden_list)
@@ -397,7 +427,6 @@ class FormTests:
         for key, value in user_attr.items():
             self.assertEqual(value, getattr(self.user, key, None))
 
-    @skip("Hold test for debugging. ")
     def test_as_table(self, output=None, form=None):
         """All forms should return HTML table rows when .as_table is called. """
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
@@ -410,7 +439,6 @@ class FormTests:
         self.assertNotEqual('', output)
         self.assertEqual(expected, output)
 
-    @skip("Hold test for debugging. ")
     def test_as_ul(self, output=None, form=None):
         """All forms should return HTML <li>s when .as_ul is called. """
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
@@ -472,6 +500,131 @@ class FormTests:
         self.assertEqual(expected, focus_list[0])
 
 
+class FormFieldsetTests(FormTests, TestCase):
+    form_class = FormFieldsetForm
+
+    def test_prep_remaining(self):
+        """The prep_remaining method exists. Unchanged, it returns parameters unmodified. """
+        self.assertTrue(hasattr(self.form, 'prep_remaining'))
+        original_fields = self.form.fields
+        self.form.fields = original_fields.copy()
+        remaining_fields = original_fields.copy()
+        opts, field_rows = {'fake_opts': 'fake', 'fields': ['nope']}, [{'name': 'assigned_field'}]
+        args = ['arbitrary', 'input', 'args']
+        kwargs = {'test_1': 'data_1', 'test_2': 'data_2'}
+
+        expected = (opts.copy(), field_rows.copy(), remaining_fields.copy(), *args, kwargs.copy())
+        actual = self.form.prep_country_fields(opts, field_rows, remaining_fields, *args, **kwargs)
+        self.assertEqual(expected, actual)
+
+        self.form.fields = original_fields
+
+    @skip("Not Implemented")
+    def test_label_width_not_enough_single_field_rows(self):
+        """The determine_label_width method returns empty values if there are not multiple rows of a single field. """
+        pass
+
+    @skip("Not Implemented")
+    def test_not_adjust_label_width(self):
+        """The determine_label_width method returns empty values if form.adjust_label_width is not True. """
+        pass
+
+    @skip("Not Implemented")
+    def test_only_correct_widget_classes(self):
+        """If all excluded based on accepted & rejected widgets, determine_label_width method returns empty values. """
+        pass
+
+    @skip("Not Implemented")
+    def test_raises_too_wide_label_width(self):
+        """The determine_label_width method raises ImproperlyConfigured if the computed width is greater than max. """
+        pass
+
+    @skip("Not Implemented")
+    def test_raises_too_wide_label_width(self):
+        """The determine_label_width method raises ImproperlyConfigured if the computed width is greater than max. """
+        pass
+
+    @skip("Not Implemented")
+    def test_word_wrap_label_width(self):
+        """The determine_label_width method sets width based on word length if full label would exceed the max. """
+        pass
+
+    @skip("Not Implemented")
+    def test_label_width_fits_full_label_if_small_enough(self):
+        """If all row labels are small enough, The determine_label_width method sets width to fit labels on a line. """
+        pass
+
+    @skip("Not Implemented")
+    def test_determine_label_width(self):
+        """Happy path for determine_label_width method returns inline style attribute and list of field names. """
+        pass
+
+    @skip("Not Implemented")
+    def test_make_fieldsets_uses_prep_fields(self):
+        """The make_fieldsets method calls the prep_fields method (from FormOverrideMixIn) if it is present. """
+        pass
+
+    @skip("Not Implemented")
+    def test_raises_if_initial_fieldsets_error(self):
+        """The make_fieldsets method raises ImproperlyConfigured if initial fieldset is missing fields or position. """
+        pass
+
+    @skip("Not Implemented")
+    def test_make_fieldsets_names_can_be_coded(self):
+        """The make_fieldsets method recognizes field name in opts['fields'] if coded with leading underscore. """
+        pass
+
+    @skip("Not Implemented")
+    def test_no_duplicate_fields_in_fieldsets(self):
+        """If a field is defined in two fieldsets, the field only shows up in the first fieldset. """
+        pass
+
+    @skip("Not Implemented")
+    def test_top_errors_has_hidden_field_errors(self):
+        """The make_fieldsets appends the top_errors with any errors found for hidden fields. """
+        pass
+
+    @skip("Not Implemented")
+    def test_make_fieldsets_uses_handle_modifiers(self):
+        """The make_fieldsets method calls the handle_modifiers method (from FormOverrideMixIn) if it is present. """
+        pass
+
+    @skip("Not Implemented")
+    def test_make_fieldsets_saves_results(self):
+        """The make_fieldsets method saves the computed fieldsets to form._fieldsets, and saves a form.fs_summary. """
+        pass
+
+    @skip("Not Implemented")
+    def test_no_empty_rows_in_computed_fieldsets(self):
+        """Any empty rows defined in the initial fieldset settings are removed in the computed fieldset settings. """
+        pass
+
+    @skip("Not Implemented")
+    def test_no_empty_sets_in_computed_fieldsets(self):
+        """Any empty fieldset defined in initial fieldset settings are removed in the computed fieldset settings. """
+        pass
+
+    @skip("Not Implemented")
+    def test_computed_fieldsets_structure(self):
+        """The each fieldset in the computed fieldset settings have all the expected keys in their options. """
+        pass
+
+    @skip("Not Implemented")
+    def test_raises_if_missed_fields(self):
+        """The make_fieldsets method raises ImproperlyConfigured if somehow some fields are not accounted for. """
+        pass
+
+    @skip("Not Implemented")
+    def test_make_fieldsets_outcome_order(self):
+        """The make_fieldsets method assigns and sorts according to the expected order. """
+        pass
+
+    @skip("Not Implemented")
+    def test_happy_path_make_fieldsets(self):
+        """The make_fieldsets method returns the expected response. """
+        pass
+
+
 class FocusTests(FormTests, TestCase):
     form_class = FocusForm
 
@@ -520,6 +673,31 @@ class FocusTests(FormTests, TestCase):
         self.assertEqual(1, len(focused_2))
         self.assertEqual(target_2, focused_2[0])
         self.assertEqual(target_2, result_2)
+
+    def test_focus_on_limited_fields(self):
+        """Focus assignment can be limited to a subset of form fields by setting 'fields_focus' on form. """
+        original_named_focus = self.form.named_focus
+        original_fields_focus = self.form.fields_focus
+        original_given_focus = self.form.given_focus
+        original_fields = self.form.fields
+        self.form.named_focus = None
+        self.form.given_focus = None
+        # all_field_names = list(self.form.fields.keys())
+        allowed = [name for name, field in self.form.fields.items()
+                   if not field.disabled and not isinstance(field.widget, (HiddenInput, MultipleHiddenInput))]
+        self.assertGreater(len(allowed), 1)
+        fields_focus = allowed[1:]
+        self.form.fields_focus = fields_focus
+        expected = fields_focus[0]
+        actual = self.form.assign_focus_field(None, fields=self.form.fields_focus)
+
+        self.assertEqual(expected, actual)
+        self.assertEqual(self.form.given_focus, actual)
+
+        self.form.name_focus = original_named_focus
+        self.form.fields_focus = original_fields_focus
+        self.form.given_focus = original_given_focus
+        self.form.fields = original_fields
 
 
 class CriticalTests(FormTests, TestCase):
@@ -1031,6 +1209,16 @@ class OverrideTests(FormTests, TestCase):
         self.test_initial = test_initial
         self.test_data = test_data
 
+    def test_raises_set_alt_data(self):
+        """Raises ImproperlyConfigured if set_alt_data get both collection and single data input. """
+        name, value = 'generic_field', 'alt_data_value'
+        field = self.form.fields.get(name, None)
+        self.assertIsNotNone(field, "Unable to find the expected field in current fields. ")
+        data = {name: (field, value)}
+
+        with self.assertRaises(ImproperlyConfigured):
+            self.form.set_alt_data(data=data, name=name, field=field, value=value)
+
     def test_set_alt_data_single(self):
         """Get expected results when passing name, field, value, but not data. """
         name, value = 'generic_field', 'alt_data_value'
@@ -1045,8 +1233,8 @@ class OverrideTests(FormTests, TestCase):
         expected_data = test_data.copy()
         expected_data.update({name: value})
         initial_val = self.form.get_initial_for_field(field, name)
-        data_name = self.form.add_prefix(name)
-        data_val = field.widget.value_from_datadict(self.form.data, self.form.files, data_name)
+        html_name = self.form.add_prefix(name)
+        data_val = field.widget.value_from_datadict(self.form.data, self.form.files, html_name)
         use_alt_value = not field.has_changed(initial_val, data_val)
         expected_value = value if use_alt_value else initial_data.get(name)
         expected_result = {name: value} if use_alt_value else {}
@@ -1054,7 +1242,8 @@ class OverrideTests(FormTests, TestCase):
 
         self.assertEqual(self.test_initial[name], initial_val)
         self.assertEqual(initial_data[name], data_val)
-        self.assertEqual(expected_value, self.form.data[name])
+        self.assertEqual(expected_value, self.form.data[html_name])
+        self.assertEqual(expected_value, field.initial)
         self.assertDictEqual(expected_result, result)
         for key in initial_data:
             self.assertEqual(expected_data[key], self.form.data[key])
@@ -1069,11 +1258,11 @@ class OverrideTests(FormTests, TestCase):
         alt_values = {name: f"alt_value_{name}" for name in self.test_initial}  # some, but not all, will be used.
         original_form_data = self.form.data
         test_data = self.test_data.copy()
-        test_data.update({name: val for name, val in self.test_initial.items() if name not in names})
+        test_data.update({k: v for k, v in self.test_initial.items() if get_html_name(self.form, k) not in names})
         test_data._mutable = False
         self.form.data = test_data
         initial_data = test_data.copy()
-        expected_result = {name: val for name, val in alt_values.items() if name not in names}
+        expected_result = {k: v for k, v in alt_values.items() if get_html_name(self.form, k) not in names}
         expected_data = test_data.copy()
         expected_data.update(expected_result)
         expect_updates = any(self.data_is_initial(name) for name in initial_data)
@@ -1502,10 +1691,6 @@ class OverrideTests(FormTests, TestCase):
     def test_prep_fields_called_html_output(self):
         """The prep_fields method is called by _html_output because of definition in FormOverrideMixIn. """
         pass
-
-
-class FormFieldsetTests(FormTests, TestCase):
-    form_class = FormFieldsetForm
 
 
 class ComputedUsernameTests(FormTests, TestCase):
@@ -1990,14 +2175,14 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 
         self.assertNotIn(self.form.name_for_user, original_data)
         self.assertNotIn(self.form.name_for_user, original_fields)
-        self.assertIn(self.form.name_for_user, self.form.data)
+        self.assertIn(get_html_name(self.form, self.form.name_for_user), self.form.data)
         self.assertIn(self.form.name_for_user, self.form.fields)
         self.assertNotIn(self.form.USERNAME_FLAG_FIELD, original_data)
         self.assertNotIn(self.form.USERNAME_FLAG_FIELD, original_fields)
-        self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.data)
+        self.assertIn(get_html_name(self.form, self.form.USERNAME_FLAG_FIELD), self.form.data)
         self.assertIn(self.form.USERNAME_FLAG_FIELD, self.form.fields)
-        self.assertEqual(expected_name, self.form.data.get(self.form.name_for_user, None))
-        self.assertEqual(expected_flag, self.form.data.get(self.form.USERNAME_FLAG_FIELD, None))
+        self.assertEqual(expected_name, self.form.data.get(get_html_name(self.form, self.form.name_for_user), None))
+        self.assertEqual(expected_flag, self.form.data.get(get_html_name(self.form, self.form.USERNAME_FLAG_FIELD)))
 
         self.form.data = original_data
         self.form.fields = original_fields
@@ -2195,7 +2380,7 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 
         self.assertIsNotNone(email_val)
         self.assertIsNotNone(user_field)
-        self.assertEqual(email_val, self.form.data.get(self.form.name_for_email, None))
+        self.assertEqual(email_val, self.form.data.get(get_html_name(self.form, self.form.name_for_email), None))
         self.assertEqual(expected, actual)
 
         self.form.data = original_data
@@ -2295,7 +2480,15 @@ class ConfirmationComputedUsernameTests(FormTests, TestCase):
 class BaseCountryTests:
     form_class = None
     overrides_empty_or_skip = 'skip'
+    good_practice = 'empty'
+    alt_info = 'empty'
     initial_data = None
+
+    # # TODO: Refactor to use a function wrapper to trigger pushing to has_call.
+    # def record_wrapper(self, signal, func, *args, **kwargs):
+    #     self.form.has_call.push(signal)
+    #     response = func(*args, **kwargs)
+    #     return response
 
     def setUp(self):
         self.user = self.make_user()
@@ -2309,17 +2502,51 @@ class BaseCountryTests:
         self.original_get_overrides = self.form.get_overrides
         self.original_get_alt_field_info = self.form.get_alt_field_info
         self.original_formfield_attrs_overrides = self.form.formfield_attrs_overrides
-        self.original_autocomplete = self.form.autocomplete
         self.original_alt_field_info = self.form.alt_field_info
-        self.form.good_practice_attrs = self.empty_good_practice_attrs
+        if self.good_practice == 'empty':
+            self.form.good_practice_attrs = self.empty_good_practice_attrs
+        # else:
+        #     self.form.good_practice_attrs = self.record_wrapper('good_practice_attrs', self.form.good_practice_attrs)
         if self.overrides_empty_or_skip == 'empty':
             self.form.get_overrides = self.empty_get_overrides
+            self.form.formfield_attrs_overrides = {}
         elif self.overrides_empty_or_skip == 'skip':
             self.form.get_overrides = self.skip_get_overrides
-        self.form.get_alt_field_info = self.empty_get_alt_field_info
-        self.form.formfield_attrs_overrides = {}
-        self.form.autocomplete = {}
-        self.form.alt_field_info = {}
+            self.form.formfield_attrs_overrides = {}
+        if self.alt_info == 'empty':
+            self.form.get_alt_field_info = self.empty_get_alt_field_info
+            self.form.alt_field_info = {}
+
+    def test_setup(self):
+        """Are the overridden methods the new empty versions? """
+        self.assertIsNotNone(getattr(self, 'original_good_practice_attrs', None))
+        self.assertIsNotNone(getattr(self, 'original_get_overrides', None))
+        self.assertIsNotNone(getattr(self, 'original_get_alt_field_info', None))
+        self.assertIsNone(getattr(self.form, 'is_prepared', None))
+        self.assertNotIn('good_practice_attrs', self.form.has_call)
+        self.assertNotIn('get_overrides', self.form.has_call)
+        self.assertNotIn('get_alt_field_info', self.form.has_call)
+        good_practice = self.form.good_practice_attrs()
+        if self.good_practice == 'empty':
+            self.assertEqual({}, good_practice)
+        overrides = self.form.get_overrides()
+        if self.overrides_empty_or_skip == 'empty':
+            self.assertEqual({}, overrides)
+        elif self.overrides_empty_or_skip == 'skip':
+            self.assertEqual(self.no_resize_override(), overrides)
+        if self.alt_info == 'empty':
+            self.assertEqual({}, self.form.get_alt_field_info())
+            self.assertIn('get_alt_field_info', self.form.has_call)
+            self.assertEqual(self.form.get_alt_field_info.__name__, 'empty_get_alt_field_info')
+        self.assertIn('good_practice_attrs', self.form.has_call)
+        self.assertIn('get_overrides', self.form.has_call)
+        self.form.has_call = []
+        self.assertEqual(self.form.good_practice_attrs.__name__, 'empty_good_practice_attrs')
+        if self.overrides_empty_or_skip == 'empty':
+            self.assertEqual(self.form.get_overrides.__name__, 'empty_get_overrides')
+        self.assertEqual(self.form.get_overrides.__name__, 'skip_get_overrides')
+        request_type = 'POST' if self.get_initial_data() else 'GET'
+        self.assertEqual(request_type, self.request.method)
 
     def get_initial_data(self, removed=('billing_country_code', )):
         """Can be overwritten to modify the initial_test_data used in a POST request. """
@@ -2368,33 +2595,6 @@ class BaseCountryTests:
         field = source.pop(name, None)
         return field
 
-    def test_setup(self):
-        """Are the overridden methods the new empty versions? """
-        self.assertIsNotNone(getattr(self, 'original_good_practice_attrs', None))
-        self.assertIsNotNone(getattr(self, 'original_get_overrides', None))
-        self.assertIsNotNone(getattr(self, 'original_get_alt_field_info', None))
-        self.assertIsNone(getattr(self.form, 'is_prepared', None))
-        self.assertNotIn('good_practice_attrs', self.form.has_call)
-        self.assertNotIn('get_overrides', self.form.has_call)
-        self.assertNotIn('get_alt_field_info', self.form.has_call)
-        self.assertEqual({}, self.form.good_practice_attrs())
-        if self.overrides_empty_or_skip == 'empty':
-            self.assertEqual({}, self.form.get_overrides())
-        elif self.overrides_empty_or_skip == 'skip':
-            self.assertEqual(self.no_resize_override(), self.form.get_overrides())
-        self.assertEqual({}, self.form.get_alt_field_info())
-        self.assertIn('good_practice_attrs', self.form.has_call)
-        self.assertIn('get_overrides', self.form.has_call)
-        self.assertIn('get_alt_field_info', self.form.has_call)
-        self.form.has_call = []
-        self.assertEqual(self.form.good_practice_attrs.__name__, 'empty_good_practice_attrs')
-        if self.overrides_empty_or_skip == 'empty':
-            self.assertEqual(self.form.get_overrides.__name__, 'empty_get_overrides')
-        self.assertEqual(self.form.get_overrides.__name__, 'skip_get_overrides')
-        self.assertEqual(self.form.get_alt_field_info.__name__, 'empty_get_alt_field_info')
-        request_type = 'POST' if self.get_initial_data() else 'GET'
-        self.assertEqual(request_type, self.request.method)
-
     def test_as_p(self):
         self.assertNotIn('good_practice_attrs', self.form.has_call)
         self.assertNotIn('get_overrides', self.form.has_call)
@@ -2405,7 +2605,8 @@ class BaseCountryTests:
             self.assertIn('good_practice_attrs', self.form.has_call)
         elif self.overrides_empty_or_skip == 'skip':
             self.assertIn('get_overrides', self.form.has_call)
-        self.assertIn('get_alt_field_info', self.form.has_call)
+        if self.alt_info == 'empty':
+            self.assertIn('get_alt_field_info', self.form.has_call)
         self.assertTrue(getattr(self.form, 'is_prepared', None))
         self.form.has_call = []
         super().test_as_p(output=output)
@@ -2549,6 +2750,7 @@ class CountryTests(BaseCountryTests, FormTests, TestCase):
 
 class CountryPostTests(BaseCountryTests, FormTests, TestCase):
     form_class = CountryForm
+    alt_info = False
     initial_data = {
         'generic_field': 'generic data input',
         'billing_address_1': '1234 Main St, S',
@@ -2599,20 +2801,77 @@ class CountryPostTests(BaseCountryTests, FormTests, TestCase):
 class ComputedCountryTests(CountryPostTests):
     form_class = ComputedCountryForm
 
+    def get_critical_field_signal(self, names, alt_name=''):
+        self.get_critical_call = getattr(self, 'get_critical_call', {})
+        self.get_critical_call.update({'names': names, 'alt_name': alt_name})
+        # result = super(self.form).get_critical_field(names, alt_name)
+        # return result
+        pass
+
     @skip("Not Implemented")
     def test_init_get_critical_for_needed(self):
         """get_critical_field called if form.country_optional, country_field, and needed_names. """
-        # needed_names = [nf for nf in ('country_display', 'country_flag') if nf not in self.base_fields]
+        # needed_names = [nf for nf in ('country_display', 'country_flag') if nf not in self.form.base_fields]
         # for name in needed_names: name, field = self.get_critical_field(name, name)
-        pass
+        # original_get_critical_field = self.form.get_critical_field
+        # self.form.get_critical_field = self.get_critical_field_signal
+        print("================ TEST INIT GET CRITICAL FOR NEEDED ==================")
+        print(self.form.get_critical_field.__name__)
+        # print(getattr(self, 'get_critical_call', 'NOT FOUND'))
+        # print(getattr(self.form, 'get_critical_call', 'NOT FOUND'))
+        name = 'country_display'
+        expected = {'names': name, 'alt_name': name}
+        field = self.form.fields.get(name, None) or self.form.computed_fields(name, None)
+        response = self.form.get_critical_field(name, name)
+        actual = getattr(self, 'get_critical_call', 'NOT FOUND')
+        print("----------------------------------------")
+        print(response)
+        print(expected)
+        print(actual)
+        # self.assertDictEqual(expected, actual)
+        self.assertEqual((name, field), response)
 
-    @skip("Not Implemented")
+        # self.get_critical_field = original_get_critical_field
+
     def test_init_update_computed_field_names(self):
-        """get_critical_field called if form.country_optional, country_field, and needed_names. """
-        # computed_field_names = [country_name]
-        # computed_field_names.extend(kwargs.get('computed_fields', []))
-        # kwargs['computed_fields'] = computed_field_names
-        pass
+        """OverrideCountryMixIn uses computed_fields features if they are present. """
+        original_request = self.request
+        original_form = self.form
+        computed = getattr(self.form, 'computed_fields', None)
+        get_form = self.make_form_request()
+        computed_fields = getattr(get_form, 'computed_fields', None)
 
+        self.assertIsNotNone(computed)
+        self.assertIsNotNone(computed_fields)
+        self.assertIsNotNone(self.form.country_field_name)
+        self.assertIn(self.form.country_field_name, computed_fields)
+
+        self.request = original_request
+        self.form = original_form
+
+    def test_clean_uses_computed(self):
+        """The clean_country_flag method will look for country field in computed_fields if not in fields. """
+        original_request = self.request
+        original_form = self.form
+        original_cleaned = getattr(self.form, 'cleaned_data', None)
+        self.form = self.make_form_request()
+        name = self.form.country_field_name
+        initial = self.form.base_fields[name].initial
+        cleaned = {'country_flag': True, name: initial}
+        self.form.cleaned_data = cleaned
+
+        self.assertNotIn(name, self.form.fields)
+        self.assertIn(name, self.form.computed_fields)
+        with self.assertRaisesMessage(ValidationError, "You can input your address. "):
+            clean_flag = self.form.clean_country_flag()
+        self.form.cleaned_data[name] = ''
+        clean_flag = self.form.clean_country_flag()
+        self.assertEqual(True, clean_flag)
+
+        self.request = original_request
+        self.form = original_form
+        self.form.cleaned_data = original_cleaned
+        if original_cleaned is None:
+            del self.form.cleaned_data
 
 # end test_mixins.py

@@ -21,10 +21,13 @@ from ..views import RegisterModelSimpleFlowView, RegisterModelActivateFlowView
 
 
 class FocusForm(FocusMixIn, Form):
+    first = CharField(initial='first_value')
+    second = CharField(initial='second_value')
     hide_field = CharField(widget=HiddenInput(), initial='hide_data')
     disable_field = CharField(disabled=True, initial='disable_data')
     generic_field = CharField()
     another_field = CharField(initial='initial_data')
+    last = CharField(initial='last_value')
 
 
 class CriticalForm(CriticalFieldMixIn, Form):
