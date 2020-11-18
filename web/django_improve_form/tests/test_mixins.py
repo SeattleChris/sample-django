@@ -576,6 +576,34 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fieldsets = original_fieldsets
 
+    @skip("Not Implemented")
+    def test_collected_col_data(self):
+        """For a given field and parameters, returns a dict with expected values. """
+        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        pass
+
+    @skip("Not Implemented")
+    def test_collected_columns(self):
+        """For a given row and parameters, returns a list with each element an expected dict. """
+        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
+        # calls:
+        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        pass
+
+    @skip("Not Implemented")
+    def test_get_error_data(self):
+        """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
+        # form.get_error_data(columns, error_settings)
+        pass
+
+    @skip("Not Implemented")
+    def test_row_from_columns(self):
+        """For a given row of columns and parameters, returns a list of 1-2 lists (depending on errors & settings). """
+        # form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
+        # calls:
+        # form.make_row(columns, error_data, row_tag, html_row_attr)
+        pass
+
     def test_label_width_not_enough_single_field_rows(self):
         """The determine_label_width method returns empty values if there are not multiple rows of a single field. """
         name, *names = list(self.form.fields.keys())
