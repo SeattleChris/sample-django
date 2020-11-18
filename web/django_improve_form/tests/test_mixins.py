@@ -519,35 +519,62 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fields = original_fields
 
-    # @skip("Hold for testing")
     def test_as_table(self, output=None, form=None):
         output = output or self.form.as_table_old()
         super().test_as_table(output, form)
 
-    # @skip("Hold for testing")
     def test_as_ul(self, output=None, form=None):
         output = output or self.form.as_ul_old()
         super().test_as_ul(output, form)
 
-    # @skip("Hold for testing")
     def test_as_p(self, output=None, form=None):
         output = output or self.form.as_p_old()
         super().test_as_p(output, form)
 
     @skip("Hold for testing")
     def test_as_table_new(self, output=None, form=None):
-        # output = output or self.form.as_table_old()
         super().test_as_table(output, form)
 
     @skip("Hold for testing")
     def test_as_ul_new(self, output=None, form=None):
-        # output = output or self.form.as_ul_old()
         super().test_as_ul(output, form)
 
     @skip("Hold for testing")
-    def test_as_p_new(self, output=None, form=None):
-        # output = output or self.form.as_p_old()
-        super().test_as_p(output, form)
+    def test_as_ul_new(self, output=None, form=None):
+        super().test_as_ul(output, form)
+
+    # @skip("Hold for testing")
+    def test_flat_fieldset_as_p(self, output=None, form=None):
+        from pprint import pprint
+        ROW_BREAK = '_ROW_'
+        original_fieldsets = self.form.fieldsets
+        self.form.make_fieldsets()
+        field_names = []
+        top_errors = self.form._fs_summary['top_errors']
+        reflected_structure = [top_errors] if top_errors else []
+        all_fields = {}
+        for label, opts in self.form._fieldsets:
+            field_names += opts['field_names']
+            reflected_structure.extend(opts['field_names'])
+            reflected_structure.append(ROW_BREAK)
+            for row in opts['rows']:
+                all_fields.update(row)
+        reflected_structure.pop()
+        last = reflected_structure.pop()
+        reflected_structure.append([last, *self.form._fs_summary['hidden_fields']])
+        # TODO: perhaps sort by field_names
+        print("========================= TEST FLAT FIELDSET ======================================")
+        pprint(field_names)
+        print("-------------------------------------------------------------")
+        pprint(reflected_structure)
+        print("-------------------------------------------------------------")
+        pprint(all_fields)
+        print("-------------------------------------------------------------")
+        pprint(self.form.fields)
+        print("-------------------------------------------------------------")
+        # super().test_as_p(output, form)
+
+        self.form.fieldsets = original_fieldsets
 
     def test_label_width_not_enough_single_field_rows(self):
         """The determine_label_width method returns empty values if there are not multiple rows of a single field. """
