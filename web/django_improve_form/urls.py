@@ -11,9 +11,9 @@ urlpatterns = [
     path('initial', RegisterActivateFlowView.as_view(), name='initial_signup'),  # Two-step, customized.
     path('signup', RegisterSimpleFlowView.as_view(), name='django_registration_register'),  # One-step, customized.
     path('update/', ModifyUser.as_view(), name='user_update'),
-    path('password/', PasswordChangeView.as_view(template_name='update.html'), name='password'),
-    path('password/reset', PasswordChangeView.as_view(template_name='update.html'), name='password_reset'),
-    path('login', LoginView.as_view(template_name=''), name='login'),
+    path('password/', PasswordChangeView.as_view(template_name='improve_form/update.html'), name='password'),
+    path('password/reset', PasswordChangeView.as_view(template_name='improve_form/update.html'), name='password_reset'),
+    path('login', LoginView.as_view(template_name='improve_form/login.html'), name='login'),
     path('model/signup', RegisterModelSimpleFlowView.as_view(), name='model_signup'),  # One-step, customized.
     path('model/initial', RegisterModelActivateFlowView.as_view(), name='model_initial'),  # Two-step, customized.
 ]
