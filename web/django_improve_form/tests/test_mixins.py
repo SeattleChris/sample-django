@@ -769,32 +769,53 @@ class FormFieldsetTests(FormTests, TestCase):
             print("Name, errors, display: ", name, ', ', bf_errors, ', ', display)
         pass
 
-    @skip("Not Implemented")
     def test_col_data_css_classes(self):
         """For a given field and parameters, returns a dict with expected css_classes value. """
-        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # help_text_br = True|False  '<br />' or ''
         help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        expected = [self.form[name].css_classes() for name in names]
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('css_classes'))
 
-        pass
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
 
-    @skip("Not Implemented")
     def test_col_data_field_name(self):
         """For a given field and parameters, returns a dict with expected field_name value. """
-        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # help_text_br = True|False  '<br />' or ''
         help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        expected = [self.form[name].html_name for name in names]
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('field_name'))
 
-        pass
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
 
-    @skip("Not Implemented")
     def test_col_data_empty(self):
         """For a given field and parameters, returns a dict with expected empty place holder values. """
-        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # html_head_attr, html_col_attr
-        # help_text_br = True|False  '<br />' or ''
         help_tag = 'span'
-        pass
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        targets = ('html_head_attr', 'html_col_attr')
+        expected = {nam: {fd: '' for fd in targets} for nam in names}
+        actual = {}
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual[name] = {target: response.get(target, 'NOT FOUND') for target in targets}
+
+        self.assertDictEqual(expected, actual)
 
     @skip("Not Implemented")
     def test_collected_columns(self):
