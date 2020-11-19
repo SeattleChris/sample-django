@@ -714,10 +714,7 @@ class FormFieldsetTests(FormTests, TestCase):
         expected[name]['field'] = display
         expected[names[1]]['field'] = self.form[names[1]]
         original_field = {name: self.form.fields[name]}
-        # modified_field = {name: original_field[name].copy()}
         self.form.fields.update({name: deepcopy(original_field[name])})
-        # modified_field[name].show_hidden_initial = True
-        # self.form.update(modified_field)
         self.form.fields[name].show_hidden_initial = True
         actual = {}
         for name in names:
@@ -729,11 +726,8 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fields.update(original_field)
 
-    @skip("Not Implemented")
     def test_col_data_errors(self):
         """For a given field and parameters, returns a dict with expected error value. """
-        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # help_text_br = True|False  '<br />' or ''
         help_tag = 'span'
         help_text_br = False
         label_attrs = {}
