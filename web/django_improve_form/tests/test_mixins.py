@@ -695,6 +695,40 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.assertDictEqual(expected, actual)
 
+    def test_col_data_field_help_hidden_initial_manual(self):
+        """For a given field and parameters, returns a dict with expected field value. """
+        help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        targets = ('help_text', 'field')
+        expected = {nam: {fd: '' for fd in targets} for nam in names}
+        test_text = 'This is the test help text'
+        name = names[0]
+        self.form.fields[name].help_text = test_text
+        expected[name]['help_text'] = '<span id="id_{}-help" class="help-text">{}</span>'.format(name, test_text)
+        field_attrs = {'aria-describedby': 'id_{}-help'.format(name)}
+        bf = self.form[name]
+        display = bf.as_widget(attrs=field_attrs)
+        display += bf.as_hidden(only_initial=True)
+        expected[name]['field'] = display
+        expected[names[1]]['field'] = self.form[names[1]]
+        original_field = {name: self.form.fields[name]}
+        # modified_field = {name: original_field[name].copy()}
+        self.form.fields.update({name: deepcopy(original_field[name])})
+        # modified_field[name].show_hidden_initial = True
+        # self.form.update(modified_field)
+        self.form.fields[name].show_hidden_initial = True
+        actual = {}
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual[name] = {target: response.get(target, 'NOT FOUND') for target in targets}
+
+        self.assertDictEqual(expected, actual)
+
+        self.form.fields.update(original_field)
+
     @skip("Not Implemented")
     def test_col_data_errors(self):
         """For a given field and parameters, returns a dict with expected error value. """
