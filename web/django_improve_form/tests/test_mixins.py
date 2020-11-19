@@ -735,8 +735,28 @@ class FormFieldsetTests(FormTests, TestCase):
         # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
         # help_text_br = True|False  '<br />' or ''
         help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        name = names[0]
+        errors = ErrorDict()
+        message = "This is the test error message"
+        err = ValidationError(message)
+        errors[name] = self.form.error_class()
+        errors[name].extend(err.error_list)
+        expected = [errors[name], self.form.error_class()]
+        original_errors = self.form._errors
+        self.form._errors = errors
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('errors'))
 
-        pass
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+        self.form._errors = original_errors
 
     @skip("Not Implemented")
     def test_collected_col_data(self):
