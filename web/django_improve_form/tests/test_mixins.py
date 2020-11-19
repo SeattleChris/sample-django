@@ -800,8 +800,7 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.assertDictEqual(expected, actual)
 
-    # @skip("Not Implemented")
-    def test_collected_columns_as_table_single_col(self):
+    def test_collected_columns_as_table_one_col_from_one(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
         # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
         # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
@@ -825,14 +824,17 @@ class FormFieldsetTests(FormTests, TestCase):
         col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         actual = self.form.collect_columns(row, col_settings, *col_args)
 
+        self.assertEqual(len(expected), len(actual))
+        for expect, got in zip(expected, actual):
+            self.assertEqual(len(expect), len(got))
+            self.assertListEqual(list(expect.keys()), list(got.keys()))
+            self.assertListEqual(list(expect.values()), list(got.values()))
         self.assertEqual(expected, actual)
 
-    # @skip("Not Implemented")
-    def test_collected_columns_no_table_single_col(self):
+    def test_collected_columns_no_table_one_col_from_one(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
         # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
         # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         col_double, allow_colspan = False, False  # as_type != 'table'
         col_args = ('span', False, {})
         name, multi_field_row = 'first', False
@@ -850,14 +852,17 @@ class FormFieldsetTests(FormTests, TestCase):
         col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         actual = self.form.collect_columns(row, col_settings, *col_args)
 
+        self.assertEqual(len(expected), len(actual))
+        for expect, got in zip(expected, actual):
+            self.assertEqual(len(expect), len(got))
+            self.assertListEqual(list(expect.keys()), list(got.keys()))
+            self.assertListEqual(list(expect.values()), list(got.values()))
         self.assertEqual(expected, actual)
 
-    # @skip("Not Implemented")
-    def test_collected_columns_as_table_multi_col(self):
+    def test_collected_columns_as_table_two_col_from_two(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
         # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
         # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         col_double, allow_colspan = True, True  # as_type == 'table'
         col_args = ('span', False, {})
         names, multi_field_row = ('first', 'billing_address_1'), True
@@ -876,23 +881,17 @@ class FormFieldsetTests(FormTests, TestCase):
         col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         actual = self.form.collect_columns(row, col_settings, *col_args)
 
-        print("===================== AS table, MULTI col, COL_COUNT=2, row has 2 cols. ====================")
         self.assertEqual(len(expected), len(actual))
         for expect, got in zip(expected, actual):
             self.assertEqual(len(expect), len(got))
             self.assertListEqual(list(expect.keys()), list(got.keys()))
-            print(expect)
-            print(got)
-            for name, result in got.items():
-                self.assertEqual[expect[name], result]
+            self.assertListEqual(list(expect.values()), list(got.values()))
         self.assertEqual(expected, actual)
 
-    # @skip("Not Implemented")
-    def test_collected_columns_no_table_multi_col(self):
+    def test_collected_columns_no_table_two_col_from_two(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
         # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
         # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         col_double, allow_colspan = False, False  # as_type != 'table'
         col_args = ('span', False, {})
         names, multi_field_row = ('first', 'billing_address_1'), True
@@ -909,15 +908,11 @@ class FormFieldsetTests(FormTests, TestCase):
         col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         actual = self.form.collect_columns(row, col_settings, *col_args)
 
-        print("===================== NO table, MULTI col, COL_COUNT=2, row has 2 cols. ====================")
         self.assertEqual(len(expected), len(actual))
         for expect, got in zip(expected, actual):
             self.assertEqual(len(expect), len(got))
             self.assertListEqual(list(expect.keys()), list(got.keys()))
-            print(expect)
-            print(got)
-            for name, result in got.items():
-                self.assertEqual[expect[name], result]
+            self.assertListEqual(list(expect.values()), list(got.values()))
         self.assertEqual(expected, actual)
 
     @skip("Not Implemented")
