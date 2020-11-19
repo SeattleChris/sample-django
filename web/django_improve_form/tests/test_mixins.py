@@ -800,13 +800,125 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.assertDictEqual(expected, actual)
 
-    @skip("Not Implemented")
-    def test_collected_columns(self):
+    # @skip("Not Implemented")
+    def test_collected_columns_as_table_single_col(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
         # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
-        # calls:
-        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        pass
+        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        col_double, allow_colspan = True, True  # as_type == 'table'
+        col_args = ('span', False, {})
+        name, multi_field_row = 'first', False
+        names = [name]
+        row = {name: self.form.fields[name]}
+        col_count = 1
+        expected = [self.form.collect_col_data(name, self.form.fields[name], *col_args) for name in names]
+        for ea in expected:
+            if multi_field_row:
+                ea['css_classes'] = ' '.join(['nowrap', ea['css_classes']])
+                ea['html_head_attr'] = ' class="nowrap"'
+            val = ea.pop('css_classes', '')
+            val = ' class="%s"' % val if val else ''
+            if not multi_field_row and col_count > 1:
+                val = val + ' colspan="{}"'.format(2 * col_count - 1)
+            ea['html_col_attr'] = val
+        col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        actual = self.form.collect_columns(row, col_settings, *col_args)
+
+        self.assertEqual(expected, actual)
+
+    # @skip("Not Implemented")
+    def test_collected_columns_no_table_single_col(self):
+        """For a given row and parameters, returns a list with each element an expected dict. """
+        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
+        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        col_double, allow_colspan = False, False  # as_type != 'table'
+        col_args = ('span', False, {})
+        name, multi_field_row = 'first', False
+        names = [name]
+        row = {name: self.form.fields[name]}
+        col_count = 1
+        expected = [self.form.collect_col_data(name, self.form.fields[name], *col_args) for name in names]
+        for ea in expected:
+            if multi_field_row:
+                ea['css_classes'] = ' '.join(['nowrap', ea['css_classes']])
+                ea['html_head_attr'] = ' class="nowrap"'
+            val = ea.pop('css_classes', '')
+            val = ' class="%s"' % val if val else ''
+            ea['html_col_attr'] = val
+        col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        actual = self.form.collect_columns(row, col_settings, *col_args)
+
+        self.assertEqual(expected, actual)
+
+    # @skip("Not Implemented")
+    def test_collected_columns_as_table_multi_col(self):
+        """For a given row and parameters, returns a list with each element an expected dict. """
+        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
+        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        col_double, allow_colspan = True, True  # as_type == 'table'
+        col_args = ('span', False, {})
+        names, multi_field_row = ('first', 'billing_address_1'), True
+        row = {name: self.form.fields[name] for name in names}
+        col_count = 2
+        expected = [self.form.collect_col_data(name, self.form.fields[name], *col_args) for name in names]
+        for ea in expected:
+            if multi_field_row:
+                ea['css_classes'] = ' '.join(['nowrap', ea['css_classes']])
+                ea['html_head_attr'] = ' class="nowrap"'
+            val = ea.pop('css_classes', '')
+            val = ' class="%s"' % val if val else ''
+            if not multi_field_row and col_count > 1:
+                val = val + ' colspan="{}"'.format(2 * col_count - 1)
+            ea['html_col_attr'] = val
+        col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        actual = self.form.collect_columns(row, col_settings, *col_args)
+
+        print("===================== AS table, MULTI col, COL_COUNT=2, row has 2 cols. ====================")
+        self.assertEqual(len(expected), len(actual))
+        for expect, got in zip(expected, actual):
+            self.assertEqual(len(expect), len(got))
+            self.assertListEqual(list(expect.keys()), list(got.keys()))
+            print(expect)
+            print(got)
+            for name, result in got.items():
+                self.assertEqual[expect[name], result]
+        self.assertEqual(expected, actual)
+
+    # @skip("Not Implemented")
+    def test_collected_columns_no_table_multi_col(self):
+        """For a given row and parameters, returns a list with each element an expected dict. """
+        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
+        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        col_double, allow_colspan = False, False  # as_type != 'table'
+        col_args = ('span', False, {})
+        names, multi_field_row = ('first', 'billing_address_1'), True
+        row = {name: self.form.fields[name] for name in names}
+        col_count = 2
+        expected = [self.form.collect_col_data(name, self.form.fields[name], *col_args) for name in names]
+        for ea in expected:
+            if multi_field_row:
+                ea['css_classes'] = ' '.join(['nowrap', ea['css_classes']])
+                ea['html_head_attr'] = ' class="nowrap"'
+            val = ea.pop('css_classes', '')
+            val = ' class="%s"' % val if val else ''
+            ea['html_col_attr'] = val
+        col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        actual = self.form.collect_columns(row, col_settings, *col_args)
+
+        print("===================== NO table, MULTI col, COL_COUNT=2, row has 2 cols. ====================")
+        self.assertEqual(len(expected), len(actual))
+        for expect, got in zip(expected, actual):
+            self.assertEqual(len(expect), len(got))
+            self.assertListEqual(list(expect.keys()), list(got.keys()))
+            print(expect)
+            print(got)
+            for name, result in got.items():
+                self.assertEqual[expect[name], result]
+        self.assertEqual(expected, actual)
 
     @skip("Not Implemented")
     def test_get_error_data(self):
