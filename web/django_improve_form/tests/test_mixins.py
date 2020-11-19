@@ -8,7 +8,7 @@ from django.forms import (CharField, BooleanField, EmailField, HiddenInput, Mult
 from django.contrib.auth import get_user_model  # , views
 from django.urls import reverse  # , reverse_lazy
 from django.utils.datastructures import MultiValueDict
-from django.utils.html import format_html  # conditional_escape,
+from django.utils.html import conditional_escape, format_html
 from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
@@ -543,7 +543,7 @@ class FormFieldsetTests(FormTests, TestCase):
     def test_as_ul_new(self, output=None, form=None):
         super().test_as_ul(output, form)
 
-    # @skip("Hold for testing")
+    @skip("Hold for testing")
     def test_flat_fieldset_as_p(self, output=None, form=None):
         from pprint import pprint
         ROW_BREAK = '_ROW_'
@@ -575,6 +575,364 @@ class FormFieldsetTests(FormTests, TestCase):
         # super().test_as_p(output, form)
 
         self.form.fieldsets = original_fieldsets
+
+    def test_col_data_label_no_attrs(self):
+        """For a given field and parameters, returns a dict with expected label value. """
+        help_tag = 'span'
+        help_text_br = False
+        names = ('first', 'billing_address_1')
+        label_attrs = {}
+        expected = ['<label for="id_first">First:</label>']
+        expected.append('<label for="id_billing_address_1">street address (line 1):</label>')
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('label'))
+
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+    def test_col_data_label_with_attrs(self):
+        """For a given field and parameters, returns a dict with expected label value. """
+        help_tag = 'span'
+        help_text_br = False
+        names = ('first', 'billing_address_1')
+        attrs = {'style': 'width: 10rem; display: inline-block'}
+        label_attrs = {name: attrs for name in names}
+        txt = '{}="{}"'.format(*list(attrs.items())[0])
+        expected = ['<label for="id_first" {}>First:</label>'.format(txt)]
+        expected.append('<label for="id_billing_address_1" {}>street address (line 1):</label>'.format(txt))
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('label'))
+
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+    def test_col_data_help_text(self):
+        """For a given field and parameters, returns a dict with expected help_text value. """
+        help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        test_text = 'This is the test help text'
+        name = names[0]
+        self.form.fields[name].help_text = test_text
+        expected = ['<span id="id_{}-help" class="help-text">{}</span>'.format(name, test_text), '']
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('help_text'))
+
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+    def test_col_data_help_text_br(self):
+        """For a given field and parameters, returns a dict with expected help_text value. """
+        help_tag = 'span'
+        help_text_br = True  # help_text_br = True|False  '<br />' or ''
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        test_text = 'This is the test help text'
+        name = names[0]
+        self.form.fields[name].help_text = test_text
+        expected = ['<span id="id_{}-help" class="help-text"><br />{}</span>'.format(name, test_text), '']
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('help_text'))
+
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+    def test_col_data_field(self):
+        """For a given field and parameters, returns a dict with expected field value. """
+        help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        expected = [self.form[name] for name in names]
+        # expected = ['<input type="text" name="first" value="first_value" required id="id_first">']
+        # expected.append('<input type="text" name="billing_address_1" maxlength="191" id="id_billing_address_1">')
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('field'))
+
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+    def test_col_data_field_help_aria(self):
+        """For a given field and parameters, returns a dict with expected field value. """
+        help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        targets = ('help_text', 'field')
+        expected = {nam: {fd: '' for fd in targets} for nam in names}
+        test_text = 'This is the test help text'
+        name = names[0]
+        self.form.fields[name].help_text = test_text
+        expected[name]['help_text'] = '<span id="id_{}-help" class="help-text">{}</span>'.format(name, test_text)
+        field_attrs = {'aria-describedby': 'id_{}-help'.format(name)}
+        bf = self.form[name]
+        display = bf.as_widget(attrs=field_attrs)
+        if self.form.fields[name].show_hidden_initial:
+            display += bf.as_hidden(on_initial=True)
+        expected[name]['field'] = display
+        expected[names[1]]['field'] = self.form[names[1]]
+        actual = {}
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual[name] = {target: response.get(target, 'NOT FOUND') for target in targets}
+
+        self.assertDictEqual(expected, actual)
+
+    def test_col_data_field_help_hidden_initial_manual(self):
+        """For a given field and parameters, returns a dict with expected field value. """
+        help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        targets = ('help_text', 'field')
+        expected = {nam: {fd: '' for fd in targets} for nam in names}
+        test_text = 'This is the test help text'
+        name = names[0]
+        self.form.fields[name].help_text = test_text
+        expected[name]['help_text'] = '<span id="id_{}-help" class="help-text">{}</span>'.format(name, test_text)
+        field_attrs = {'aria-describedby': 'id_{}-help'.format(name)}
+        bf = self.form[name]
+        display = bf.as_widget(attrs=field_attrs)
+        display += bf.as_hidden(only_initial=True)
+        expected[name]['field'] = display
+        expected[names[1]]['field'] = self.form[names[1]]
+        original_field = {name: self.form.fields[name]}
+        self.form.fields.update({name: deepcopy(original_field[name])})
+        self.form.fields[name].show_hidden_initial = True
+        actual = {}
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual[name] = {target: response.get(target, 'NOT FOUND') for target in targets}
+
+        self.assertDictEqual(expected, actual)
+
+        self.form.fields.update(original_field)
+
+    def test_col_data_errors(self):
+        """For a given field and parameters, returns a dict with expected error value. """
+        help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        name = names[0]
+        errors = ErrorDict()
+        message = "This is the test error message"
+        err = ValidationError(message)
+        errors[name] = self.form.error_class()
+        errors[name].extend(err.error_list)
+        expected = [errors[name], self.form.error_class()]
+        original_errors = self.form._errors
+        self.form._errors = errors
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('errors'))
+
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+        self.form._errors = original_errors
+
+    def test_col_data_css_classes(self):
+        """For a given field and parameters, returns a dict with expected css_classes value. """
+        help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        expected = [self.form[name].css_classes() for name in names]
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('css_classes'))
+
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+    def test_col_data_field_name(self):
+        """For a given field and parameters, returns a dict with expected field_name value. """
+        help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        expected = [self.form[name].html_name for name in names]
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('field_name'))
+
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+    def test_col_data_empty(self):
+        """For a given field and parameters, returns a dict with expected empty place holder values. """
+        help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        targets = ('html_head_attr', 'html_col_attr')
+        expected = {nam: {fd: '' for fd in targets} for nam in names}
+        actual = {}
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual[name] = {target: response.get(target, 'NOT FOUND') for target in targets}
+
+        self.assertDictEqual(expected, actual)
+
+    # @skip("Not Implemented")
+    def test_collected_columns_as_table_single_col(self):
+        """For a given row and parameters, returns a list with each element an expected dict. """
+        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
+        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        col_double, allow_colspan = True, True  # as_type == 'table'
+        col_args = ('span', False, {})
+        name, multi_field_row = 'first', False
+        names = [name]
+        row = {name: self.form.fields[name]}
+        col_count = 1
+        expected = [self.form.collect_col_data(name, self.form.fields[name], *col_args) for name in names]
+        for ea in expected:
+            if multi_field_row:
+                ea['css_classes'] = ' '.join(['nowrap', ea['css_classes']])
+                ea['html_head_attr'] = ' class="nowrap"'
+            val = ea.pop('css_classes', '')
+            val = ' class="%s"' % val if val else ''
+            if not multi_field_row and col_count > 1:
+                val = val + ' colspan="{}"'.format(2 * col_count - 1)
+            ea['html_col_attr'] = val
+        col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        actual = self.form.collect_columns(row, col_settings, *col_args)
+
+        self.assertEqual(expected, actual)
+
+    # @skip("Not Implemented")
+    def test_collected_columns_no_table_single_col(self):
+        """For a given row and parameters, returns a list with each element an expected dict. """
+        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
+        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        col_double, allow_colspan = False, False  # as_type != 'table'
+        col_args = ('span', False, {})
+        name, multi_field_row = 'first', False
+        names = [name]
+        row = {name: self.form.fields[name]}
+        col_count = 1
+        expected = [self.form.collect_col_data(name, self.form.fields[name], *col_args) for name in names]
+        for ea in expected:
+            if multi_field_row:
+                ea['css_classes'] = ' '.join(['nowrap', ea['css_classes']])
+                ea['html_head_attr'] = ' class="nowrap"'
+            val = ea.pop('css_classes', '')
+            val = ' class="%s"' % val if val else ''
+            ea['html_col_attr'] = val
+        col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        actual = self.form.collect_columns(row, col_settings, *col_args)
+
+        self.assertEqual(expected, actual)
+
+    # @skip("Not Implemented")
+    def test_collected_columns_as_table_multi_col(self):
+        """For a given row and parameters, returns a list with each element an expected dict. """
+        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
+        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        col_double, allow_colspan = True, True  # as_type == 'table'
+        col_args = ('span', False, {})
+        names, multi_field_row = ('first', 'billing_address_1'), True
+        row = {name: self.form.fields[name] for name in names}
+        col_count = 2
+        expected = [self.form.collect_col_data(name, self.form.fields[name], *col_args) for name in names]
+        for ea in expected:
+            if multi_field_row:
+                ea['css_classes'] = ' '.join(['nowrap', ea['css_classes']])
+                ea['html_head_attr'] = ' class="nowrap"'
+            val = ea.pop('css_classes', '')
+            val = ' class="%s"' % val if val else ''
+            if not multi_field_row and col_count > 1:
+                val = val + ' colspan="{}"'.format(2 * col_count - 1)
+            ea['html_col_attr'] = val
+        col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        actual = self.form.collect_columns(row, col_settings, *col_args)
+
+        print("===================== AS table, MULTI col, COL_COUNT=2, row has 2 cols. ====================")
+        self.assertEqual(len(expected), len(actual))
+        for expect, got in zip(expected, actual):
+            self.assertEqual(len(expect), len(got))
+            self.assertListEqual(list(expect.keys()), list(got.keys()))
+            print(expect)
+            print(got)
+            for name, result in got.items():
+                self.assertEqual[expect[name], result]
+        self.assertEqual(expected, actual)
+
+    # @skip("Not Implemented")
+    def test_collected_columns_no_table_multi_col(self):
+        """For a given row and parameters, returns a list with each element an expected dict. """
+        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
+        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        col_double, allow_colspan = False, False  # as_type != 'table'
+        col_args = ('span', False, {})
+        names, multi_field_row = ('first', 'billing_address_1'), True
+        row = {name: self.form.fields[name] for name in names}
+        col_count = 2
+        expected = [self.form.collect_col_data(name, self.form.fields[name], *col_args) for name in names]
+        for ea in expected:
+            if multi_field_row:
+                ea['css_classes'] = ' '.join(['nowrap', ea['css_classes']])
+                ea['html_head_attr'] = ' class="nowrap"'
+            val = ea.pop('css_classes', '')
+            val = ' class="%s"' % val if val else ''
+            ea['html_col_attr'] = val
+        col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        actual = self.form.collect_columns(row, col_settings, *col_args)
+
+        print("===================== NO table, MULTI col, COL_COUNT=2, row has 2 cols. ====================")
+        self.assertEqual(len(expected), len(actual))
+        for expect, got in zip(expected, actual):
+            self.assertEqual(len(expect), len(got))
+            self.assertListEqual(list(expect.keys()), list(got.keys()))
+            print(expect)
+            print(got)
+            for name, result in got.items():
+                self.assertEqual[expect[name], result]
+        self.assertEqual(expected, actual)
+
+    @skip("Not Implemented")
+    def test_get_error_data(self):
+        """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
+        # form.get_error_data(columns, error_settings)
+        pass
+
+    @skip("Not Implemented")
+    def test_row_from_columns(self):
+        """For a given row of columns and parameters, returns a list of 1-2 lists (depending on errors & settings). """
+        # form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
+        # calls:
+        # form.make_row(columns, error_data, row_tag, html_row_attr)
+        pass
 
     def test_label_width_not_enough_single_field_rows(self):
         """The determine_label_width method returns empty values if there are not multiple rows of a single field. """

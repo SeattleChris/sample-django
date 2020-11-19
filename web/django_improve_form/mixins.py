@@ -1,5 +1,5 @@
 from django import forms
-from django.conf import settings
+from django.conf import settings as app_settings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.contrib.admin.utils import flatten
 from django.contrib.auth import get_user_model
@@ -15,7 +15,7 @@ from django.urls import reverse
 from django_registration import validators
 from copy import deepcopy
 
-DEFAULT_COUNTRY = getattr(settings, 'DEFAULT_COUNTRY', 'US')
+DEFAULT_COUNTRY = getattr(app_settings, 'DEFAULT_COUNTRY', 'US')
 
 
 def get_html_name(form, name):
@@ -786,6 +786,7 @@ class FormFieldsetMixIn:
     """
 
     untitled_fieldset_class = 'noline'
+    # nowrap_class = 'nowrap'  # TODO: Use this nowrap_class sigil instead of literal string.
     max_label_width = 12
     adjust_label_width = True
     label_width_widgets = (Input, Textarea, )  # Base classes for the field.widgets we want to line up their lables.
@@ -997,6 +998,91 @@ class FormFieldsetMixIn:
                 output.extend(row_data)
         return output
 
+    def collect_col_data(self, name, field, help_tag, help_text_br, label_attrs):
+        """Used for HTML output. Makes a single field column. """
+        field_attrs_dict = {}
+        bf = self[name]
+        bf_errors = self.error_class(bf.errors)
+        css_classes = bf.css_classes()  # a string of space seperated css classes.
+        # can add to css_classes, used to make 'class="..."' attribute if the row or column should need it.
+        attrs = label_attrs.get(name, {})
+        label = conditional_escape(bf.label)  # bf.label is always either field.label or pretty_name(name)
+        label = bf.label_tag(label, attrs) or ''
+        if field.help_text:  # bf.help_text = field.help_text or ''
+            help_text = '<br />' if help_text_br else ''
+            help_text += str(field.help_text)
+            id_ = field.widget.attrs.get('id') or bf.auto_id
+            field_html_id = field.widget.id_for_label(id_) if id_ else ''
+            help_id = field_html_id or bf.html_name
+            help_id += '-help'
+            field_attrs_dict.update({'aria-describedby': help_id})
+            help_attr = ' id="{}" class="help-text"'.format(help_id)
+            help_text = self._html_tag(help_tag, help_text, help_attr)
+        else:
+            help_text = ''
+        if field_attrs_dict:
+            field_display = bf.as_widget(attrs=field_attrs_dict)
+            if field.show_hidden_initial:
+                field_display += bf.as_hidden(only_initial=True)
+        else:
+            field_display = bf
+        format_kwargs = {
+            'errors': bf_errors,
+            'label': label,
+            'field': field_display,
+            'help_text': help_text,
+            'html_head_attr': '',
+            'html_col_attr': '',
+            'css_classes': css_classes,
+            'field_name': bf.html_name,
+            }
+        return format_kwargs
+
+    def collect_columns(self, row, col_settings, help_tag, help_text_br, label_attrs={}):
+        """Used for HTML output. Makes a single field, or multi-field, row. """
+        multi_field_row, col_count, col_double, allow_colspan = col_settings
+        all_columns = []
+        for name, field in row.items():
+            col_kwargs = self.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            col_kwargs['html_head_attr'] = ' class="nowrap"' if multi_field_row else ''  # TODO: Is this desired effect?
+            css_classes = col_kwargs.pop('css_classes')  # a string of space seperated css classes.
+            if multi_field_row:
+                css_classes = ' '.join(['nowrap', css_classes])
+            col_kwargs['html_col_attr'] = ' class="%s"' % css_classes if css_classes else ''
+            if allow_colspan and not multi_field_row and col_count > 1:
+                colspan = col_count * 2 - 1 if col_double else col_count
+                col_kwargs['html_col_attr'] += ' colspan="{}"'.format(colspan)
+            all_columns.append(col_kwargs)
+        # end iterating field columns within individual row.
+        return all_columns
+
+    def get_error_data(self, columns, error_settings):
+        """Returns a list of HTML error data. Used when errors_on_separate_row. """
+        maybe_errors = [ea['errors'] for ea in columns]
+        if all(ea in ('', None) for ea in maybe_errors):
+            return []
+        cur_tag, multi_field_row, col_count, col_double, allow_colspan = error_settings
+        error_data = []
+        for bf_errors in maybe_errors:
+            # make error column
+            colspan = 1 if multi_field_row else col_count
+            colspan *= 2 if col_double else 1
+            attr = ''
+            if colspan > 1 and allow_colspan:
+                attr = ' colspan="{}"'.format(colspan)
+            err = str(bf_errors) if not cur_tag else self._html_tag(cur_tag, str(bf_errors), attr)
+            error_data.append(err)
+        return error_data
+
+    def row_from_columns(self, columns, row_tag, errors_on_separate_row, row_settings):
+        """Take a list of constructed col_kwargs to create a row. """
+        cur_format, html_row_attr, *error_settings = row_settings
+        error_data = []
+        if errors_on_separate_row:
+            error_data = self.get_error_data(columns, error_settings)
+        columns = [cur_format % ea for ea in columns]
+        return self.make_row(columns, error_data, row_tag, html_row_attr)
+
     def _html_output_new(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
                          help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
         """Default for HTML output, an alternative to BaseForm._html_output. Used by as_table, as_ul, as_p, etc. """
@@ -1008,8 +1094,9 @@ class FormFieldsetMixIn:
         if as_type == 'table':
             adjust_label_width = False
         all_fieldsets = True if as_type == 'fieldset' else False
-        html_args = [row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets]
-        col_html, single_col_html = self.column_formats(col_head_tag, col_tag, single_col_tag, col_head_data, col_data)
+        html_col_tags = (col_head_tag, col_tag, single_col_tag)
+        html_args = [row_tag, *html_col_tags, as_type, all_fieldsets]
+        col_format, single_col_format = self.column_formats(*html_col_tags, col_head_data, col_data)
         fieldsets = getattr(self, '_fieldsets', None) or self.make_fieldsets()
         summary = getattr(self, '_fs_summary', None)
         if fieldsets[-1][0] == 'summary':
@@ -1018,83 +1105,29 @@ class FormFieldsetMixIn:
         assert isinstance(summary, dict) and all(ea in summary for ea in data_labels), "Malformed fieldsets summary. "
         form_col_count = 1 if all_fieldsets else summary['columns']
         col_double = col_head_tag and as_type == 'table'
+        attr_on_lonely_col = bool(col_head_tag or single_col_tag)
 
         for fieldset_label, opts in fieldsets:
             label_width_attrs_dict, width_labels = {}, []
             if adjust_label_width:
                 label_width_attrs_dict, width_labels = self.determine_label_width(opts['rows'])
+            label_attrs = {name: label_width_attrs_dict for name in width_labels}
             col_count = opts['column_count'] if fieldset_label else form_col_count
             row_data = []
             for row in opts['rows']:
                 multi_field_row = False if len(row) == 1 else True
-                columns_data, error_data, html_row_attr = [], [], ''
-                for name, field in row.items():
-                    field_attrs_dict = {}
-                    bf = self[name]
-                    bf_errors = self.error_class(bf.errors)
-                    if errors_on_separate_row and bf_errors:
-                        colspan = 1 if multi_field_row else col_count
-                        colspan *= 2 if col_double else 1
-                        attr = ''
-                        if colspan > 1 and allow_colspan:
-                            attr += ' colspan="{}"'.format(colspan)
-                        tag = col_tag if multi_field_row else single_col_tag
-                        err = str(bf_errors) if not tag else self._html_tag(tag, bf_errors, attr)
-                        error_data.append(err)
-                    css_classes = bf.css_classes()  # a string of space seperated css classes.
-                    # can add to css_classes, used to make 'class="..."' attribute if the row or column should need it.
-                    if multi_field_row:
-                        css_classes = ' '.join(['nowrap', css_classes])
-                    if bf.label:
-                        attrs = label_width_attrs_dict if name in width_labels else {}
-                        label = conditional_escape(bf.label)
-                        label = bf.label_tag(label, attrs) or ''
-                    else:
-                        raise ImproperlyConfigured(_("Visible Bound Fields must have a non-empty label. "))
-                    if field.help_text:
-                        help_text = '<br />' if help_text_br else ''
-                        help_text += str(field.help_text)
-                        id_ = field.widget.attrs.get('id') or bf.auto_id
-                        field_html_id = field.widget.id_for_label(id_) if id_ else ''
-                        help_id = field_html_id or bf.html_name
-                        help_id += '-help'
-                        field_attrs_dict.update({'aria-describedby': help_id})
-                        help_attr = ' id="{}" class="help-text"'.format(help_id)
-                        help_text = self._html_tag(help_tag, help_text, help_attr)
-                    else:
-                        help_text = ''
-                    html_class_attr = ' class="%s"' % css_classes if css_classes else ''
-                    html_row_attr = ''
-                    html_head_attr = ' class="nowrap"' if multi_field_row else ''
-                    html_col_attr = html_class_attr
-                    if allow_colspan and not multi_field_row and col_count > 1:
-                        colspan = col_count * 2 - 1 if col_double else col_count
-                        html_col_attr += ' colspan="{}"'.format(colspan)
-                    if field_attrs_dict:
-                        field_display = bf.as_widget(attrs=field_attrs_dict)
-                        if field.show_hidden_initial:
-                            field_display += bf.as_hidden(only_initial=True)
-                    else:
-                        field_display = bf
-                    format_kwargs = {
-                        'errors': bf_errors,
-                        'label': label,
-                        'field': field_display,
-                        'help_text': help_text,
-                        'html_head_attr': html_head_attr,
-                        'html_col_attr': html_col_attr,
-                        'field_name': bf.html_name,
-                    }
-                    if multi_field_row:
-                        columns_data.append(col_html % format_kwargs)
-                    else:
-                        columns_data.append(single_col_html % format_kwargs)
-                        if not col_head_tag and not single_col_tag:
-                            html_row_attr += html_col_attr
-                row_data.extend(self.make_row(columns_data, error_data, row_tag, html_row_attr))
-            # end iterating field rows
+                cur_format, cur_tag = single_col_format, single_col_tag
+                if multi_field_row:
+                    cur_format, cur_tag = col_format, col_tag
+                col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+                columns = self.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs)
+                html_row_attr = '' if multi_field_row or attr_on_lonely_col else columns[0]['html_col_attr']
+                row_settings = (cur_format, html_row_attr, cur_tag, *col_settings)
+                row = self.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
+                row_data.extend(row)
+            # end iterating field rows within the individual fieldset.
             opts['row_data'] = row_data
-        # end iterating fieldsets
+        # end iterating fieldsets within the full form.
         output = []
         top_errors = summary['top_errors']
         if top_errors:
