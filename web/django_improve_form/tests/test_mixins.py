@@ -8,7 +8,7 @@ from django.forms import (CharField, BooleanField, EmailField, HiddenInput, Mult
 from django.contrib.auth import get_user_model  # , views
 from django.urls import reverse  # , reverse_lazy
 from django.utils.datastructures import MultiValueDict
-from django.utils.html import format_html  # conditional_escape,
+from django.utils.html import conditional_escape, format_html
 from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
@@ -543,7 +543,7 @@ class FormFieldsetTests(FormTests, TestCase):
     def test_as_ul_new(self, output=None, form=None):
         super().test_as_ul(output, form)
 
-    # @skip("Hold for testing")
+    @skip("Hold for testing")
     def test_flat_fieldset_as_p(self, output=None, form=None):
         from pprint import pprint
         ROW_BREAK = '_ROW_'
@@ -580,6 +580,106 @@ class FormFieldsetTests(FormTests, TestCase):
     def test_collected_col_data(self):
         """For a given field and parameters, returns a dict with expected values. """
         # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        print("========================= TEST COLLECTED COL DATA ======================================")
+        for name, field in self.form.fields.items():
+            bf = self.form[name]
+            bf_errors = self.form.error_class(bf.errors)
+            # attrs = label_attrs.get(name, {})
+            attrs = {}
+            label = conditional_escape(bf.label)
+            label = bf.label_tag(label, attrs) or ''
+
+            print("Name, errors, label: ", name, ', ', bf_errors, ', ', label)
+        pass
+
+    def test_col_data_label_no_attrs(self):
+        """For a given field and parameters, returns a dict with expected label value. """
+        help_tag = 'span'
+        help_text_br = False
+        names = ('first', 'billing_address_1')
+        label_attrs = {}
+        expected = ['<label for="id_first">First:</label>']
+        expected.append('<label for="id_billing_address_1">street address (line 1):</label>')
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('label'))
+
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+    def test_col_data_label_with_attrs(self):
+        """For a given field and parameters, returns a dict with expected label value. """
+        help_tag = 'span'
+        help_text_br = False
+        names = ('first', 'billing_address_1')
+        attrs = {'style': 'width: 10rem; display: inline-block'}
+        label_attrs = {name: attrs for name in names}
+        txt = '{}="{}"'.format(*list(attrs.items())[0])
+        expected = ['<label for="id_first" {}>First:</label>'.format(txt)]
+        expected.append('<label for="id_billing_address_1" {}>street address (line 1):</label>'.format(txt))
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('label'))
+
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+    @skip("Not Implemented")
+    def test_col_data_help_text(self):
+        """For a given field and parameters, returns a dict with expected help_text value. """
+        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # help_text_br = True|False  '<br />' or ''
+        help_tag = 'span'
+
+        pass
+
+    @skip("Not Implemented")
+    def test_col_data_field(self):
+        """For a given field and parameters, returns a dict with expected field value. """
+        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # help_text_br = True|False  '<br />' or ''
+        help_tag = 'span'
+
+        pass
+
+    @skip("Not Implemented")
+    def test_col_data_errors(self):
+        """For a given field and parameters, returns a dict with expected error value. """
+        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # help_text_br = True|False  '<br />' or ''
+        help_tag = 'span'
+
+        pass
+
+    @skip("Not Implemented")
+    def test_col_data_css_classes(self):
+        """For a given field and parameters, returns a dict with expected css_classes value. """
+        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # help_text_br = True|False  '<br />' or ''
+        help_tag = 'span'
+
+        pass
+
+    @skip("Not Implemented")
+    def test_col_data_field_name(self):
+        """For a given field and parameters, returns a dict with expected field_name value. """
+        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # help_text_br = True|False  '<br />' or ''
+        help_tag = 'span'
+
+        pass
+
+    @skip("Not Implemented")
+    def test_col_data_empty(self):
+        """For a given field and parameters, returns a dict with expected empty place holder values. """
+        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # html_head_attr, html_col_attr
+        # help_text_br = True|False  '<br />' or ''
+        help_tag = 'span'
         pass
 
     @skip("Not Implemented")
