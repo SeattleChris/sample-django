@@ -1005,13 +1005,10 @@ class FormFieldsetMixIn:
         bf_errors = self.error_class(bf.errors)
         css_classes = bf.css_classes()  # a string of space seperated css classes.
         # can add to css_classes, used to make 'class="..."' attribute if the row or column should need it.
-        if bf.label:
-            attrs = label_attrs.get(name, {})
-            label = conditional_escape(bf.label)
-            label = bf.label_tag(label, attrs) or ''
-        else:
-            raise ImproperlyConfigured(_("Visible Bound Fields must have a non-empty label. "))
-        if field.help_text:
+        attrs = label_attrs.get(name, {})
+        label = conditional_escape(bf.label)  # bf.label is always either field.label or pretty_name(name)
+        label = bf.label_tag(label, attrs) or ''
+        if field.help_text:  # bf.help_text = field.help_text or ''
             help_text = '<br />' if help_text_br else ''
             help_text += str(field.help_text)
             id_ = field.widget.attrs.get('id') or bf.auto_id
