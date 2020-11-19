@@ -950,14 +950,56 @@ class FormFieldsetTests(FormTests, TestCase):
     def test_get_error_data(self):
         """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
         # form.get_error_data(columns, error_settings)
+        # error_settings = (cur_tag, multi_field_row, col_count, col_double, allow_colspan)
+        # error_settings = ('span', True, 3, False, False)  # multi_col_row, form has 3 col, Not a Table
+        # error_settings = ('', False, 3, False, False)  # single_col_row, form has 3 col, Not a Table
+        # error_settings = ('span', True, 2, False, False)  # multi_col_row, form has 2 col, Not a Table
+        # error_settings = ('td', True, 3, True, True)  # multi_col_row, form has 3 col, IS a Table
+        # error_settings = ('td', False, 3, True, True)  # single_col_row, form has 3 col, IS a Table
         pass
 
     @skip("Not Implemented")
-    def test_row_from_columns(self):
-        """For a given row of columns and parameters, returns a list of 1-2 lists (depending on errors & settings). """
+    def test_get_error_data_when_no_errors(self):
+        """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
+        # form.get_error_data(columns, error_settings)
+        pass
+
+    @skip("Not Implemented")
+    def test_get_error_data_single_col_row_has_error(self):
+        """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
+        # form.get_error_data(columns, error_settings)
+        pass
+
+    @skip("Not Implemented")
+    def test_get_error_data_all_col_errors(self):
+        """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
+        # form.get_error_data(columns, error_settings)
+        pass
+
+    @skip("Not Implemented")
+    def test_get_error_data_some_col_errors(self):
+        """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
+        # form.get_error_data(columns, error_settings)
+        pass
+
+    @skip("Not Implemented")
+    def test_row_from_columns_no_errors(self):
+        """For a given row of columns and parameters, returns a list of 1 list (since no errors). """
         # form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
-        # calls:
-        # form.make_row(columns, error_data, row_tag, html_row_attr)
+        # error_settings = cur_tag, multi_field_row, col_count, col_double, allow_colspan
+        # row_settings = cur_format, html_row_attr, *error_settings
+        # columns = [cur_format % ea for ea in columns]
+        # calls: form.make_row(columns, error_data, row_tag, html_row_attr)
+        pass
+
+    @skip("Not Implemented")
+    def test_row_from_columns_has_errors(self):
+        """For a given row of columns and parameters, returns a list of 2 lists (depending on errors & settings). """
+        # form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
+        # error_settings = cur_tag, multi_field_row, col_count, col_double, allow_colspan
+        # row_settings = cur_format, html_row_attr, *error_settings
+        # columns = [cur_format % ea for ea in columns]
+        # calls: form.make_row(columns, error_data, row_tag, html_row_attr)
         pass
 
     def test_label_width_not_enough_single_field_rows(self):
