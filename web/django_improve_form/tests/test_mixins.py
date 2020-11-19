@@ -576,22 +576,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fieldsets = original_fieldsets
 
-    @skip("Not Implemented")
-    def test_collected_col_data(self):
-        """For a given field and parameters, returns a dict with expected values. """
-        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        print("========================= TEST COLLECTED COL DATA ======================================")
-        for name, field in self.form.fields.items():
-            bf = self.form[name]
-            bf_errors = self.form.error_class(bf.errors)
-            # attrs = label_attrs.get(name, {})
-            attrs = {}
-            label = conditional_escape(bf.label)
-            label = bf.label_tag(label, attrs) or ''
-
-            print("Name, errors, label: ", name, ', ', bf_errors, ', ', label)
-        pass
-
     def test_col_data_label_no_attrs(self):
         """For a given field and parameters, returns a dict with expected label value. """
         help_tag = 'span'
@@ -628,23 +612,88 @@ class FormFieldsetTests(FormTests, TestCase):
         for expect, got in zip(expected, actual):
             self.assertEqual(expect, got)
 
-    @skip("Not Implemented")
     def test_col_data_help_text(self):
         """For a given field and parameters, returns a dict with expected help_text value. """
-        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # help_text_br = True|False  '<br />' or ''
         help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        test_text = 'This is the test help text'
+        name = names[0]
+        self.form.fields[name].help_text = test_text
+        expected = ['<span id="id_{}-help" class="help-text">{}</span>'.format(name, test_text), '']
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('help_text'))
 
-        pass
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
 
-    @skip("Not Implemented")
+    def test_col_data_help_text_br(self):
+        """For a given field and parameters, returns a dict with expected help_text value. """
+        help_tag = 'span'
+        help_text_br = True  # help_text_br = True|False  '<br />' or ''
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        test_text = 'This is the test help text'
+        name = names[0]
+        self.form.fields[name].help_text = test_text
+        expected = ['<span id="id_{}-help" class="help-text"><br />{}</span>'.format(name, test_text), '']
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('help_text'))
+
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
     def test_col_data_field(self):
         """For a given field and parameters, returns a dict with expected field value. """
-        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # help_text_br = True|False  '<br />' or ''
         help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        expected = [self.form[name] for name in names]
+        # expected = ['<input type="text" name="first" value="first_value" required id="id_first">']
+        # expected.append('<input type="text" name="billing_address_1" maxlength="191" id="id_billing_address_1">')
+        actual = []
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual.append(response.get('field'))
 
-        pass
+        for expect, got in zip(expected, actual):
+            self.assertEqual(expect, got)
+
+    def test_col_data_field_help_aria(self):
+        """For a given field and parameters, returns a dict with expected field value. """
+        help_tag = 'span'
+        help_text_br = False
+        label_attrs = {}
+        names = ('first', 'billing_address_1')
+        targets = ('help_text', 'field')
+        expected = {nam: {fd: '' for fd in targets} for nam in names}
+        test_text = 'This is the test help text'
+        name = names[0]
+        self.form.fields[name].help_text = test_text
+        expected[name]['help_text'] = '<span id="id_{}-help" class="help-text">{}</span>'.format(name, test_text)
+        field_attrs = {'aria-describedby': 'id_{}-help'.format(name)}
+        bf = self.form[name]
+        display = bf.as_widget(attrs=field_attrs)
+        if self.form.fields[name].show_hidden_initial:
+            display += bf.as_hidden(on_initial=True)
+        expected[name]['field'] = display
+        expected[names[1]]['field'] = self.form[names[1]]
+        actual = {}
+        for name in names:
+            field = self.form.fields[name]
+            response = self.form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+            actual[name] = {target: response.get(target, 'NOT FOUND') for target in targets}
+
+        self.assertDictEqual(expected, actual)
 
     @skip("Not Implemented")
     def test_col_data_errors(self):
@@ -653,6 +702,23 @@ class FormFieldsetTests(FormTests, TestCase):
         # help_text_br = True|False  '<br />' or ''
         help_tag = 'span'
 
+        pass
+
+    @skip("Not Implemented")
+    def test_collected_col_data(self):
+        """For a given field and parameters, returns a dict with expected values. """
+        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        print("========================= TEST COLLECTED COL DATA ======================================")
+        test_text = 'This is the test help text'
+        self.form.fields['first'].help_text = test_text
+        for name, field in self.form.fields.items():
+            bf = self.form[name]
+            bf_errors = self.form.error_class(bf.errors)
+            # attrs = label_attrs.get(name, {})
+            # attrs = {}
+            display = bf
+
+            print("Name, errors, display: ", name, ', ', bf_errors, ', ', display)
         pass
 
     @skip("Not Implemented")
