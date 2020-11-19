@@ -752,23 +752,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form._errors = original_errors
 
-    @skip("Not Implemented")
-    def test_collected_col_data(self):
-        """For a given field and parameters, returns a dict with expected values. """
-        # form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        print("========================= TEST COLLECTED COL DATA ======================================")
-        test_text = 'This is the test help text'
-        self.form.fields['first'].help_text = test_text
-        for name, field in self.form.fields.items():
-            bf = self.form[name]
-            bf_errors = self.form.error_class(bf.errors)
-            # attrs = label_attrs.get(name, {})
-            # attrs = {}
-            display = bf
-
-            print("Name, errors, display: ", name, ', ', bf_errors, ', ', display)
-        pass
-
     def test_col_data_css_classes(self):
         """For a given field and parameters, returns a dict with expected css_classes value. """
         help_tag = 'span'
