@@ -1030,10 +1030,32 @@ class FormFieldsetTests(FormTests, TestCase):
             self.assertEqual(row['expected'], row['actual'])
         pass
 
-    @skip("Not Implemented")
-    def test_get_error_data_some_col_errors(self):
+    # @skip("Not Implemented")
+    def test_get_error_data_table_when_no_errors(self):
+        """Each row that has no errors returns an empty list from the get_error_data method. """
+        field_setup = None
+        error_names = ['non-field_name', 'not_a_field']
+        prepared_info = self.setup_error_data(field_setup, error_names, True)
+        for row in prepared_info:
+            self.assertEqual(row['expected'], row['actual'])
+
+    # @skip("Not Implemented")
+    def test_get_error_data_table_all_col_errors(self):
+        """When all columns have an error, returns a list of HTML for each error from the get_error_data method. """
+        field_setup = None
+        error_names = None
+        prepared_info = self.setup_error_data(field_setup, error_names, True)
+        for row in prepared_info:
+            self.assertEqual(row['expected'], row['actual'])
+
+    # @skip("Not Implemented")
+    def test_get_error_data_table_some_col_errors(self):
         """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
-        # form.get_error_data(columns, error_settings)
+        field_setup = None
+        error_names = ['first', 'billing_address_1', 'billing_country_area']
+        prepared_info = self.setup_error_data(field_setup, error_names, True)
+        for row in prepared_info:
+            self.assertEqual(row['expected'], row['actual'])
         pass
 
     @skip("Not Implemented")
