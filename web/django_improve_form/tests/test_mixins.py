@@ -1421,16 +1421,43 @@ class FormFieldsetTests(FormTests, TestCase):
         # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
         pass
 
-    # @skip("Not Implemented")
     def test_make_headless_row_empty_single_col_tag(self):
         """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
-        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
+        for as_type in ('p', 'ul', 'fieldset'):
+            row_tag = 'li' if as_type == 'ul' else 'p'
+            col_tag, single_col_tag, col_head_tag = 'span', '', None
+            html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, False)
+            html_el = "This is some test content. "
+            column_count = 3
+            col_attr = ' id="test-col"'
+            row_attr = ' class="row"'
+            result = self.form.make_headless_row(html_args, html_el, column_count, col_attr, row_attr)
+            expected = self.form._html_tag(row_tag, html_el, row_attr + col_attr)
+            self.assertEqual(expected, result, f"Failed on as_{as_type}. ")
+
+    def test_make_headless_row_has_single_col_tag(self):
+        """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
+        for as_type in ('p', 'ul', 'fieldset'):
+            row_tag = 'li' if as_type == 'ul' else 'p'
+            col_tag, single_col_tag, col_head_tag = 'span', 'div', None
+            html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, False)
+            html_el = "This is some test content. "
+            column_count = 3
+            col_attr = ' id="test-col"'
+            row_attr = ' class="row"'
+            result = self.form.make_headless_row(html_args, html_el, column_count, col_attr, row_attr)
+            html_el = self.form._html_tag(single_col_tag, html_el, col_attr)
+            expected = self.form._html_tag(row_tag, html_el, row_attr)
+            self.assertEqual(expected, result, f"Failed on as_{as_type}. ")
+
+    def test_make_headless_row_include_table(self):
+        """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
         for as_type in ('p', 'ul', 'fieldset', 'table'):
             if as_type == 'table':
                 row_tag, col_tag, single_col_tag, col_head_tag = 'tr', 'td', 'td', 'th'
             else:
                 row_tag = 'li' if as_type == 'ul' else 'p'
-                col_tag, single_col_tag, col_head_tag = 'span', '', None
+                col_tag, single_col_tag, col_head_tag = 'span', 'div', None
             html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, False)
             html_el = "This is some test content. "
             column_count = 3
@@ -1438,31 +1465,12 @@ class FormFieldsetTests(FormTests, TestCase):
             row_attr = ' class="row"'
             result = self.form.make_headless_row(html_args, html_el, column_count, col_attr, row_attr)
             if single_col_tag != '':
-                col_attr += ' colspan="{}"'.format(column_count * 2 if col_head_tag else column_count)
+                if as_type == 'table':
+                    col_attr += ' colspan="{}"'.format(column_count * 2 if col_head_tag else column_count)
                 html_el = self.form._html_tag(single_col_tag, html_el, col_attr)
                 col_attr = ''
             expected = self.form._html_tag(row_tag, html_el, row_attr + col_attr)
-            print("================ TEST MAKE HEADLESS ROW EMPTY SINGLE COL TAG =======================")
-            print(expected)
-            print("-------------------------------------")
-            print(result)
             self.assertEqual(expected, result, f"Failed on as_{as_type}. ")
-        pass
-
-    @skip("Not Implemented")
-    def test_make_headless_row_has_single_col_tag(self):
-        """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
-        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
-        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
-        pass
-
-    @skip("Not Implemented")
-    def test_make_headless_row_as_table(self):
-        """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
-        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
-        # col_head_tag = 'th', single_col_tag = 'td', as_type = 'table', column_count > 0
-        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
-        pass
 
     @skip("Not Implemented")
     def test_form_main_rows_simple(self):
