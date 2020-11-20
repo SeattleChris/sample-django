@@ -1560,40 +1560,157 @@ class FormFieldsetTests(FormTests, TestCase):
             expected = self.form._html_tag(row_tag, html_el, row_attr + col_attr)
             self.assertEqual(expected, result, f"Failed on as_{as_type}. ")
 
-    @skip("Not Implemented")
-    def test_form_main_rows_simple(self):
+    # @skip("Not Implemented")
+    def test_form_main_rows_simple(self, all_fieldsets=False):
         """Expected list of formatted strings for each main form 'row'. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
-        pass
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
+        original_fieldsets = self.form.fieldsets
+        self.form.fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'last',
+                    ],
+            }),
+            (None, {
+                'position': None,
+                # 'modifiers': ['password_display', ],
+                'fields': [
+                    # ('password1', 'password2', ),
+                    'generic_field',
+                    'bool_field',
+                    'single_check'
+                ]
+            }),
+            ('address', {
+                'classes': ('collapse', 'address', ),
+                # 'modifiers': ['address', 'prep_country_fields', ],
+                'position': 'end',
+                'fields': [
+                    'billing_address_1',
+                    'billing_address_2',
+                    ('billing_city', 'billing_country_area', 'billing_postcode', ),
+                    ],
+            }), )
+        self.form.make_fieldsets()
+        form_col_count = 1 if all_fieldsets else self.form._fs_summary['columns']
+        fieldsets = deepcopy(self.form._fieldsets)
+        for as_type in ('p', 'ul', 'fieldset', 'table'):
+            errors_on_separate_row = False
+            col_args = ('span', as_type == 'table', {})
+            if as_type == 'table':
+                row_tag, col_tag, single_col_tag, col_head_tag = 'tr', 'td', 'td', 'th'
+                col_double, allow_colspan, attr_on_lonely_col = True, True, True
+                col_head_data = '%(label)s'
+                col_data = '%(errors)s%(field)s%(help_text)s'
+            else:
+                row_tag = 'li' if as_type == 'ul' else 'p'
+                col_tag, single_col_tag, col_head_tag = 'span', '', None
+                col_double, allow_colspan, attr_on_lonely_col = False, False, False
+                col_head_data = ''
+                col_data = '%(errors)s%(label)s %(field)s%(help_text)s'
+                if as_type == 'p':
+                    col_data = '%(label)s %(field)s%(help_text)s'
+                    errors_on_separate_row = True
+            html_col_tags = (col_head_tag, col_tag, single_col_tag)
+            col_format, single_col_format = self.form.column_formats(*html_col_tags, col_head_data, col_data)
+            for fieldset_label, opts in fieldsets:
+                col_count = opts['column_count'] if fieldset_label else form_col_count
+                row_data = []
+                for row in opts['rows']:
+                    multi_field_row = False if len(row) == 1 else True
+                    cur_format, cur_tag = single_col_format, single_col_tag
+                    if multi_field_row:
+                        cur_format, cur_tag = col_format, col_tag
+                    col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+                    columns = self.form.collect_columns(row, col_settings, *col_args)
+                    html_row_attr = '' if multi_field_row or attr_on_lonely_col else columns[0]['html_col_attr']
+                    row_settings = (cur_format, html_row_attr, cur_tag, *col_settings)
+                    row = self.form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
+                    row_data.extend(row)
+                # end iterating field rows within the individual fieldset.
+                opts['row_data'] = row_data
+            html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
+            actual = self.form.form_main_rows(html_args, fieldsets, form_col_count)
+            # ----------------------- Expected -----------------------
+            # TODO: Better Test for this. After a lot of setup, the following is nearly a copy of tested code.
+            expected = []
+            for fieldset_label, opts in fieldsets:
+                row_data = opts['row_data']
+                if all_fieldsets or fieldset_label is not None:
+                    fieldset_classes = list(opts.get('classes', []))
+                    if not fieldset_label and self.form.untitled_fieldset_class:
+                        fieldset_classes.append(self.form.untitled_fieldset_class)
+                        # fieldset_classes = list(fieldset_classes).append(self.form.untitled_fieldset_class)
+                    fieldset_attr = ' class="%s"' % ' '.join(fieldset_classes) if fieldset_classes else ''
+                    container = None if as_type in ('p', 'fieldset') else as_type
+                    data = '\n'.join(row_data)
+                    if container:
+                        container_attr = f' class="fieldset_{as_type}"'
+                        data = self.form._html_tag(container, data, container_attr) + '\n'
+                    legend = self.form._html_tag('legend', fieldset_label) + '\n' if fieldset_label else ''
+                    fieldset_el = self.form._html_tag('fieldset', legend + data, fieldset_attr)
+                    if container:
+                        row_attr = ' class="fieldset_row"'
+                        fieldset_el = self.form.make_headless_row(html_args, fieldset_el, form_col_count, '', row_attr)
+                    expected.append(fieldset_el)
+                else:
+                    expected.extend(row_data)
+
+            print(f"======================== TEST MAIN ROWS as type: {as_type} ==========================")
+            # for row in actual:
+            #     print(row)
+            self.assertEqual(len(expected), len(actual))
+            for expect, got in zip(expected, actual):
+                if expect != got:
+                    print(expect)
+                    print("*****************")
+                    print(got)
+                    print("-----------------------------------")
+                self.assertEqual(expect, got)
+
+        self.form.fieldsets = original_fieldsets
 
     @skip("Not Implemented")
     def test_form_main_rows_html_fieldset(self):
         """For labeled fieldsets, creates HTML fieldset element containing rows data and HTML legend element. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
     @skip("Not Implemented")
     def test_form_main_rows_all_fieldsets(self):
         """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
     @skip("Not Implemented")
     def test_form_main_rows_html_fieldset_has_container(self):
         """For labeled fieldsets, creates HTML fieldset element containing rows data and HTML legend element. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
     @skip("Not Implemented")
     def test_form_main_rows_all_fieldsets_has_container(self):
         """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
     @skip("Not Implemented")
     def test_form_main_rows_complicated(self):
         """Expected list of formatted strings, with some labeled and contained fieldsets, for each main form 'row'. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
     @skip("Currently Unused feature. Not Implemented")
