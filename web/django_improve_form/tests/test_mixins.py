@@ -1371,14 +1371,102 @@ class FormFieldsetTests(FormTests, TestCase):
         # lookup = {'end': max_position + 2, 'remaining': max_position + 1, None: max_position}
         pass
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_happy_path_make_fieldsets(self):
         """The make_fieldsets method returns the expected response. """
         # method: form.make_fieldsets(self, *fs_args, **kwargs)
         # computed: form._fieldsets
         # summary: form._fs_summary
         # result: form._fieldsets.update(form._fs_summary)
-        pass
+        original_fieldsets = self.form.fieldsets
+        self.form.fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'not_third',
+                    'not_fourth',
+                    'last',
+                    ],
+            }),
+            ('Non_Fields', {
+                'position': 3,
+                'fields': [
+                    'non-field_name',
+                    'not_a_field'
+                    ],
+            }),
+            (None, {
+                'position': None,
+                # 'modifiers': ['password_display', ],
+                'fields': [
+                    # ('password1', 'password2', ),
+                    'generic_field',
+                    'bool_field',
+                    'single_check'
+                ]
+            }),
+            ('address', {
+                'classes': ('collapse', 'address', ),
+                # 'modifiers': ['address', 'prep_country_fields', ],
+                'position': 'end',
+                'fields': [
+                    'billing_address_1',
+                    'billing_address_2',
+                    ('billing_city', 'billing_country_area', 'billing_postcode', ),
+                    ],
+            }), )
+        fieldsets = [(label, deepcopy(opts)) for label, opts in self.form.fieldsets if label != 'Non_Fields']
+        # print("========================= TEMP LOG TEST =============================")
+        remaining_fields = self.form.fields.copy()
+        assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
+        unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
+        remaining_fields.pop('hide_field')
+        # print("Hide in unassigned: ", 'hide_field' in unassigned_field_names)
+        address_fieldset = fieldsets.pop()
+        opts = {'modifiers': 'prep_remaining', 'position': 'remaining', 'fields': unassigned_field_names}
+        fieldsets.append((None, opts))
+        fieldsets.append(address_fieldset)
+        for fieldset_label, opts in fieldsets:
+            opts['field_names'] = flatten(opts['fields'])
+            rows, column_count = [], 0
+            for names in opts['fields']:
+                if isinstance(names, str):
+                    names = [names]
+                column_count = max(column_count, len(names))
+                columns = {name: self.form.fields[name] for name in names if name in remaining_fields}
+                # TODO: Remove hidden or otherwise excluded fields.
+                if columns:
+                    rows.append(columns)
+            opts['rows'] = rows
+            opts['column_count'] = column_count
+        self.form.make_fieldsets()
+        actual_fieldsets = self.form._fieldsets
+        self.assertEqual(len(fieldsets), 5)
+        self.assertEqual(len(fieldsets), len(actual_fieldsets))
+        count = 0
+        # print("*************** Expect and Got ********************")
+        for expect, got in zip(fieldsets, actual_fieldsets):
+            # # print(expect[1]['field_names'])
+            # print([tuple(row.keys()) for row in expect[1]['rows']])
+            # print("--------------------------")
+            # print([tuple(row.keys()) for row in got[1]['rows']])
+            # # print(got[1]['field_names'])
+            # print("*********************************************")
+            labels = (expect[0], got[0])
+            labels = str(got[0]) if labels[0] == labels[1] else ' & '.join(str(ea) for ea in labels)
+            fields = (expect[1]['fields'], got[1]['fields'])
+            message = f"Fieldset # {count} named {labels} expected then got: \n{fields[0]} \n{fields[1]}. "
+            self.assertEqual(expect, got, message)
+            count += 1
+        self.assertEqual(fieldsets, actual_fieldsets)
+
+        self.form.fieldsets = original_fieldsets
 
     @skip("Redundant. Not Implemented")
     def test_html_tag(self):
