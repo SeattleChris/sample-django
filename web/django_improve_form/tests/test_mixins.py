@@ -1053,7 +1053,6 @@ class FormFieldsetTests(FormTests, TestCase):
         result = []
         for row in error_setup:
             error_settings = row['settings']
-            # cur_tag, multi_field_row, col_count, col_double, allow_colspan = error_settings
             multi_field_row = error_settings[1]
             col_ct = error_settings[2]
             col_settings = (multi_field_row, col_ct, True, True) if is_table else (multi_field_row, col_ct, True, True)
@@ -1071,7 +1070,6 @@ class FormFieldsetTests(FormTests, TestCase):
             result.append({'expected': expected, 'actual': actual})
         return result
 
-    # @skip("Not Implemented")
     def test_row_from_columns_no_errors(self):
         """For a given row of columns and parameters, returns a list of 1 list (since no errors). """
         errors_on_separate_row = True
@@ -1084,7 +1082,6 @@ class FormFieldsetTests(FormTests, TestCase):
                 self.assertEqual(len(row['actual']), 1)
                 self.assertEqual(row['expected'], row['actual'])
 
-    # @skip("Not Implemented")
     def test_row_from_columns_not_own_error_row(self):
         """For a given row of columns and parameters, returns a list of 1 list since not errors_on_separate_row. """
         errors_on_separate_row = False
@@ -1097,7 +1094,6 @@ class FormFieldsetTests(FormTests, TestCase):
                 self.assertEqual(len(row['actual']), 1)
                 self.assertEqual(row['expected'], row['actual'])
 
-    # @skip("Not Implemented")
     def test_row_from_columns_has_errors(self):
         """For a given row of columns and parameters, returns a list of 2 lists (depending on errors & settings). """
         errors_on_separate_row = True
@@ -1115,7 +1111,6 @@ class FormFieldsetTests(FormTests, TestCase):
                     self.assertGreater(len(row['actual']), 1)
                 self.assertEqual(row['expected'], row['actual'])
 
-    # @skip("Not Implemented")
     def test_row_from_columns_no_errors_table(self):
         """For a given row of columns and parameters, returns a list of 1 list (since no errors). """
         errors_on_separate_row = True
@@ -1128,7 +1123,6 @@ class FormFieldsetTests(FormTests, TestCase):
                 self.assertEqual(len(row['actual']), 1)
                 self.assertEqual(row['expected'], row['actual'])
 
-    # @skip("Not Implemented")
     def test_row_from_columns_not_own_error_row_table(self):
         """For a given row of columns and parameters, returns a list of 1 list since not errors_on_separate_row. """
         errors_on_separate_row = False
@@ -1141,7 +1135,6 @@ class FormFieldsetTests(FormTests, TestCase):
                 self.assertEqual(len(row['actual']), 1)
                 self.assertEqual(row['expected'], row['actual'])
 
-    # @skip("Not Implemented")
     def test_row_from_columns_has_errors_table(self):
         """For a given row of columns and parameters, returns a list of 2 lists (depending on errors & settings). """
         errors_on_separate_row = True
@@ -1401,6 +1394,12 @@ class FormFieldsetTests(FormTests, TestCase):
         pass
 
     @skip("Not Implemented")
+    def test_column_formats_col_head_tag(self):
+        """The column_formats method, when col_head_tag is present, returns the expected response. """
+        # form.column_formats(self, col_head_tag, col_tag, single_col_tag, col_head_data, col_data)
+        pass
+
+    @skip("Redundant. Not Implemented")
     def test_make_row(self):
         """If there are errors, the make_row method returns a list of 2 strings, with errors first. """
         # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
@@ -1413,26 +1412,61 @@ class FormFieldsetTests(FormTests, TestCase):
         pass
 
     @skip("Not Implemented")
-    def test_make_headless_row(self):
+    def test_make_headless_row_empty_single_col_tag(self):
         """If there are errors, the make_row method returns a list of 2 strings, with errors first. """
         # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
+        # single_col_tag = ''
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
     @skip("Not Implemented")
-    def test_form_main_rows(self):
+    def test_make_headless_row_has_single_col_tag(self):
+        """If there are errors, the make_row method returns a list of 2 strings, with errors first. """
+        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
+        pass
+
+    @skip("Not Implemented")
+    def test_make_headless_row_as_table(self):
+        """If there are errors, the make_row method returns a list of 2 strings, with errors first. """
+        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
+        # col_head_tag = 'th', single_col_tag = 'td', as_type = 'table', column_count > 0
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_simple(self):
         """Expected list of formatted strings for each main form 'row'. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         pass
 
     @skip("Not Implemented")
     def test_form_main_rows_html_fieldset(self):
-        """Creates HTML fieldset element containing rows data and HTML legend element. """
+        """For labeled fieldsets, creates HTML fieldset element containing rows data and HTML legend element. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         pass
 
     @skip("Not Implemented")
     def test_form_main_rows_all_fieldsets(self):
         """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_html_fieldset_has_container(self):
+        """For labeled fieldsets, creates HTML fieldset element containing rows data and HTML legend element. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_all_fieldsets_has_container(self):
+        """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_complicated(self):
+        """Expected list of formatted strings, with some labeled and contained fieldsets, for each main form 'row'. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         pass
 
