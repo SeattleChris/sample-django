@@ -979,7 +979,10 @@ class FormFieldsetTests(FormTests, TestCase):
             if all(ea == '' for ea in error_list):
                 expected = []
             actual = self.form.get_error_data(columns, error_settings)
-            row_info.append({'field_names': row, 'expected': expected, 'actual': actual})
+            row_summary = {'expected': expected, 'actual': actual, 'field_names': row, 'settings': error_settings}
+            row_summary['columns'] = columns
+            row_info.append(row_summary)
+        # fieldset_summary = {'fieldset_fields': field_setup, 'error_names': error_names, 'expected': [], 'actual': []}
         return row_info
 
     def test_get_error_data_when_no_errors(self):
@@ -1071,22 +1074,46 @@ class FormFieldsetTests(FormTests, TestCase):
     # @skip("Not Implemented")
     def test_row_from_columns_no_errors(self):
         """For a given row of columns and parameters, returns a list of 1 list (since no errors). """
-        # form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
-        # error_settings = cur_tag, multi_field_row, col_count, col_double, allow_colspan
-        # row_settings = cur_format, html_row_attr, *error_settings
-        # columns = [cur_format % ea for ea in columns]
-        # calls: form.make_row(columns, error_data, row_tag, html_row_attr)
-        pass
+        errors_on_separate_row = True
+        field_setup = None
+        error_names = ['non-field_name', 'not_a_field']
+        for as_type in ('p', 'ul', 'fieldset'):
+            setup = self.setup_row_from_columns(as_type, field_setup, error_names, errors_on_separate_row)
+            for row in setup:
+                self.assertEqual(len(row['expected']), 1)
+                self.assertEqual(len(row['actual']), 1)
+                self.assertEqual(row['expected'], row['actual'])
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
+    def test_row_from_columns_not_own_error_row(self):
+        """For a given row of columns and parameters, returns a list of 1 list since not errors_on_separate_row. """
+        errors_on_separate_row = False
+        field_setup = None
+        error_names = None
+        for as_type in ('p', 'ul', 'fieldset'):
+            setup = self.setup_row_from_columns(as_type, field_setup, error_names, errors_on_separate_row)
+            for row in setup:
+                self.assertEqual(len(row['expected']), 1)
+                self.assertEqual(len(row['actual']), 1)
+                self.assertEqual(row['expected'], row['actual'])
+
+    # @skip("Not Implemented")
     def test_row_from_columns_has_errors(self):
         """For a given row of columns and parameters, returns a list of 2 lists (depending on errors & settings). """
-        # form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
-        # error_settings = cur_tag, multi_field_row, col_count, col_double, allow_colspan
-        # row_settings = cur_format, html_row_attr, *error_settings
-        # columns = [cur_format % ea for ea in columns]
-        # calls: form.make_row(columns, error_data, row_tag, html_row_attr)
-        pass
+        errors_on_separate_row = True
+        field_setup = None
+        error_names = ['first', 'billing_address_1', 'billing_country_area']
+        for as_type in ('p', 'ul', 'fieldset'):
+            setup = self.setup_row_from_columns(as_type, field_setup, error_names, errors_on_separate_row)
+            has_no_errors = setup[-1]
+            for row in setup:
+                if row == has_no_errors:
+                    self.assertEqual(len(row['expected']), 1)
+                    self.assertEqual(len(row['actual']), 1)
+                else:
+                    self.assertGreater(len(row['expected']), 1)
+                    self.assertGreater(len(row['actual']), 1)
+                self.assertEqual(row['expected'], row['actual'])
 
     def test_label_width_not_enough_single_field_rows(self):
         """The determine_label_width method returns empty values if there are not multiple rows of a single field. """
