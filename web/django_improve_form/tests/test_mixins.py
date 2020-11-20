@@ -5,6 +5,7 @@ from django.urls.exceptions import NoReverseMatch
 from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
 from django.forms import (CharField, BooleanField, EmailField, HiddenInput, MultipleHiddenInput,
                           RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea, Select, SelectMultiple)
+from django.contrib.admin.utils import flatten
 from django.contrib.auth import get_user_model  # , views
 from django.urls import reverse  # , reverse_lazy
 from django.utils.datastructures import MultiValueDict
@@ -981,28 +982,6 @@ class FormFieldsetTests(FormTests, TestCase):
             row_info.append({'field_names': row, 'expected': expected, 'actual': actual})
         return row_info
 
-    # @skip("Not Implemented")
-    def test_get_error_data(self):
-        """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
-        # form.get_error_data(columns, error_settings)
-        # error_settings = (cur_tag, multi_field_row, col_count, col_double, allow_colspan)
-        # error_settings = ('span', True, 3, False, False)  # multi_col_row, form has 3 col, Not a Table
-        # error_settings = ('', False, 3, False, False)  # single_col_row, form has 3 col, Not a Table
-        # error_settings = ('span', True, 2, False, False)  # multi_col_row, form has 2 col, Not a Table
-        # error_settings = ('td', True, 3, True, True)  # multi_col_row, form has 3 col, IS a Table
-        # error_settings = ('td', False, 3, True, True)  # single_col_row, form has 3 col, IS a Table
-
-        field_setup = None
-        error_names = ['non-field_name', 'not_a_field']
-        prepared_info = self.setup_error_data(field_setup, error_names)
-        print("======================== TEST GET ERROR DATA ==============================")
-        for row in prepared_info:
-            print("Fields: ", row['field_names'])
-            print("Expected: ", row['expected'])
-            print("Actual:   ", row['actual'])
-            self.assertEqual(row['expected'], row['actual'])
-
-    # @skip("Not Implemented")
     def test_get_error_data_when_no_errors(self):
         """Each row that has no errors returns an empty list from the get_error_data method. """
         field_setup = None
@@ -1011,7 +990,6 @@ class FormFieldsetTests(FormTests, TestCase):
         for row in prepared_info:
             self.assertEqual(row['expected'], row['actual'])
 
-    # @skip("Not Implemented")
     def test_get_error_data_all_col_errors(self):
         """When all columns have an error, returns a list of HTML for each error from the get_error_data method. """
         field_setup = None
@@ -1020,7 +998,6 @@ class FormFieldsetTests(FormTests, TestCase):
         for row in prepared_info:
             self.assertEqual(row['expected'], row['actual'])
 
-    # @skip("Not Implemented")
     def test_get_error_data_some_col_errors(self):
         """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
         field_setup = None
@@ -1030,27 +1007,24 @@ class FormFieldsetTests(FormTests, TestCase):
             self.assertEqual(row['expected'], row['actual'])
         pass
 
-    # @skip("Not Implemented")
     def test_get_error_data_table_when_no_errors(self):
-        """Each row that has no errors returns an empty list from the get_error_data method. """
+        """For as_table, but no errors, returns an empty list from the get_error_data method. """
         field_setup = None
         error_names = ['non-field_name', 'not_a_field']
         prepared_info = self.setup_error_data(field_setup, error_names, True)
         for row in prepared_info:
             self.assertEqual(row['expected'], row['actual'])
 
-    # @skip("Not Implemented")
     def test_get_error_data_table_all_col_errors(self):
-        """When all columns have an error, returns a list of HTML for each error from the get_error_data method. """
+        """For as_table and all column errors, returns a list of HTML for each error from the get_error_data method. """
         field_setup = None
         error_names = None
         prepared_info = self.setup_error_data(field_setup, error_names, True)
         for row in prepared_info:
             self.assertEqual(row['expected'], row['actual'])
 
-    # @skip("Not Implemented")
     def test_get_error_data_table_some_col_errors(self):
-        """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
+        """For as_table with some column errors, returns a list of HTML elements for the error row. """
         field_setup = None
         error_names = ['first', 'billing_address_1', 'billing_country_area']
         prepared_info = self.setup_error_data(field_setup, error_names, True)
