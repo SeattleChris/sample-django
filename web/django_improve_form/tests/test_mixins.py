@@ -1393,11 +1393,21 @@ class FormFieldsetTests(FormTests, TestCase):
         # form.column_formats(self, col_head_tag, col_tag, single_col_tag, col_head_data, col_data)
         pass
 
-    @skip("Not Implemented")
     def test_column_formats_col_head_tag(self):
         """The column_formats method, when col_head_tag is present, returns the expected response. """
-        # form.column_formats(self, col_head_tag, col_tag, single_col_tag, col_head_data, col_data)
-        pass
+        col_head_tag = 'th'
+        col_tag = 'td'
+        single_col_tag = col_tag
+        col_head_data = '%(label)s'
+        col_data = '%(errors)s%(field)s%(help_text)s'
+        head_html = self.form._html_tag(col_head_tag, col_head_data, '%(html_head_attr)s')
+        base_col_html = self.form._html_tag(col_tag, col_data, '%(html_col_attr)s')
+        expected_html = head_html + base_col_html
+        args = (col_head_tag, col_tag, single_col_tag, col_head_data, col_data)
+        col_html, single_col_html = self.form.column_formats(*args)
+
+        self.assertEqual(expected_html, col_html)
+        self.assertEqual(expected_html, single_col_html)
 
     @skip("Redundant. Not Implemented")
     def test_make_row(self):
