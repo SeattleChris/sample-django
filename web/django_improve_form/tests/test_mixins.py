@@ -946,7 +946,42 @@ class FormFieldsetTests(FormTests, TestCase):
             self.assertListEqual(list(expect.values()), list(got.values()))
         self.assertEqual(expected, actual)
 
-    @skip("Not Implemented")
+    def setup_error_data(self, field_setup, error_names, is_table=False, col_tag='span', single_col_tag=''):
+        """Used for setting up structure for testing 'get_error_data' method. """
+        backup_fieldset_fields = [
+            ('first', 'second'),
+            'billing_address_1',
+            ('billing_city', 'billing_country_area', 'billing_postcode'),
+            'last',
+            ]
+        field_setup = field_setup or backup_fieldset_fields
+        error_names = set(error_names or flatten(field_setup))
+        col_count = max([1 if isinstance(ea, str) else len(ea) for ea in field_setup])
+        error_txt = "This is a '{}' test error. "
+        row_info = []
+        for row in field_setup:
+            if isinstance(row, str):
+                row = [row]
+            multi_col_row = len(row) > 1
+            if is_table:
+                cur_tag = 'td'
+                error_settings = (cur_tag, multi_col_row, col_count, True, True)
+                attr = ' colspan="{}"'.format(2 if multi_col_row else 2 * col_count)
+            else:
+                cur_tag = col_tag if multi_col_row else single_col_tag
+                error_settings = (cur_tag, multi_col_row, col_count, False, False)
+                attr = ''
+            error_list = [error_txt.format(name) if name in error_names else '' for name in row]
+            columns = [{'errors': ea} for ea in error_list]
+            # columns = [{'errors': error_txt.format(name)} for name in row]
+            expected = [err if not cur_tag else self.form._html_tag(cur_tag, err, attr) for err in error_list]
+            if all(ea == '' for ea in error_list):
+                expected = []
+            actual = self.form.get_error_data(columns, error_settings)
+            row_info.append({'field_names': row, 'expected': expected, 'actual': actual})
+        return row_info
+
+    # @skip("Not Implemented")
     def test_get_error_data(self):
         """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
         # form.get_error_data(columns, error_settings)
@@ -956,9 +991,18 @@ class FormFieldsetTests(FormTests, TestCase):
         # error_settings = ('span', True, 2, False, False)  # multi_col_row, form has 2 col, Not a Table
         # error_settings = ('td', True, 3, True, True)  # multi_col_row, form has 3 col, IS a Table
         # error_settings = ('td', False, 3, True, True)  # single_col_row, form has 3 col, IS a Table
-        pass
 
-    @skip("Not Implemented")
+        field_setup = None
+        error_names = ['non-field_name', 'not_a_field']
+        prepared_info = self.setup_error_data(field_setup, error_names)
+        print("======================== TEST GET ERROR DATA ==============================")
+        for row in prepared_info:
+            print("Fields: ", row['field_names'])
+            print("Expected: ", row['expected'])
+            print("Actual:   ", row['actual'])
+            self.assertEqual(row['expected'], row['actual'])
+
+    # @skip("Not Implemented")
     def test_get_error_data_when_no_errors(self):
         """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
         # form.get_error_data(columns, error_settings)
