@@ -5,6 +5,7 @@ from django.urls.exceptions import NoReverseMatch
 from django.forms.utils import pretty_name, ErrorDict  # , ErrorList
 from django.forms import (CharField, BooleanField, EmailField, HiddenInput, MultipleHiddenInput,
                           RadioSelect, CheckboxSelectMultiple, CheckboxInput, Textarea, Select, SelectMultiple)
+from django.contrib.admin.utils import flatten
 from django.contrib.auth import get_user_model  # , views
 from django.urls import reverse  # , reverse_lazy
 from django.utils.datastructures import MultiValueDict
@@ -800,8 +801,7 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.assertDictEqual(expected, actual)
 
-    # @skip("Not Implemented")
-    def test_collected_columns_as_table_single_col(self):
+    def test_collected_columns_as_table_one_col_from_one(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
         # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
         # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
@@ -825,14 +825,17 @@ class FormFieldsetTests(FormTests, TestCase):
         col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         actual = self.form.collect_columns(row, col_settings, *col_args)
 
+        self.assertEqual(len(expected), len(actual))
+        for expect, got in zip(expected, actual):
+            self.assertEqual(len(expect), len(got))
+            self.assertListEqual(list(expect.keys()), list(got.keys()))
+            self.assertListEqual(list(expect.values()), list(got.values()))
         self.assertEqual(expected, actual)
 
-    # @skip("Not Implemented")
-    def test_collected_columns_no_table_single_col(self):
+    def test_collected_columns_no_table_one_col_from_one(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
         # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
         # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         col_double, allow_colspan = False, False  # as_type != 'table'
         col_args = ('span', False, {})
         name, multi_field_row = 'first', False
@@ -850,14 +853,17 @@ class FormFieldsetTests(FormTests, TestCase):
         col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         actual = self.form.collect_columns(row, col_settings, *col_args)
 
+        self.assertEqual(len(expected), len(actual))
+        for expect, got in zip(expected, actual):
+            self.assertEqual(len(expect), len(got))
+            self.assertListEqual(list(expect.keys()), list(got.keys()))
+            self.assertListEqual(list(expect.values()), list(got.values()))
         self.assertEqual(expected, actual)
 
-    # @skip("Not Implemented")
-    def test_collected_columns_as_table_multi_col(self):
+    def test_collected_columns_as_table_two_col_from_two(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
         # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
         # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         col_double, allow_colspan = True, True  # as_type == 'table'
         col_args = ('span', False, {})
         names, multi_field_row = ('first', 'billing_address_1'), True
@@ -876,23 +882,17 @@ class FormFieldsetTests(FormTests, TestCase):
         col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         actual = self.form.collect_columns(row, col_settings, *col_args)
 
-        print("===================== AS table, MULTI col, COL_COUNT=2, row has 2 cols. ====================")
         self.assertEqual(len(expected), len(actual))
         for expect, got in zip(expected, actual):
             self.assertEqual(len(expect), len(got))
             self.assertListEqual(list(expect.keys()), list(got.keys()))
-            print(expect)
-            print(got)
-            for name, result in got.items():
-                self.assertEqual[expect[name], result]
+            self.assertListEqual(list(expect.values()), list(got.values()))
         self.assertEqual(expected, actual)
 
-    # @skip("Not Implemented")
-    def test_collected_columns_no_table_multi_col(self):
+    def test_collected_columns_no_table_two_col_from_two(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
         # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
         # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         col_double, allow_colspan = False, False  # as_type != 'table'
         col_args = ('span', False, {})
         names, multi_field_row = ('first', 'billing_address_1'), True
@@ -909,30 +909,248 @@ class FormFieldsetTests(FormTests, TestCase):
         col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         actual = self.form.collect_columns(row, col_settings, *col_args)
 
-        print("===================== NO table, MULTI col, COL_COUNT=2, row has 2 cols. ====================")
         self.assertEqual(len(expected), len(actual))
         for expect, got in zip(expected, actual):
             self.assertEqual(len(expect), len(got))
             self.assertListEqual(list(expect.keys()), list(got.keys()))
-            print(expect)
-            print(got)
-            for name, result in got.items():
-                self.assertEqual[expect[name], result]
+            self.assertListEqual(list(expect.values()), list(got.values()))
         self.assertEqual(expected, actual)
 
-    @skip("Not Implemented")
-    def test_get_error_data(self):
+    def test_collected_columns_as_table_one_col_from_many(self):
+        """For a given row and parameters, returns a list with each element an expected dict. """
+        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
+        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
+        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        col_double, allow_colspan = True, True  # as_type == 'table'
+        col_args = ('span', False, {})
+        name, multi_field_row = 'first', False
+        names = [name]
+        row = {name: self.form.fields[name]}
+        col_count = 3
+        expected = [self.form.collect_col_data(name, self.form.fields[name], *col_args) for name in names]
+        for ea in expected:
+            if multi_field_row:
+                ea['css_classes'] = ' '.join(['nowrap', ea['css_classes']])
+                ea['html_head_attr'] = ' class="nowrap"'
+            val = ea.pop('css_classes', '')
+            val = ' class="%s"' % val if val else ''
+            if not multi_field_row and col_count > 1:
+                val = val + ' colspan="{}"'.format(2 * col_count - 1)
+            ea['html_col_attr'] = val
+        col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+        actual = self.form.collect_columns(row, col_settings, *col_args)
+
+        self.assertEqual(len(expected), len(actual))
+        for expect, got in zip(expected, actual):
+            self.assertEqual(len(expect), len(got))
+            self.assertListEqual(list(expect.keys()), list(got.keys()))
+            self.assertListEqual(list(expect.values()), list(got.values()))
+        self.assertEqual(expected, actual)
+
+    def setup_error_data(self, field_setup, error_names, is_table=False, col_tag='span', single_col_tag=''):
+        """Used for setting up structure for testing 'get_error_data' method. """
+        backup_fieldset_fields = [
+            ('first', 'second'),
+            'billing_address_1',
+            ('billing_city', 'billing_country_area', 'billing_postcode'),
+            'last',
+            ]
+        field_setup = field_setup or backup_fieldset_fields
+        error_names = set(error_names or flatten(field_setup))
+        col_count = max([1 if isinstance(ea, str) else len(ea) for ea in field_setup])
+        error_txt = "This is a {} test error. "
+        row_info = []
+        for row in field_setup:
+            if isinstance(row, str):
+                row = [row]
+            multi_col_row = len(row) > 1
+            if is_table:
+                cur_tag = 'td'
+                error_settings = (cur_tag, multi_col_row, col_count, True, True)
+                attr = ' colspan="{}"'.format(2 if multi_col_row else 2 * col_count)
+            else:
+                cur_tag = col_tag if multi_col_row else single_col_tag
+                error_settings = (cur_tag, multi_col_row, col_count, False, False)
+                attr = ''
+            error_list = [error_txt.format(name) if name in error_names else '' for name in row]
+            columns = [{'errors': ea} for ea in error_list]
+            # columns = [{'errors': error_txt.format(name)} for name in row]
+            expected = [err if not cur_tag else self.form._html_tag(cur_tag, err, attr) for err in error_list]
+            if all(ea == '' for ea in error_list):
+                expected = []
+            actual = self.form.get_error_data(columns, error_settings)
+            row_summary = {'expected': expected, 'actual': actual, 'field_names': row, 'settings': error_settings}
+            row_summary['columns'] = columns
+            row_info.append(row_summary)
+        # fieldset_summary = {'fieldset_fields': field_setup, 'error_names': error_names, 'expected': [], 'actual': []}
+        return row_info
+
+    def test_get_error_data_when_no_errors(self):
+        """Each row that has no errors returns an empty list from the get_error_data method. """
+        field_setup = None
+        error_names = ['non-field_name', 'not_a_field']
+        prepared_info = self.setup_error_data(field_setup, error_names)
+        for row in prepared_info:
+            self.assertEqual(row['expected'], row['actual'])
+
+    def test_get_error_data_all_col_errors(self):
+        """When all columns have an error, returns a list of HTML for each error from the get_error_data method. """
+        field_setup = None
+        error_names = None
+        prepared_info = self.setup_error_data(field_setup, error_names)
+        for row in prepared_info:
+            self.assertEqual(row['expected'], row['actual'])
+
+    def test_get_error_data_some_col_errors(self):
         """For a given row of columns and parameters, returns a list of HTML elements for the error row. """
-        # form.get_error_data(columns, error_settings)
+        field_setup = None
+        error_names = ['first', 'billing_address_1', 'billing_country_area']
+        prepared_info = self.setup_error_data(field_setup, error_names)
+        for row in prepared_info:
+            self.assertEqual(row['expected'], row['actual'])
         pass
 
-    @skip("Not Implemented")
-    def test_row_from_columns(self):
-        """For a given row of columns and parameters, returns a list of 1-2 lists (depending on errors & settings). """
-        # form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
-        # calls:
-        # form.make_row(columns, error_data, row_tag, html_row_attr)
+    def test_get_error_data_table_when_no_errors(self):
+        """For as_table, but no errors, returns an empty list from the get_error_data method. """
+        field_setup = None
+        error_names = ['non-field_name', 'not_a_field']
+        prepared_info = self.setup_error_data(field_setup, error_names, True)
+        for row in prepared_info:
+            self.assertEqual(row['expected'], row['actual'])
+
+    def test_get_error_data_table_all_col_errors(self):
+        """For as_table and all column errors, returns a list of HTML for each error from the get_error_data method. """
+        field_setup = None
+        error_names = None
+        prepared_info = self.setup_error_data(field_setup, error_names, True)
+        for row in prepared_info:
+            self.assertEqual(row['expected'], row['actual'])
+
+    def test_get_error_data_table_some_col_errors(self):
+        """For as_table with some column errors, returns a list of HTML elements for the error row. """
+        field_setup = None
+        error_names = ['first', 'billing_address_1', 'billing_country_area']
+        prepared_info = self.setup_error_data(field_setup, error_names, True)
+        for row in prepared_info:
+            self.assertEqual(row['expected'], row['actual'])
         pass
+
+    def setup_row_from_columns(self, as_type, field_setup=None, error_names=None, errors_on_separate_row=True):
+        """Gathers expected and actual for row_from_columns for created columns with mock errors. """
+        col_args = ('span', as_type == 'table', {})
+        is_table = as_type == 'table'
+        if is_table:
+            row_tag = 'tr',
+            tag_info = ('th', 'td', 'td', '%(label)s', '%(errors)s%(field)s%(help_text)s')
+        else:
+            row_tag = 'li' if as_type == 'ul' else 'p'
+            col_data = '%(errors)s%(label)s %(field)s%(help_text)s'
+            if as_type == 'p':
+                col_data = '%(label)s %(field)s%(help_text)s'
+            tag_info = (None, 'span', '', '', col_data)
+        col_html, single_col_html = self.form.column_formats(*tag_info)
+        error_setup = self.setup_error_data(field_setup, error_names, is_table)
+        result = []
+        for row in error_setup:
+            error_settings = row['settings']
+            multi_field_row = error_settings[1]
+            col_ct = error_settings[2]
+            col_settings = (multi_field_row, col_ct, True, True) if is_table else (multi_field_row, col_ct, True, True)
+            row_data = {name: self.form.fields[name] for name in row['field_names']}
+            columns = self.form.collect_columns(row_data, col_settings, *col_args)
+            for num, ea in enumerate(columns):  # update each column with the artificial error data
+                ea.update(row['columns'][num])
+            html_row_attr = '' if multi_field_row or is_table else columns[0]['html_col_attr']
+            cur_format = col_html if multi_field_row else single_col_html
+            row_settings = (cur_format, html_row_attr, *error_settings)
+            col_data = [cur_format % ea for ea in columns]
+            err_data = row['actual'] if errors_on_separate_row else []
+            expected = self.form.make_row(col_data, err_data, row_tag, html_row_attr)
+            actual = self.form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
+            result.append({'expected': expected, 'actual': actual})
+        return result
+
+    def test_row_from_columns_no_errors(self):
+        """For a given row of columns and parameters, returns a list of 1 list (since no errors). """
+        errors_on_separate_row = True
+        field_setup = None
+        error_names = ['non-field_name', 'not_a_field']
+        for as_type in ('p', 'ul', 'fieldset'):
+            setup = self.setup_row_from_columns(as_type, field_setup, error_names, errors_on_separate_row)
+            for row in setup:
+                self.assertEqual(len(row['expected']), 1)
+                self.assertEqual(len(row['actual']), 1)
+                self.assertEqual(row['expected'], row['actual'])
+
+    def test_row_from_columns_not_own_error_row(self):
+        """For a given row of columns and parameters, returns a list of 1 list since not errors_on_separate_row. """
+        errors_on_separate_row = False
+        field_setup = None
+        error_names = None
+        for as_type in ('p', 'ul', 'fieldset'):
+            setup = self.setup_row_from_columns(as_type, field_setup, error_names, errors_on_separate_row)
+            for row in setup:
+                self.assertEqual(len(row['expected']), 1)
+                self.assertEqual(len(row['actual']), 1)
+                self.assertEqual(row['expected'], row['actual'])
+
+    def test_row_from_columns_has_errors(self):
+        """For a given row of columns and parameters, returns a list of 2 lists (depending on errors & settings). """
+        errors_on_separate_row = True
+        field_setup = None
+        error_names = ['first', 'billing_address_1', 'billing_country_area']
+        for as_type in ('p', 'ul', 'fieldset'):
+            setup = self.setup_row_from_columns(as_type, field_setup, error_names, errors_on_separate_row)
+            has_no_errors = setup[-1]
+            for row in setup:
+                if row == has_no_errors:
+                    self.assertEqual(len(row['expected']), 1)
+                    self.assertEqual(len(row['actual']), 1)
+                else:
+                    self.assertGreater(len(row['expected']), 1)
+                    self.assertGreater(len(row['actual']), 1)
+                self.assertEqual(row['expected'], row['actual'])
+
+    def test_row_from_columns_no_errors_table(self):
+        """For a given row of columns and parameters, returns a list of 1 list (since no errors). """
+        errors_on_separate_row = True
+        field_setup = None
+        error_names = ['non-field_name', 'not_a_field']
+        for as_type in ('p', 'ul', 'fieldset'):
+            setup = self.setup_row_from_columns(as_type, field_setup, error_names, errors_on_separate_row)
+            for row in setup:
+                self.assertEqual(len(row['expected']), 1)
+                self.assertEqual(len(row['actual']), 1)
+                self.assertEqual(row['expected'], row['actual'])
+
+    def test_row_from_columns_not_own_error_row_table(self):
+        """For a given row of columns and parameters, returns a list of 1 list since not errors_on_separate_row. """
+        errors_on_separate_row = False
+        field_setup = None
+        error_names = None
+        for as_type in ('p', 'ul', 'fieldset'):
+            setup = self.setup_row_from_columns(as_type, field_setup, error_names, errors_on_separate_row)
+            for row in setup:
+                self.assertEqual(len(row['expected']), 1)
+                self.assertEqual(len(row['actual']), 1)
+                self.assertEqual(row['expected'], row['actual'])
+
+    def test_row_from_columns_has_errors_table(self):
+        """For a given row of columns and parameters, returns a list of 2 lists (depending on errors & settings). """
+        errors_on_separate_row = True
+        field_setup = None
+        error_names = ['first', 'billing_address_1', 'billing_country_area']
+        for as_type in ('p', 'ul', 'fieldset'):
+            setup = self.setup_row_from_columns(as_type, field_setup, error_names, errors_on_separate_row)
+            has_no_errors = setup[-1]
+            for row in setup:
+                if row == has_no_errors:
+                    self.assertEqual(len(row['expected']), 1)
+                    self.assertEqual(len(row['actual']), 1)
+                else:
+                    self.assertGreater(len(row['expected']), 1)
+                    self.assertGreater(len(row['actual']), 1)
+                self.assertEqual(row['expected'], row['actual'])
 
     def test_label_width_not_enough_single_field_rows(self):
         """The determine_label_width method returns empty values if there are not multiple rows of a single field. """
@@ -1175,7 +1393,23 @@ class FormFieldsetTests(FormTests, TestCase):
         # form.column_formats(self, col_head_tag, col_tag, single_col_tag, col_head_data, col_data)
         pass
 
-    @skip("Not Implemented")
+    def test_column_formats_col_head_tag(self):
+        """The column_formats method, when col_head_tag is present, returns the expected response. """
+        col_head_tag = 'th'
+        col_tag = 'td'
+        single_col_tag = col_tag
+        col_head_data = '%(label)s'
+        col_data = '%(errors)s%(field)s%(help_text)s'
+        head_html = self.form._html_tag(col_head_tag, col_head_data, '%(html_head_attr)s')
+        base_col_html = self.form._html_tag(col_tag, col_data, '%(html_col_attr)s')
+        expected_html = head_html + base_col_html
+        args = (col_head_tag, col_tag, single_col_tag, col_head_data, col_data)
+        col_html, single_col_html = self.form.column_formats(*args)
+
+        self.assertEqual(expected_html, col_html)
+        self.assertEqual(expected_html, single_col_html)
+
+    @skip("Redundant. Not Implemented")
     def test_make_row(self):
         """If there are errors, the make_row method returns a list of 2 strings, with errors first. """
         # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
@@ -1187,27 +1421,82 @@ class FormFieldsetTests(FormTests, TestCase):
         # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
         pass
 
-    @skip("Not Implemented")
-    def test_make_headless_row(self):
-        """If there are errors, the make_row method returns a list of 2 strings, with errors first. """
+    # @skip("Not Implemented")
+    def test_make_headless_row_empty_single_col_tag(self):
+        """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
         # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
+        for as_type in ('p', 'ul', 'fieldset', 'table'):
+            if as_type == 'table':
+                row_tag, col_tag, single_col_tag, col_head_tag = 'tr', 'td', 'td', 'th'
+            else:
+                row_tag = 'li' if as_type == 'ul' else 'p'
+                col_tag, single_col_tag, col_head_tag = 'span', '', None
+            html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, False)
+            html_el = "This is some test content. "
+            column_count = 3
+            col_attr = ' id="test-col"'
+            row_attr = ' class="row"'
+            result = self.form.make_headless_row(html_args, html_el, column_count, col_attr, row_attr)
+            if single_col_tag != '':
+                col_attr += ' colspan="{}"'.format(column_count * 2 if col_head_tag else column_count)
+                html_el = self.form._html_tag(single_col_tag, html_el, col_attr)
+                col_attr = ''
+            expected = self.form._html_tag(row_tag, html_el, row_attr + col_attr)
+            print("================ TEST MAKE HEADLESS ROW EMPTY SINGLE COL TAG =======================")
+            print(expected)
+            print("-------------------------------------")
+            print(result)
+            self.assertEqual(expected, result, f"Failed on as_{as_type}. ")
         pass
 
     @skip("Not Implemented")
-    def test_form_main_rows(self):
+    def test_make_headless_row_has_single_col_tag(self):
+        """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
+        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
+        pass
+
+    @skip("Not Implemented")
+    def test_make_headless_row_as_table(self):
+        """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
+        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
+        # col_head_tag = 'th', single_col_tag = 'td', as_type = 'table', column_count > 0
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_simple(self):
         """Expected list of formatted strings for each main form 'row'. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         pass
 
     @skip("Not Implemented")
     def test_form_main_rows_html_fieldset(self):
-        """Creates HTML fieldset element containing rows data and HTML legend element. """
+        """For labeled fieldsets, creates HTML fieldset element containing rows data and HTML legend element. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         pass
 
     @skip("Not Implemented")
     def test_form_main_rows_all_fieldsets(self):
         """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_html_fieldset_has_container(self):
+        """For labeled fieldsets, creates HTML fieldset element containing rows data and HTML legend element. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_all_fieldsets_has_container(self):
+        """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
+        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        pass
+
+    @skip("Not Implemented")
+    def test_form_main_rows_complicated(self):
+        """Expected list of formatted strings, with some labeled and contained fieldsets, for each main form 'row'. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         pass
 
