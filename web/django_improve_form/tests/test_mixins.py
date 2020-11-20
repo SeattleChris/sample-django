@@ -1032,7 +1032,43 @@ class FormFieldsetTests(FormTests, TestCase):
             self.assertEqual(row['expected'], row['actual'])
         pass
 
-    @skip("Not Implemented")
+    def setup_row_from_columns(self, as_type, field_setup=None, error_names=None, errors_on_separate_row=True):
+        """Gathers expected and actual for row_from_columns for created columns with mock errors. """
+        col_args = ('span', as_type == 'table', {})
+        is_table = as_type == 'table'
+        if is_table:
+            row_tag = 'tr',
+            tag_info = ('th', 'td', 'td', '%(label)s', '%(errors)s%(field)s%(help_text)s')
+        else:
+            row_tag = 'li' if as_type == 'ul' else 'p'
+            col_data = '%(errors)s%(label)s %(field)s%(help_text)s'
+            if as_type == 'p':
+                col_data = '%(label)s %(field)s%(help_text)s'
+            tag_info = (None, 'span', '', '', col_data)
+        col_html, single_col_html = self.form.column_formats(*tag_info)
+        error_setup = self.setup_error_data(field_setup, error_names, is_table)
+        result = []
+        for row in error_setup:
+            error_settings = row['settings']
+            # cur_tag, multi_field_row, col_count, col_double, allow_colspan = error_settings
+            multi_field_row = error_settings[1]
+            col_ct = error_settings[2]
+            col_settings = (multi_field_row, col_ct, True, True) if is_table else (multi_field_row, col_ct, True, True)
+            row_data = {name: self.form.fields[name] for name in row['field_names']}
+            columns = self.form.collect_columns(row_data, col_settings, *col_args)
+            for num, ea in enumerate(columns):  # update each column with the artificial error data
+                ea.update(row['columns'][num])
+            html_row_attr = '' if multi_field_row or is_table else columns[0]['html_col_attr']
+            cur_format = col_html if multi_field_row else single_col_html
+            row_settings = (cur_format, html_row_attr, *error_settings)
+            col_data = [cur_format % ea for ea in columns]
+            err_data = row['actual'] if errors_on_separate_row else []
+            expected = self.form.make_row(col_data, err_data, row_tag, html_row_attr)
+            actual = self.form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
+            result.append({'expected': expected, 'actual': actual})
+        return result
+
+    # @skip("Not Implemented")
     def test_row_from_columns_no_errors(self):
         """For a given row of columns and parameters, returns a list of 1 list (since no errors). """
         # form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
