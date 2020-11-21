@@ -135,6 +135,18 @@ class FormFieldsetForm(FormFieldsetMixIn, Form):
     def handle_modifiers(self, opts, *args, **kwargs):
         """This is a placeholder to mock when FormOverrideMixIn is combined with this FormFieldsetMixIn. """
         self.called_handle_modifiers = True
+        remove_field = kwargs.get('remove_field', None)
+        add_field = kwargs.get('add_field', None)
+        if remove_field:
+            self.hold_field = {remove_field: self.fields.pop(remove_field)}
+        if add_field:
+            self.fields.update({add_field: self.hold_field.pop(add_field)})
+        fix_fields = getattr(self, 'hold_field', None)
+        if fix_fields:
+            field_rows, remaining_fields, *fs_args = args
+            remaining_fields.update(fix_fields)
+            self.form.fields.update(fix_fields)
+            args = (field_rows, remaining_fields, *fs_args)
         return (opts, *args, kwargs)
 
 
