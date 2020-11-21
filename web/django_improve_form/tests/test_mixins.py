@@ -697,7 +697,7 @@ class FormFieldsetTests(FormTests, TestCase):
         self.assertDictEqual(expected, actual)
 
     def test_col_data_field_help_hidden_initial_manual(self):
-        """For a given field and parameters, returns a dict with expected field value. """
+        """If a form field has 'show_hidden_initial' as true, the boundfield.as_hidden HTML is also included. """
         help_tag = 'span'
         help_text_br = False
         label_attrs = {}
@@ -1279,33 +1279,121 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.adjust_label_width = original_setting
 
-    @skip("Not Implemented")
     def test_make_fieldsets_uses_prep_fields(self):
-        """The make_fieldsets method calls the prep_fields method (from FormOverrideMixIn) if it is present. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        pass
+        """The make_fieldsets method calls the prep_fields method (usually from FormOverrideMixIn) if it is present. """
+        original_called_prep_fields = self.form.called_prep_fields = False
+        full_fieldsets = self.form.make_fieldsets()
 
-    @skip("Not Implemented")
+        self.assertFalse(original_called_prep_fields)
+        self.assertIsInstance(full_fieldsets, (list, tuple))
+        self.assertIsNotNone(getattr(self.form, '_fieldsets', None))
+        self.assertTrue(self.form.called_prep_fields)
+
+        self.form.called_prep_fields = original_called_prep_fields
+
     def test_raises_if_initial_fieldsets_error(self):
         """The make_fieldsets method raises ImproperlyConfigured if initial fieldset is missing fields or position. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # initial: form.fieldsets
-        pass
+        original_fieldsets = self.form.fieldsets
+        test_fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'last',
+                    ],
+            }), )
+        position_missing_fieldsets = deepcopy(test_fieldsets)
+        del position_missing_fieldsets[1][1]['position']
+        fields_missing_fieldsets = deepcopy(test_fieldsets)
+        del fields_missing_fieldsets[0][1]['fields']
+        message = "There must be 'fields' and 'position' in each fieldset. "
+        self.form.fieldsets = position_missing_fieldsets
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.make_fieldsets()
+        self.form.fieldsets = fields_missing_fieldsets
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.make_fieldsets()
 
-    @skip("Not Implemented")
+        self.form.fieldsets = original_fieldsets
+
     def test_make_fieldsets_names_can_be_coded(self):
         """The make_fieldsets method recognizes field name in opts['fields'] if coded with leading underscore. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # used to lookup special field names, like: '_name_for_email', '_name_for_user', '_USERNAME_FLAG_FIELD'
-        # initial: form.fieldsets
-        # computed: form._fieldsets
-        pass
+        original_fieldsets = self.form.fieldsets
+        test_fieldsets = (
+            (None, {
+                'position': 1,
+                'fields': [
+                    ('first', 'second', ),
+                    ('_name_for_coded', 'last', ),
+                    ],
+            }),
+            ('Your Name', {
+                'position': 2,
+                'fields': [('first_name', 'last_name', )],
+            }), )
+        self.form.fieldsets = test_fieldsets
+        expected_name = self.form.name_for_coded
+        self.form.make_fieldsets()
+        computed_fieldsets = self.form._fieldsets
+        opts = computed_fieldsets[0][1]
+        target = opts['rows'][1]
+        self.assertIn(expected_name, target.keys())
+        self.assertEqual(self.form.fields.get(expected_name), target.get(expected_name, ''))
+        self.assertIn('_name_for_coded', opts['field_names'])
 
-    @skip("Not Implemented")
+        self.form.fieldsets = original_fieldsets
+
     def test_no_duplicate_fields_in_fieldsets(self):
         """If a field is defined in two fieldsets, the field only shows up in the first fieldset. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        pass
+        original_fieldsets = self.form.fieldsets
+        test_fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'last',
+                    ],
+            }),
+            ('Confused', {
+                'position': 3,
+                'fields': [
+                    ('first_name', 'generic_field', ),
+                    'first',
+                    'last',
+                    ],
+            }), )
+        duplicates = set(('first_name', 'first', 'last', ))
+        expected = []
+        for names in test_fieldsets[2][1]['fields']:
+            if isinstance(names, str):
+                names = (names, )
+            names = [name for name in names if name not in duplicates]
+            if names:
+                expected.append({name: self.form.fields[name] for name in names})
+        self.form.fieldsets = deepcopy(test_fieldsets)
+        self.form.make_fieldsets()
+        computed_fieldsets = self.form._fieldsets
+        opts = computed_fieldsets[2][1]
+        actual = opts['rows']
+
+        self.assertEqual(1, len(actual), "Rows of already used fields were added. ")
+        self.assertEqual(1, len(actual[0]), "Columns of already used fields were added. ")
+        self.assertEqual(expected, actual)
+        for lbl, opts in computed_fieldsets[:2]:
+            row_names = flatten([list(row.keys()) for row in opts['rows']])
+            self.assertEqual(opts['field_names'], row_names, "Field missing from its expected first fieldset. ")
+
+        self.form.fieldsets = original_fieldsets
 
     @skip("Not Implemented")
     def test_top_errors_has_hidden_field_errors(self):
@@ -1315,13 +1403,20 @@ class FormFieldsetTests(FormTests, TestCase):
         # The hidden field errors are not in non_field_errors, but are only added to the the HTML result.
         pass
 
-    @skip("Not Implemented")
     def test_make_fieldsets_uses_handle_modifiers(self):
         """The make_fieldsets method calls the handle_modifiers method (from FormOverrideMixIn) if it is present. """
         # method: form.make_fieldsets(self, *fs_args, **kwargs)
         # args = [opts, field_rows, remaining_fields, *fs_args]
         # opts, field_rows, remaining_fields, *fs_args, kwargs = self.handle_modifiers(*args, **kwargs)
-        pass
+        original_called_handle_modifiers = self.form.called_handle_modifiers = False
+        full_fieldsets = self.form.make_fieldsets()
+
+        self.assertFalse(original_called_handle_modifiers)
+        self.assertIsInstance(full_fieldsets, (list, tuple))
+        self.assertIsNotNone(getattr(self.form, '_fieldsets', None))
+        self.assertTrue(self.form.called_handle_modifiers)
+
+        self.form.called_handle_modifiers = original_called_handle_modifiers
 
     @skip("Not Implemented")
     def test_make_fieldsets_saves_results(self):
@@ -1371,14 +1466,102 @@ class FormFieldsetTests(FormTests, TestCase):
         # lookup = {'end': max_position + 2, 'remaining': max_position + 1, None: max_position}
         pass
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_happy_path_make_fieldsets(self):
         """The make_fieldsets method returns the expected response. """
         # method: form.make_fieldsets(self, *fs_args, **kwargs)
         # computed: form._fieldsets
         # summary: form._fs_summary
         # result: form._fieldsets.update(form._fs_summary)
-        pass
+        original_fieldsets = self.form.fieldsets
+        self.form.fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'not_third',
+                    'not_fourth',
+                    'last',
+                    ],
+            }),
+            ('Non_Fields', {
+                'position': 3,
+                'fields': [
+                    'non-field_name',
+                    'not_a_field'
+                    ],
+            }),
+            (None, {
+                'position': None,
+                # 'modifiers': ['password_display', ],
+                'fields': [
+                    # ('password1', 'password2', ),
+                    'generic_field',
+                    'bool_field',
+                    'single_check'
+                ]
+            }),
+            ('address', {
+                'classes': ('collapse', 'address', ),
+                # 'modifiers': ['address', 'prep_country_fields', ],
+                'position': 'end',
+                'fields': [
+                    'billing_address_1',
+                    'billing_address_2',
+                    ('billing_city', 'billing_country_area', 'billing_postcode', ),
+                    ],
+            }), )
+        fieldsets = [(label, deepcopy(opts)) for label, opts in self.form.fieldsets if label != 'Non_Fields']
+        # print("========================= TEMP LOG TEST =============================")
+        remaining_fields = self.form.fields.copy()
+        assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
+        unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
+        remaining_fields.pop('hide_field')
+        # print("Hide in unassigned: ", 'hide_field' in unassigned_field_names)
+        address_fieldset = fieldsets.pop()
+        opts = {'modifiers': 'prep_remaining', 'position': 'remaining', 'fields': unassigned_field_names}
+        fieldsets.append((None, opts))
+        fieldsets.append(address_fieldset)
+        for fieldset_label, opts in fieldsets:
+            opts['field_names'] = flatten(opts['fields'])
+            rows, column_count = [], 0
+            for names in opts['fields']:
+                if isinstance(names, str):
+                    names = [names]
+                column_count = max(column_count, len(names))
+                columns = {name: self.form.fields[name] for name in names if name in remaining_fields}
+                # TODO: Remove hidden or otherwise excluded fields.
+                if columns:
+                    rows.append(columns)
+            opts['rows'] = rows
+            opts['column_count'] = column_count
+        self.form.make_fieldsets()
+        actual_fieldsets = self.form._fieldsets
+        self.assertEqual(len(fieldsets), 5)
+        self.assertEqual(len(fieldsets), len(actual_fieldsets))
+        count = 0
+        # print("*************** Expect and Got ********************")
+        for expect, got in zip(fieldsets, actual_fieldsets):
+            # # print(expect[1]['field_names'])
+            # print([tuple(row.keys()) for row in expect[1]['rows']])
+            # print("--------------------------")
+            # print([tuple(row.keys()) for row in got[1]['rows']])
+            # # print(got[1]['field_names'])
+            # print("*********************************************")
+            labels = (expect[0], got[0])
+            labels = str(got[0]) if labels[0] == labels[1] else ' & '.join(str(ea) for ea in labels)
+            fields = (expect[1]['fields'], got[1]['fields'])
+            message = f"Fieldset # {count} named {labels} expected then got: \n{fields[0]} \n{fields[1]}. "
+            self.assertEqual(expect, got, message)
+            count += 1
+        self.assertEqual(fieldsets, actual_fieldsets)
+
+        self.form.fieldsets = original_fieldsets
 
     @skip("Redundant. Not Implemented")
     def test_html_tag(self):
@@ -1421,16 +1604,43 @@ class FormFieldsetTests(FormTests, TestCase):
         # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
         pass
 
-    # @skip("Not Implemented")
     def test_make_headless_row_empty_single_col_tag(self):
         """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
-        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
+        for as_type in ('p', 'ul', 'fieldset'):
+            row_tag = 'li' if as_type == 'ul' else 'p'
+            col_tag, single_col_tag, col_head_tag = 'span', '', None
+            html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, False)
+            html_el = "This is some test content. "
+            column_count = 3
+            col_attr = ' id="test-col"'
+            row_attr = ' class="row"'
+            result = self.form.make_headless_row(html_args, html_el, column_count, col_attr, row_attr)
+            expected = self.form._html_tag(row_tag, html_el, row_attr + col_attr)
+            self.assertEqual(expected, result, f"Failed on as_{as_type}. ")
+
+    def test_make_headless_row_has_single_col_tag(self):
+        """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
+        for as_type in ('p', 'ul', 'fieldset'):
+            row_tag = 'li' if as_type == 'ul' else 'p'
+            col_tag, single_col_tag, col_head_tag = 'span', 'div', None
+            html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, False)
+            html_el = "This is some test content. "
+            column_count = 3
+            col_attr = ' id="test-col"'
+            row_attr = ' class="row"'
+            result = self.form.make_headless_row(html_args, html_el, column_count, col_attr, row_attr)
+            html_el = self.form._html_tag(single_col_tag, html_el, col_attr)
+            expected = self.form._html_tag(row_tag, html_el, row_attr)
+            self.assertEqual(expected, result, f"Failed on as_{as_type}. ")
+
+    def test_make_headless_row_include_table(self):
+        """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
         for as_type in ('p', 'ul', 'fieldset', 'table'):
             if as_type == 'table':
                 row_tag, col_tag, single_col_tag, col_head_tag = 'tr', 'td', 'td', 'th'
             else:
                 row_tag = 'li' if as_type == 'ul' else 'p'
-                col_tag, single_col_tag, col_head_tag = 'span', '', None
+                col_tag, single_col_tag, col_head_tag = 'span', 'div', None
             html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, False)
             html_el = "This is some test content. "
             column_count = 3
@@ -1438,83 +1648,164 @@ class FormFieldsetTests(FormTests, TestCase):
             row_attr = ' class="row"'
             result = self.form.make_headless_row(html_args, html_el, column_count, col_attr, row_attr)
             if single_col_tag != '':
-                col_attr += ' colspan="{}"'.format(column_count * 2 if col_head_tag else column_count)
+                if as_type == 'table':
+                    col_attr += ' colspan="{}"'.format(column_count * 2 if col_head_tag else column_count)
                 html_el = self.form._html_tag(single_col_tag, html_el, col_attr)
                 col_attr = ''
             expected = self.form._html_tag(row_tag, html_el, row_attr + col_attr)
-            print("================ TEST MAKE HEADLESS ROW EMPTY SINGLE COL TAG =======================")
-            print(expected)
-            print("-------------------------------------")
-            print(result)
             self.assertEqual(expected, result, f"Failed on as_{as_type}. ")
-        pass
 
-    @skip("Not Implemented")
-    def test_make_headless_row_has_single_col_tag(self):
-        """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
-        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
-        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
-        pass
-
-    @skip("Not Implemented")
-    def test_make_headless_row_as_table(self):
-        """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
-        # form.make_headless_row(self, html_args, html_el, column_count, col_attr='', row_attr='')
-        # col_head_tag = 'th', single_col_tag = 'td', as_type = 'table', column_count > 0
-        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
-        pass
-
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_form_main_rows_simple(self):
         """Expected list of formatted strings for each main form 'row'. """
-        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
-        pass
+        # TODO: Better Test for this. After a lot of setup, the following is nearly a copy of tested code.
+        original_fieldsets = self.form.fieldsets
+        self.form.fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'last',
+                    ],
+            }),
+            (None, {
+                'position': None,
+                # 'modifiers': ['password_display', ],
+                'fields': [
+                    # ('password1', 'password2', ),
+                    'generic_field',
+                    'bool_field',
+                    'single_check'
+                ]
+            }),
+            ('address', {
+                'classes': ('collapse', 'address', ),
+                # 'modifiers': ['address', 'prep_country_fields', ],
+                'position': 'end',
+                'fields': [
+                    'billing_address_1',
+                    'billing_address_2',
+                    ('billing_city', 'billing_country_area', 'billing_postcode', ),
+                    ],
+            }), )
+        self.form.make_fieldsets()
+        fieldsets = deepcopy(self.form._fieldsets)
+        for as_type in ('p', 'ul', 'fieldset', 'table'):
+            all_fieldsets = True if as_type == 'fieldset' else False
+            form_col_count = 1 if all_fieldsets else self.form._fs_summary['columns']
+            errors_on_separate_row = False
+            help_tag, help_text_br = 'span', as_type == 'table'
+            if as_type == 'table':
+                row_tag, col_tag, single_col_tag, col_head_tag = 'tr', 'td', 'td', 'th'
+                col_double, allow_colspan, attr_on_lonely_col = True, True, True
+                col_head_data = '%(label)s'
+                col_data = '%(errors)s%(field)s%(help_text)s'
+            else:
+                row_tag = 'li' if as_type == 'ul' else 'p'
+                col_tag, single_col_tag, col_head_tag = 'span', '', None
+                col_double, allow_colspan, attr_on_lonely_col = False, False, False
+                col_head_data = ''
+                col_data = '%(errors)s%(label)s %(field)s%(help_text)s'
+                if as_type == 'p':
+                    col_data = '%(label)s %(field)s%(help_text)s'
+                    errors_on_separate_row = True
+            html_col_tags = (col_head_tag, col_tag, single_col_tag)
+            col_format, single_col_format = self.form.column_formats(*html_col_tags, col_head_data, col_data)
+            for fieldset_label, opts in fieldsets:
+                col_count = opts['column_count'] if fieldset_label else form_col_count
+                format_tags = (col_format, single_col_format, row_tag, col_tag, single_col_tag, help_tag, help_text_br)
+                settings = (errors_on_separate_row, {}, col_count, allow_colspan, col_double, attr_on_lonely_col)
+                opts['row_data'] = self.form.collect_row_data(opts, settings, format_tags)
+            html_args = (row_tag, *html_col_tags, as_type, all_fieldsets)
+            actual = self.form.form_main_rows(html_args, fieldsets, form_col_count)
+            expected = []
+            for fieldset_label, opts in fieldsets:
+                row_data = opts['row_data']
+                if all_fieldsets or fieldset_label is not None:
+                    fieldset_classes = list(opts.get('classes', []))
+                    if not fieldset_label and self.form.untitled_fieldset_class:
+                        fieldset_classes.append(self.form.untitled_fieldset_class)
+                    fieldset_attr = ' class="%s"' % ' '.join(fieldset_classes) if fieldset_classes else ''
+                    container = None if as_type in ('p', 'fieldset') else as_type
+                    data = '\n'.join(row_data)
+                    if container:
+                        container_attr = f' class="fieldset_{as_type}"'
+                        data = self.form._html_tag(container, data, container_attr) + '\n'
+                    legend = self.form._html_tag('legend', fieldset_label) + '\n' if fieldset_label else ''
+                    fieldset_el = self.form._html_tag('fieldset', legend + data, fieldset_attr)
+                    if container:
+                        row_attr = ' class="fieldset_row"'
+                        fieldset_el = self.form.make_headless_row(html_args, fieldset_el, form_col_count, '', row_attr)
+                    expected.append(fieldset_el)
+                else:
+                    expected.extend(row_data)
+            print(f"======================== TEST MAIN ROWS as type: {as_type} ==========================")
+            self.assertEqual(len(expected), len(actual))
+            for expect, got in zip(expected, actual):
+                if expect != got:
+                    print(expect)
+                    print("*****************")
+                    print(got)
+                    print("-----------------------------------")
+                self.assertEqual(expect, got)
 
-    @skip("Not Implemented")
+        self.form.fieldsets = original_fieldsets
+
+    @skip("Redundant? Not Implemented")
     def test_form_main_rows_html_fieldset(self):
         """For labeled fieldsets, creates HTML fieldset element containing rows data and HTML legend element. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant? Not Implemented")
     def test_form_main_rows_all_fieldsets(self):
         """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant? Not Implemented")
     def test_form_main_rows_html_fieldset_has_container(self):
         """For labeled fieldsets, creates HTML fieldset element containing rows data and HTML legend element. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant? Not Implemented")
     def test_form_main_rows_all_fieldsets_has_container(self):
         """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant? Not Implemented")
     def test_form_main_rows_complicated(self):
         """Expected list of formatted strings, with some labeled and contained fieldsets, for each main form 'row'. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
+        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Currently Unused feature. Not Implemented")
+    @skip("Redundant? Currently unused feature for as_table (or other similar). Not Implemented")
     def test_html_output_error_lines_in_table(self):
         """The _html_output method, if errors_on_separate_row for as_table, configures colspan appropriately. """
         # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant. Handled by 'collect_columns' method. Not Implemented")
     def test_no_wrap_class_multi_field_row(self):
-        """The _html_output method makes the first html class 'nowrap' on multi_field_row. """
+        """The collect_columns method makes the first html class 'nowrap' on multi_field_row. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         # css_classes = ' '.join(['nowrap', css_classes])
         pass
 
-    @skip("Redundant. Not Implemented")
+    @skip("Redundant. Handled by 'collect_col_data' method. Not Implemented")
     def test_html_output_expected_labels(self):
         """The _html_output method uses boundfield label. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
@@ -1532,23 +1823,14 @@ class FormFieldsetTests(FormTests, TestCase):
         # label = conditional_escape(bf.label)
         # label = bf.label_tag(label, attrs) or ''
 
-    @skip("Not Implemented")
-    def test_raises_no_label(self):
-        """The _html_output method raises ImproperlyConfigured if the boundfield has an empty label. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # label = conditional_escape(bf.label)
-        # label = bf.label_tag(label, attrs) or ''
-        # message = "Visible Bound Fields must have a non-empty label. "
-
-    @skip("Not Implemented")
+    @skip("Redundant. Moved to 'collect_col_data' method. Not Implemented")
     def test_help_text_included(self):
         """The _html_output method includes help_text content with expected format, if present. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant. Moved to 'collect_col_data' method. Not Implemented")
     def test_help_aria(self):
         """If help_text provided, the input field will have the aria-describedby set to id of help text span. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
@@ -1557,30 +1839,13 @@ class FormFieldsetTests(FormTests, TestCase):
         # field_display = bf.as_widget(attrs=field_attrs_dict)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant. Moved to 'collect_columns' method. Not Implemented")
     def test_colspan(self):
         """If a table has a single field row that should span multiple columns, the needed html_col_attr is applied. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         # if allow_colspan and not multi_field_row and col_count > 1:
         # colspan = col_count * 2 - 1 if col_double else col_count
-        pass
-
-    @skip("Not Implemented")
-    def test_colspan(self):
-        """If a table has a single field row that should span multiple columns, the needed html_col_attr is applied. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # if allow_colspan and not multi_field_row and col_count > 1:
-        # colspan = col_count * 2 - 1 if col_double else col_count
-        pass
-
-    @skip("Currently UNTESTED to match normal output. Not Implemented")
-    def test_html_output_show_hidden_initial(self):
-        """The _html_output method correctly implements output for fields with show_hidden_initial. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # if field.show_hidden_initial:
         pass
 
     @skip("Redundant. Not Implemented")

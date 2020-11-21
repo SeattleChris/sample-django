@@ -868,8 +868,10 @@ class FormFieldsetMixIn:
         # if hasattr(self, 'assign_focus_field'):
         #     # self.named_focus = self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
         #     self.named_focus = self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
-        remaining_fields = self.fields.copy()
         fieldsets = list(getattr(self, 'fieldsets', ((None, {'fields': [], 'position': None}), )))
+        if not all('fields' in opts and 'position' in opts for lbl, opts in fieldsets):
+            raise ImproperlyConfigured(_("There must be 'fields' and 'position' in each fieldset. "))
+        remaining_fields = self.fields.copy()
         assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
         unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
         opts = {'modifiers': 'prep_remaining', 'position': 'remaining', 'fields': unassigned_field_names}
@@ -878,8 +880,6 @@ class FormFieldsetMixIn:
         max_position, form_column_count, hidden_fields, remove_idx = 0, 0, [], []
         for index, fieldset in enumerate(fieldsets):
             fieldset_label, opts = fieldset
-            if 'fields' not in opts or 'position' not in opts:
-                raise ImproperlyConfigured(_("There must be 'fields' and 'position' in each fieldset. "))
             field_rows = []
             for ea in opts['fields']:
                 row = [ea] if isinstance(ea, str) else ea
@@ -978,9 +978,10 @@ class FormFieldsetMixIn:
         for fieldset_label, opts in fieldsets:
             row_data = opts['row_data']
             if all_fieldsets or fieldset_label is not None:
-                fieldset_classes = opts.get('classes', [])
-                if not fieldset_label:
-                    fieldset_classes = list(fieldset_classes).append(self.untitled_fieldset_class)
+                fieldset_classes = list(opts.get('classes', []))
+                if not fieldset_label and self.untitled_fieldset_class:
+                    fieldset_classes.append(self.untitled_fieldset_class)
+                    # fieldset_classes = list(fieldset_classes).append(self.untitled_fieldset_class)
                 fieldset_attr = ' class="%s"' % ' '.join(fieldset_classes) if fieldset_classes else ''
                 container = None if as_type in ('p', 'fieldset') else as_type
                 data = '\n'.join(row_data)
@@ -1083,6 +1084,25 @@ class FormFieldsetMixIn:
         columns = [cur_format % ea for ea in columns]
         return self.make_row(columns, error_data, row_tag, html_row_attr)
 
+    def collect_row_data(self, opts, settings, format_tags):
+        """Used by new _html_output method. """
+        errors_on_separate_row, label_attrs, col_count, allow_colspan, col_double, attr_on_lonely_col = settings
+        col_format, single_col_format, row_tag, col_tag, single_col_tag, help_tag, help_text_br = format_tags
+        row_data = []
+        for row in opts['rows']:
+            multi_field_row = False if len(row) == 1 else True
+            cur_format, cur_tag = single_col_format, single_col_tag
+            if multi_field_row:
+                cur_format, cur_tag = col_format, col_tag
+            col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+            columns = self.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs)
+            html_row_attr = '' if multi_field_row or attr_on_lonely_col else columns[0]['html_col_attr']
+            row_settings = (cur_format, html_row_attr, cur_tag, *col_settings)
+            row = self.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
+            row_data.extend(row)
+        # end iterating field rows within the individual fieldset.
+        return row_data
+
     def _html_output_new(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
                          help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
         """Default for HTML output, an alternative to BaseForm._html_output. Used by as_table, as_ul, as_p, etc. """
@@ -1113,20 +1133,9 @@ class FormFieldsetMixIn:
                 label_width_attrs_dict, width_labels = self.determine_label_width(opts['rows'])
             label_attrs = {name: label_width_attrs_dict for name in width_labels}
             col_count = opts['column_count'] if fieldset_label else form_col_count
-            row_data = []
-            for row in opts['rows']:
-                multi_field_row = False if len(row) == 1 else True
-                cur_format, cur_tag = single_col_format, single_col_tag
-                if multi_field_row:
-                    cur_format, cur_tag = col_format, col_tag
-                col_settings = (multi_field_row, col_count, col_double, allow_colspan)
-                columns = self.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs)
-                html_row_attr = '' if multi_field_row or attr_on_lonely_col else columns[0]['html_col_attr']
-                row_settings = (cur_format, html_row_attr, cur_tag, *col_settings)
-                row = self.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
-                row_data.extend(row)
-            # end iterating field rows within the individual fieldset.
-            opts['row_data'] = row_data
+            format_tags = (col_format, single_col_format, row_tag, col_tag, single_col_tag, help_tag, help_text_br)
+            settings = (errors_on_separate_row, label_attrs, col_count, allow_colspan, col_double, attr_on_lonely_col)
+            opts['row_data'] = self.collect_row_data(opts, settings, format_tags)
         # end iterating fieldsets within the full form.
         output = []
         top_errors = summary['top_errors']
