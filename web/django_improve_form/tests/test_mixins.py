@@ -1403,13 +1403,20 @@ class FormFieldsetTests(FormTests, TestCase):
         # The hidden field errors are not in non_field_errors, but are only added to the the HTML result.
         pass
 
-    @skip("Not Implemented")
     def test_make_fieldsets_uses_handle_modifiers(self):
         """The make_fieldsets method calls the handle_modifiers method (from FormOverrideMixIn) if it is present. """
         # method: form.make_fieldsets(self, *fs_args, **kwargs)
         # args = [opts, field_rows, remaining_fields, *fs_args]
         # opts, field_rows, remaining_fields, *fs_args, kwargs = self.handle_modifiers(*args, **kwargs)
-        pass
+        original_called_handle_modifiers = self.form.called_handle_modifiers = False
+        full_fieldsets = self.form.make_fieldsets()
+
+        self.assertFalse(original_called_handle_modifiers)
+        self.assertIsInstance(full_fieldsets, (list, tuple))
+        self.assertIsNotNone(getattr(self.form, '_fieldsets', None))
+        self.assertTrue(self.form.called_handle_modifiers)
+
+        self.form.called_handle_modifiers = original_called_handle_modifiers
 
     @skip("Not Implemented")
     def test_make_fieldsets_saves_results(self):
