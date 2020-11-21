@@ -123,6 +123,12 @@ class FormFieldsetForm(FormFieldsetMixIn, Form):
     last = CharField(initial='last_value')
 
     adjust_label_width = False
+    called_prep_fields = False
+
+    def prep_fields(self):
+        """This is a placeholder to mock when FormOverrideMixIn is combined with this FormFieldsetMixIn. """
+        self.called_prep_fields = True
+        return self.fields
 
 
 # # Extended MixIns # #

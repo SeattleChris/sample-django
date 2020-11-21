@@ -697,7 +697,7 @@ class FormFieldsetTests(FormTests, TestCase):
         self.assertDictEqual(expected, actual)
 
     def test_col_data_field_help_hidden_initial_manual(self):
-        """For a given field and parameters, returns a dict with expected field value. """
+        """If a form field has 'show_hidden_initial' as true, the boundfield.as_hidden HTML is also included. """
         help_tag = 'span'
         help_text_br = False
         label_attrs = {}
@@ -1279,11 +1279,17 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.adjust_label_width = original_setting
 
-    @skip("Not Implemented")
     def test_make_fieldsets_uses_prep_fields(self):
-        """The make_fieldsets method calls the prep_fields method (from FormOverrideMixIn) if it is present. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        pass
+        """The make_fieldsets method calls the prep_fields method (usually from FormOverrideMixIn) if it is present. """
+        original_called_prep_fields = self.form.called_prep_fields = False
+        full_fieldsets = self.form.make_fieldsets()
+
+        self.assertFalse(original_called_prep_fields)
+        self.assertIsInstance(full_fieldsets, (list, tuple))
+        self.assertIsNotNone(getattr(self.form, '_fieldsets', None))
+        self.assertTrue(self.form.called_prep_fields)
+
+        self.form.called_prep_fields = original_called_prep_fields
 
     @skip("Not Implemented")
     def test_raises_if_initial_fieldsets_error(self):
@@ -1661,56 +1667,56 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fieldsets = original_fieldsets
 
-    @skip("Not Implemented")
+    @skip("Redundant? Not Implemented")
     def test_form_main_rows_html_fieldset(self):
         """For labeled fieldsets, creates HTML fieldset element containing rows data and HTML legend element. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant? Not Implemented")
     def test_form_main_rows_all_fieldsets(self):
         """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant? Not Implemented")
     def test_form_main_rows_html_fieldset_has_container(self):
         """For labeled fieldsets, creates HTML fieldset element containing rows data and HTML legend element. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant? Not Implemented")
     def test_form_main_rows_all_fieldsets_has_container(self):
         """Returns a list of fieldset elements. Each is an HTML fieldset element containing form fields. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant? Not Implemented")
     def test_form_main_rows_complicated(self):
         """Expected list of formatted strings, with some labeled and contained fieldsets, for each main form 'row'. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Currently Unused feature. Not Implemented")
+    @skip("Redundant? Currently unused feature for as_table (or other similar). Not Implemented")
     def test_html_output_error_lines_in_table(self):
         """The _html_output method, if errors_on_separate_row for as_table, configures colspan appropriately. """
         # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant. Handled by 'collect_columns' method. Not Implemented")
     def test_no_wrap_class_multi_field_row(self):
-        """The _html_output method makes the first html class 'nowrap' on multi_field_row. """
+        """The collect_columns method makes the first html class 'nowrap' on multi_field_row. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         # css_classes = ' '.join(['nowrap', css_classes])
         pass
 
-    @skip("Redundant. Not Implemented")
+    @skip("Redundant. Handled by 'collect_col_data' method. Not Implemented")
     def test_html_output_expected_labels(self):
         """The _html_output method uses boundfield label. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
@@ -1728,23 +1734,14 @@ class FormFieldsetTests(FormTests, TestCase):
         # label = conditional_escape(bf.label)
         # label = bf.label_tag(label, attrs) or ''
 
-    @skip("Not Implemented")
-    def test_raises_no_label(self):
-        """The _html_output method raises ImproperlyConfigured if the boundfield has an empty label. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # label = conditional_escape(bf.label)
-        # label = bf.label_tag(label, attrs) or ''
-        # message = "Visible Bound Fields must have a non-empty label. "
-
-    @skip("Not Implemented")
+    @skip("Redundant. Moved to 'collect_col_data' method. Not Implemented")
     def test_help_text_included(self):
         """The _html_output method includes help_text content with expected format, if present. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant. Moved to 'collect_col_data' method. Not Implemented")
     def test_help_aria(self):
         """If help_text provided, the input field will have the aria-describedby set to id of help text span. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
@@ -1753,30 +1750,13 @@ class FormFieldsetTests(FormTests, TestCase):
         # field_display = bf.as_widget(attrs=field_attrs_dict)
         pass
 
-    @skip("Not Implemented")
+    @skip("Redundant. Moved to 'collect_columns' method. Not Implemented")
     def test_colspan(self):
         """If a table has a single field row that should span multiple columns, the needed html_col_attr is applied. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         # if allow_colspan and not multi_field_row and col_count > 1:
         # colspan = col_count * 2 - 1 if col_double else col_count
-        pass
-
-    @skip("Not Implemented")
-    def test_colspan(self):
-        """If a table has a single field row that should span multiple columns, the needed html_col_attr is applied. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # if allow_colspan and not multi_field_row and col_count > 1:
-        # colspan = col_count * 2 - 1 if col_double else col_count
-        pass
-
-    @skip("Currently UNTESTED to match normal output. Not Implemented")
-    def test_html_output_show_hidden_initial(self):
-        """The _html_output method correctly implements output for fields with show_hidden_initial. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # if field.show_hidden_initial:
         pass
 
     @skip("Redundant. Not Implemented")
