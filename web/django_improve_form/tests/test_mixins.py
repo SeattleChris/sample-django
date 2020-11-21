@@ -1561,10 +1561,9 @@ class FormFieldsetTests(FormTests, TestCase):
             self.assertEqual(expected, result, f"Failed on as_{as_type}. ")
 
     # @skip("Not Implemented")
-    def test_form_main_rows_simple(self, all_fieldsets=False):
+    def test_form_main_rows_simple(self):
         """Expected list of formatted strings for each main form 'row'. """
-        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
-        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
+        # TODO: Better Test for this. After a lot of setup, the following is nearly a copy of tested code.
         original_fieldsets = self.form.fieldsets
         self.form.fieldsets = (
             ('Your Name', {
@@ -1600,11 +1599,12 @@ class FormFieldsetTests(FormTests, TestCase):
                     ],
             }), )
         self.form.make_fieldsets()
-        form_col_count = 1 if all_fieldsets else self.form._fs_summary['columns']
         fieldsets = deepcopy(self.form._fieldsets)
         for as_type in ('p', 'ul', 'fieldset', 'table'):
+            all_fieldsets = True if as_type == 'fieldset' else False
+            form_col_count = 1 if all_fieldsets else self.form._fs_summary['columns']
             errors_on_separate_row = False
-            col_args = ('span', as_type == 'table', {})
+            help_tag, help_text_br = 'span', as_type == 'table'
             if as_type == 'table':
                 row_tag, col_tag, single_col_tag, col_head_tag = 'tr', 'td', 'td', 'th'
                 col_double, allow_colspan, attr_on_lonely_col = True, True, True
@@ -1623,24 +1623,11 @@ class FormFieldsetTests(FormTests, TestCase):
             col_format, single_col_format = self.form.column_formats(*html_col_tags, col_head_data, col_data)
             for fieldset_label, opts in fieldsets:
                 col_count = opts['column_count'] if fieldset_label else form_col_count
-                row_data = []
-                for row in opts['rows']:
-                    multi_field_row = False if len(row) == 1 else True
-                    cur_format, cur_tag = single_col_format, single_col_tag
-                    if multi_field_row:
-                        cur_format, cur_tag = col_format, col_tag
-                    col_settings = (multi_field_row, col_count, col_double, allow_colspan)
-                    columns = self.form.collect_columns(row, col_settings, *col_args)
-                    html_row_attr = '' if multi_field_row or attr_on_lonely_col else columns[0]['html_col_attr']
-                    row_settings = (cur_format, html_row_attr, cur_tag, *col_settings)
-                    row = self.form.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
-                    row_data.extend(row)
-                # end iterating field rows within the individual fieldset.
-                opts['row_data'] = row_data
-            html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
+                format_tags = (col_format, single_col_format, row_tag, col_tag, single_col_tag, help_tag, help_text_br)
+                settings = (errors_on_separate_row, {}, col_count, allow_colspan, col_double, attr_on_lonely_col)
+                opts['row_data'] = self.form.collect_row_data(opts, settings, format_tags)
+            html_args = (row_tag, *html_col_tags, as_type, all_fieldsets)
             actual = self.form.form_main_rows(html_args, fieldsets, form_col_count)
-            # ----------------------- Expected -----------------------
-            # TODO: Better Test for this. After a lot of setup, the following is nearly a copy of tested code.
             expected = []
             for fieldset_label, opts in fieldsets:
                 row_data = opts['row_data']
@@ -1648,7 +1635,6 @@ class FormFieldsetTests(FormTests, TestCase):
                     fieldset_classes = list(opts.get('classes', []))
                     if not fieldset_label and self.form.untitled_fieldset_class:
                         fieldset_classes.append(self.form.untitled_fieldset_class)
-                        # fieldset_classes = list(fieldset_classes).append(self.form.untitled_fieldset_class)
                     fieldset_attr = ' class="%s"' % ' '.join(fieldset_classes) if fieldset_classes else ''
                     container = None if as_type in ('p', 'fieldset') else as_type
                     data = '\n'.join(row_data)
@@ -1663,10 +1649,7 @@ class FormFieldsetTests(FormTests, TestCase):
                     expected.append(fieldset_el)
                 else:
                     expected.extend(row_data)
-
             print(f"======================== TEST MAIN ROWS as type: {as_type} ==========================")
-            # for row in actual:
-            #     print(row)
             self.assertEqual(len(expected), len(actual))
             for expect, got in zip(expected, actual):
                 if expect != got:
