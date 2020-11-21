@@ -1451,12 +1451,21 @@ class FormFieldsetTests(FormTests, TestCase):
         # computed: form._fieldsets
         pass
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_raises_if_missed_fields(self):
         """The make_fieldsets method raises ImproperlyConfigured if somehow some fields are not accounted for. """
         # method: form.make_fieldsets(self, *fs_args, **kwargs)
         # Probably only if self.handle_modifiers unexpectedly added fields.
-        pass
+        name = 'second'
+        remove = {'remove_field': name}
+        self.form.handle_modifiers({}, [], remove)
+        print("================== TEST RAISE ERROR CORRECTLY ======================")
+        print(self.form.hold_field)
+        self.assertNotIn(name, self.form.fields)
+        self.assertIn(name, self.form.hold_field)
+        message = "Some unassigned fields, perhaps some added during make_fieldset. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.make_fieldsets(add_field=name)
 
     @skip("Not Implemented")
     def test_make_fieldsets_outcome_order(self):
