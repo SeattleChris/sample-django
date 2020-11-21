@@ -1291,12 +1291,39 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.called_prep_fields = original_called_prep_fields
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_raises_if_initial_fieldsets_error(self):
         """The make_fieldsets method raises ImproperlyConfigured if initial fieldset is missing fields or position. """
         # method: form.make_fieldsets(self, *fs_args, **kwargs)
         # initial: form.fieldsets
-        pass
+        original_fieldsets = self.form.fieldsets
+        test_fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'last',
+                    ],
+            }), )
+        # modify test_fieldsets
+        position_missing_fieldsets = deepcopy(test_fieldsets)
+        del position_missing_fieldsets[1][1]['position']
+        fields_missing_fieldsets = deepcopy(test_fieldsets)
+        del fields_missing_fieldsets[0][1]['fields']
+        message = "There must be 'fields' and 'position' in each fieldset. "
+        self.form.fieldsets = position_missing_fieldsets
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.make_fieldsets()
+        self.form.fieldsets = fields_missing_fieldsets
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            self.form.make_fieldsets()
+
+        self.form.fieldsets = original_fieldsets
 
     @skip("Not Implemented")
     def test_make_fieldsets_names_can_be_coded(self):

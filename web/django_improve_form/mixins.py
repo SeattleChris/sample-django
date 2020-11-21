@@ -868,8 +868,11 @@ class FormFieldsetMixIn:
         # if hasattr(self, 'assign_focus_field'):
         #     # self.named_focus = self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
         #     self.named_focus = self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
-        remaining_fields = self.fields.copy()
         fieldsets = list(getattr(self, 'fieldsets', ((None, {'fields': [], 'position': None}), )))
+        for fieldset_label, opts in fieldsets:
+            if 'fields' not in opts or 'position' not in opts:
+                raise ImproperlyConfigured(_("There must be 'fields' and 'position' in each fieldset. "))
+        remaining_fields = self.fields.copy()
         assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
         unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
         opts = {'modifiers': 'prep_remaining', 'position': 'remaining', 'fields': unassigned_field_names}
@@ -878,8 +881,6 @@ class FormFieldsetMixIn:
         max_position, form_column_count, hidden_fields, remove_idx = 0, 0, [], []
         for index, fieldset in enumerate(fieldsets):
             fieldset_label, opts = fieldset
-            if 'fields' not in opts or 'position' not in opts:
-                raise ImproperlyConfigured(_("There must be 'fields' and 'position' in each fieldset. "))
             field_rows = []
             for ea in opts['fields']:
                 row = [ea] if isinstance(ea, str) else ea
