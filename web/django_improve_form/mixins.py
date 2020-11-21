@@ -1084,6 +1084,25 @@ class FormFieldsetMixIn:
         columns = [cur_format % ea for ea in columns]
         return self.make_row(columns, error_data, row_tag, html_row_attr)
 
+    def collect_row_data(self, opts, settings, format_tags):
+        """Used by new _html_output method. """
+        errors_on_separate_row, label_attrs, col_count, allow_colspan, col_double, attr_on_lonely_col = settings
+        col_format, single_col_format, row_tag, col_tag, single_col_tag, help_tag, help_text_br = format_tags
+        row_data = []
+        for row in opts['rows']:
+            multi_field_row = False if len(row) == 1 else True
+            cur_format, cur_tag = single_col_format, single_col_tag
+            if multi_field_row:
+                cur_format, cur_tag = col_format, col_tag
+            col_settings = (multi_field_row, col_count, col_double, allow_colspan)
+            columns = self.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs)
+            html_row_attr = '' if multi_field_row or attr_on_lonely_col else columns[0]['html_col_attr']
+            row_settings = (cur_format, html_row_attr, cur_tag, *col_settings)
+            row = self.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
+            row_data.extend(row)
+        # end iterating field rows within the individual fieldset.
+        return row_data
+
     def _html_output_new(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
                          help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
         """Default for HTML output, an alternative to BaseForm._html_output. Used by as_table, as_ul, as_p, etc. """
@@ -1114,20 +1133,9 @@ class FormFieldsetMixIn:
                 label_width_attrs_dict, width_labels = self.determine_label_width(opts['rows'])
             label_attrs = {name: label_width_attrs_dict for name in width_labels}
             col_count = opts['column_count'] if fieldset_label else form_col_count
-            row_data = []
-            for row in opts['rows']:
-                multi_field_row = False if len(row) == 1 else True
-                cur_format, cur_tag = single_col_format, single_col_tag
-                if multi_field_row:
-                    cur_format, cur_tag = col_format, col_tag
-                col_settings = (multi_field_row, col_count, col_double, allow_colspan)
-                columns = self.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs)
-                html_row_attr = '' if multi_field_row or attr_on_lonely_col else columns[0]['html_col_attr']
-                row_settings = (cur_format, html_row_attr, cur_tag, *col_settings)
-                row = self.row_from_columns(columns, row_tag, errors_on_separate_row, row_settings)
-                row_data.extend(row)
-            # end iterating field rows within the individual fieldset.
-            opts['row_data'] = row_data
+            format_tags = (col_format, single_col_format, row_tag, col_tag, single_col_tag, help_tag, help_text_br)
+            settings = (errors_on_separate_row, label_attrs, col_count, allow_colspan, col_double, attr_on_lonely_col)
+            opts['row_data'] = self.collect_row_data(opts, settings, format_tags)
         # end iterating fieldsets within the full form.
         output = []
         top_errors = summary['top_errors']
