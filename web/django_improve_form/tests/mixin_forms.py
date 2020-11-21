@@ -124,6 +124,7 @@ class FormFieldsetForm(FormFieldsetMixIn, Form):
 
     adjust_label_width = False
     called_prep_fields = False
+    name_for_coded = 'generic_field'  # Used for testing if 'coded' fieldset fieldnames work as needed.
 
     def prep_fields(self):
         """This is a placeholder to mock when FormOverrideMixIn is combined with this FormFieldsetMixIn. """
