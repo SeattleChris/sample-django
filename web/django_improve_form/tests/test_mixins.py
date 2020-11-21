@@ -1291,11 +1291,8 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.called_prep_fields = original_called_prep_fields
 
-    # @skip("Not Implemented")
     def test_raises_if_initial_fieldsets_error(self):
         """The make_fieldsets method raises ImproperlyConfigured if initial fieldset is missing fields or position. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # initial: form.fieldsets
         original_fieldsets = self.form.fieldsets
         test_fieldsets = (
             ('Your Name', {
@@ -1310,7 +1307,6 @@ class FormFieldsetTests(FormTests, TestCase):
                     'last',
                     ],
             }), )
-        # modify test_fieldsets
         position_missing_fieldsets = deepcopy(test_fieldsets)
         del position_missing_fieldsets[1][1]['position']
         fields_missing_fieldsets = deepcopy(test_fieldsets)
@@ -1325,7 +1321,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fieldsets = original_fieldsets
 
-    @skip("Not Implemented")
     def test_make_fieldsets_names_can_be_coded(self):
         """The make_fieldsets method recognizes field name in opts['fields'] if coded with leading underscore. """
         original_fieldsets = self.form.fieldsets
@@ -1353,11 +1348,52 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fieldsets = original_fieldsets
 
-    @skip("Not Implemented")
     def test_no_duplicate_fields_in_fieldsets(self):
         """If a field is defined in two fieldsets, the field only shows up in the first fieldset. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        pass
+        original_fieldsets = self.form.fieldsets
+        test_fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'last',
+                    ],
+            }),
+            ('Confused', {
+                'position': 3,
+                'fields': [
+                    ('first_name', 'generic_field', ),
+                    'first',
+                    'last',
+                    ],
+            }), )
+        duplicates = set(('first_name', 'first', 'last', ))
+        expected = []
+        for names in test_fieldsets[2][1]['fields']:
+            if isinstance(names, str):
+                names = (names, )
+            names = [name for name in names if name not in duplicates]
+            if names:
+                expected.append({name: self.form.fields[name] for name in names})
+        self.form.fieldsets = deepcopy(test_fieldsets)
+        self.form.make_fieldsets()
+        computed_fieldsets = self.form._fieldsets
+        opts = computed_fieldsets[2][1]
+        actual = opts['rows']
+
+        self.assertEqual(1, len(actual), "Rows of already used fields were added. ")
+        self.assertEqual(1, len(actual[0]), "Columns of already used fields were added. ")
+        self.assertEqual(expected, actual)
+        for lbl, opts in computed_fieldsets[:2]:
+            row_names = flatten([list(row.keys()) for row in opts['rows']])
+            self.assertEqual(opts['field_names'], row_names, "Field missing from its expected first fieldset. ")
+
+        self.form.fieldsets = original_fieldsets
 
     @skip("Not Implemented")
     def test_top_errors_has_hidden_field_errors(self):
