@@ -1328,11 +1328,30 @@ class FormFieldsetTests(FormTests, TestCase):
     @skip("Not Implemented")
     def test_make_fieldsets_names_can_be_coded(self):
         """The make_fieldsets method recognizes field name in opts['fields'] if coded with leading underscore. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # used to lookup special field names, like: '_name_for_email', '_name_for_user', '_USERNAME_FLAG_FIELD'
-        # initial: form.fieldsets
-        # computed: form._fieldsets
-        pass
+        original_fieldsets = self.form.fieldsets
+        test_fieldsets = (
+            (None, {
+                'position': 1,
+                'fields': [
+                    ('first', 'second', ),
+                    ('_name_for_coded', 'last', ),
+                    ],
+            }),
+            ('Your Name', {
+                'position': 2,
+                'fields': [('first_name', 'last_name', )],
+            }), )
+        self.form.fieldsets = test_fieldsets
+        expected_name = self.form.name_for_coded
+        self.form.make_fieldsets()
+        computed_fieldsets = self.form._fieldsets
+        opts = computed_fieldsets[0][1]
+        target = opts['rows'][1]
+        self.assertIn(expected_name, target.keys())
+        self.assertEqual(self.form.fields.get(expected_name), target.get(expected_name, ''))
+        self.assertIn('_name_for_coded', opts['field_names'])
+
+        self.form.fieldsets = original_fieldsets
 
     @skip("Not Implemented")
     def test_no_duplicate_fields_in_fieldsets(self):
