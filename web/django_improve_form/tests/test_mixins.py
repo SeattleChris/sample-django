@@ -1418,14 +1418,31 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.called_handle_modifiers = original_called_handle_modifiers
 
-    @skip("Not Implemented")
     def test_make_fieldsets_saves_results(self):
         """The make_fieldsets method saves the computed fieldsets to form._fieldsets, and saves a form._fs_summary. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # initial: form.fieldsets
-        # computed: form._fieldsets
-        # summary: form._fs_summary
-        pass
+        original_initial_fieldsets = getattr(self.form, 'fieldsets', None)
+        initial_fieldsets = deepcopy(original_initial_fieldsets)
+        original_computed_fieldsets = getattr(self.form, '_fieldsets', None)
+        original_summary = getattr(self.form, '_fs_summary', None)
+        self.assertIsNotNone(original_initial_fieldsets)
+        self.assertIsNone(original_computed_fieldsets)
+        self.assertIsNone(original_summary)
+        response_fieldsets = self.form.make_fieldsets()
+        label, summary = response_fieldsets.pop()
+        self.assertIsNotNone(self.form._fieldsets)
+        self.assertIsNotNone(self.form._fs_summary)
+        self.assertEqual('summary', label)
+        self.assertEqual(summary, self.form._fs_summary)
+        self.assertEqual(response_fieldsets, self.form._fieldsets)
+        self.assertEqual(initial_fieldsets, self.form.fieldsets)
+
+        self.form.fieldsets = original_initial_fieldsets
+        self.form._fieldsets = original_computed_fieldsets
+        self.form._fs_summary = original_summary
+        if original_computed_fieldsets is None:
+            del self.form._fieldsets
+        if original_summary is None:
+            del self.form._fs_summary
 
     @skip("Not Implemented")
     def test_no_empty_rows_in_computed_fieldsets(self):
