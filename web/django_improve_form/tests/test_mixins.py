@@ -2122,6 +2122,41 @@ class FormFieldsetTests(FormTests, TestCase):
             message = "Hidden fields not found in final HTML row for {}".format(as_type.upper())
             self.assertIn(str_hidden, last_row, message)
 
+    @skip("Not Yet Working Correctly")
+    def test_when_only_hidden_fields(self):
+        """When there are no errors, and only hidden fields, the form should still include the hidden fields. """
+        original_fields = self.form.fields
+        test_fields = deepcopy(original_fields)
+        all_names = [name for name in test_fields]
+        for name, field in test_fields.items():
+            widget = field.hidden_widget
+            # field.widget = HiddenInput
+            widget = widget()
+            if field.localize:
+                widget.is_localized = True
+            widget.is_required = field.required
+            extra_attrs = field.widget_attrs(widget)
+            if extra_attrs:
+                widget.attrs.update(extra_attrs)
+            field.widget = widget
+            # field.widget.is_hidden = True
+        self.form.fields = test_fields
+        hidden_fields = self.form.hidden_fields()
+        hidden_names = [bf.name for bf in hidden_fields]
+        str_hidden = ''.join(str(bf) for bf in hidden_fields)
+        print("===================== TEST TESTERING TEST TEST =============================")
+        print(all_names)
+        print("-----------------------------------")
+        print(hidden_names)
+        self.assertEqual(all_names, hidden_names)
+        for as_type in ('as_p', 'as_ul', 'as_table', 'as_fieldset'):
+            output = getattr(self.form, as_type)()
+            # last_row = output.split('\n')[-1]
+            message = "Hidden fields not found in output for {}".format(as_type.upper())
+            self.assertIn(str_hidden, output, message)
+
+        self.form.fields = original_fields
+
     @skip("Redundant? Not Implemented")
     def test_as_fieldset(self):
         """The as_fieldset method returns the expected HTML content. """
