@@ -125,6 +125,9 @@ class FormFieldsetForm(FormFieldsetMixIn, Form):
     adjust_label_width = False
     called_prep_fields = False
     called_handle_modifiers = False
+    called_assign_focus_field = False
+    named_focus = None
+    fields_focus = None
     hold_field = {}
     name_for_coded = 'generic_field'  # Used for testing if 'coded' fieldset fieldnames work as needed.
 
@@ -149,6 +152,12 @@ class FormFieldsetForm(FormFieldsetMixIn, Form):
             self.fields.update(found)
             args = (field_rows, remaining_fields, *fs_args)
         return (opts, *args, kwargs)
+
+    def assign_focus_field(self, name=None, fields=None):
+        """This is a placeholder to mock when FocusMixIn is combined with this FormFieldsetMixIn. """
+        self.called_assign_focus_field = True
+        fields = fields or self.fields
+        return name if name in fields else None
 
 
 # # Extended MixIns # #
