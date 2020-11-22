@@ -1810,11 +1810,17 @@ class FormFieldsetTests(FormTests, TestCase):
         actual = self.form._html_tag(tag, content, attrs)
         self.assertEqual(expected, actual)
 
-    @skip("Redundant. Not Implemented")
     def test_column_formats(self):
         """The column_formats method returns the column and single_column strings with formatting placeholders. """
-        # form.column_formats(self, col_head_tag, col_tag, single_col_tag, col_head_data, col_data)
-        pass
+        attrs = '%(html_col_attr)s'
+        col_tag = 'span'
+        single_col_tag = ''
+        col_data = '%(errors)s%(label)s %(field)s%(help_text)s'
+        expected_col = self.form._html_tag(col_tag, col_data, attrs)
+        expected_single = col_data if not single_col_tag else self.form._html_tag(single_col_tag, col_data, attrs)
+        actual_col, actual_single = self.form.column_formats(None, col_tag, single_col_tag, '', col_data)
+        self.assertEqual(expected_col, actual_col)
+        self.assertEqual(expected_single, actual_single)
 
     def test_column_formats_col_head_tag(self):
         """The column_formats method, when col_head_tag is present, returns the expected response. """
@@ -2017,12 +2023,6 @@ class FormFieldsetTests(FormTests, TestCase):
         """Expected list of formatted strings, with some labeled and contained fieldsets, for each main form 'row'. """
         # form.form_main_rows(self, html_args, fieldsets, form_col_count)
         # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
-        pass
-
-    @skip("Redundant? Currently unused feature for as_table (or other similar). Not Implemented")
-    def test_html_output_error_lines_in_table(self):
-        """The _html_output method, if errors_on_separate_row for as_table, configures colspan appropriately. """
-        # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
         pass
 
     @skip("Redundant. Handled by 'collect_columns' method. Not Implemented")
