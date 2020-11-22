@@ -1395,13 +1395,30 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fieldsets = original_fieldsets
 
-    @skip("Not Implemented")
     def test_top_errors_has_hidden_field_errors(self):
         """The make_fieldsets appends the top_errors with any errors found for hidden fields. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # top_errors = self.non_field_errors().copy()  # If data not submitted, this will trigger full_clean method.
-        # The hidden field errors are not in non_field_errors, but are only added to the the HTML result.
-        pass
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form._errors = ErrorDict()
+        self.form.cleaned_data = {}
+        name = 'hide_field'
+        test_error = "This is a test error. "
+        expected = self.form.error_class(error_class='nonfield')
+        expected.append(f'(Hidden field {name}) {test_error}')
+        self.form.add_error(name, test_error)
+        self.form.make_fieldsets()
+        top_errors = self.form._fs_summary['top_errors']
+
+        self.assertIn(name, self.form._errors)
+        self.assertEqual(expected, top_errors)
+        self.assertIsNotNone(getattr(self.form, '_fieldsets', None))
+
+        self.form.cleaned_data = original_cleaned_data
+        self.form._errors = original_errors
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
     def test_make_fieldsets_uses_handle_modifiers(self):
         """The make_fieldsets method calls the handle_modifiers method (from FormOverrideMixIn) if it is present. """
@@ -1443,6 +1460,17 @@ class FormFieldsetTests(FormTests, TestCase):
             del self.form._fieldsets
         if original_summary is None:
             del self.form._fs_summary
+
+    @skip("Not Implemented")
+    def test_missing_initial_fieldsets(self):
+        """If initial fieldsets is not defined, warning is raised. """
+        original_initial_fieldsets = self.form.fieldsets
+        delattr(self.form, 'fieldsets')
+        print("========================= TEST TEST TEST ========================")
+        response_fieldsets = self.form.make_fieldsets()
+        print(response_fieldsets)
+
+        setattr(self.form, 'fieldsets', original_initial_fieldsets)
 
     @skip("Not Implemented")
     def test_no_empty_rows_in_computed_fieldsets(self):
