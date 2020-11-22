@@ -293,7 +293,6 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         name_for_email = user_model.get_email_field_name()
         name_for_user = user_model.USERNAME_FIELD
         flag_names = (getattr(self, 'USERNAME_FLAG_FIELD', None), )
-
         email_opts = {'names': (name_for_email, 'email'), 'alt_field': 'email_field', 'computed': False}
         user_opts = {'names': (name_for_user, 'username'), 'alt_field': 'username_field', 'computed': True}
         flag_opts = {'names': flag_names, 'alt_field': 'username_flag', 'computed': True}
@@ -304,9 +303,6 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         critical_fields.update(kwargs.get('critical_fields', {}))
         kwargs['critical_fields'] = critical_fields
         super().__init__(*args, **kwargs)
-        # if hasattr(self, 'assign_focus_field'):
-        #     if self.name_for_user in self.data:
-        #         self.assign_focus_field(name=name_for_email)
         self.confirm_required_fields()
 
     def get_form_user_model(self):
@@ -413,7 +409,6 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         self.fields[flag_name] = flag_field
         self.fields[name_for_user] = username_field
         if hasattr(self, 'assign_focus_field'):
-            # self.named_focus = self.assign_focus_field(name=name_for_email, fields=self.fields)
             self.named_focus = name_for_email
 
         login_link = self.get_login_message(link_text='login to existing account', link_only=True)
@@ -452,20 +447,12 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         """If the user gave a non-shared email, we expect flag is False, and no username value. """
         flag_name = self.USERNAME_FLAG_FIELD
         flag_field = self.fields.get(flag_name, None) or self.computed_fields.get(flag_name, None)
-        # print("==================== ComputedUsernameMixIn.handle_flag_field =====================================")
         if not flag_field:
             return
         flag_value = self.cleaned_data[flag_name]
-        # flag_changed = flag_field.has_changed(flag_field.initial, flag_value)
         email_field = self.fields[email_field_name]
         email_value = self.cleaned_data[email_field_name]
         email_changed = email_field.has_changed(email_field.initial, email_value)
-        # user_field = self.fields[user_field_name]
-        # user_value = self.cleaned_data[user_field_name]
-        # user_changed = user_field.has_changed(user_field.initial, user_value)
-        # flag_data = f"Init: {flag_field.initial} | Clean: {flag_value} | New: {flag_changed} "
-        # email_data = f"Init: {email_field.initial} | Clean: {email_value} | New: {email_changed} "
-        # user_data = f"Init: {user_field.initial} | Clean: {user_value} | New: {user_changed} "
         error_collected = {}
         if not flag_value:  # Using email as username, confirm it is unique.
             lookup = {"{}__iexact".format(self.name_for_user): email_value}
@@ -476,7 +463,6 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         elif email_changed:
             message = "Un-check the box, or leave empty, if you want to use this email address. "
             error_collected[flag_name] = _(message)
-        # print("------------------------- END ComputedUsernameMixIn.handle_flag_field END ------------------------")
         return error_collected
 
     def clean(self):
@@ -484,8 +470,7 @@ class ComputedUsernameMixIn(ComputedFieldsMixIn):
         username_value = self.cleaned_data.get(self.name_for_user, '')
         email_value = self.cleaned_data.get(self.name_for_email, None)
         if get_html_name(self, self.name_for_user) not in self.data and username_value != email_value:
-            # print("- - - - - - - - - Confirmation Required - - - - - - - - - - - - - - -")
-            marked_safe_translatable_html = self.configure_username_confirmation()
+            marked_safe_translatable_html = self.configure_username_confirmation()  # Confirmation Required.
             raise ValidationError(marked_safe_translatable_html)
         # computed fields had no problems.
         error_dict = self.handle_flag_field(self.name_for_email, self.name_for_user)
@@ -541,7 +526,7 @@ class FormOverrideMixIn:
         for name, field_val in data.items():
             field, value = field_val
             initial = self.get_initial_for_field(field, name)
-            html_name = self.add_prefix(name)  # TODO: ? use get_html_name ?
+            html_name = get_html_name(self, name)
             data_val = field.widget.value_from_datadict(self.data, self.files, html_name)
             if not field.has_changed(initial, data_val) and data_val != value:
                 field.initial = value
@@ -633,8 +618,8 @@ class FormOverrideMixIn:
             opts, _ignored, fields, *prep_args, kwargs = self.handle_modifiers(*args, **kwargs)
         has_computed = issubclass(self.__class__, ComputedFieldsMixIn)
         if not has_computed:
-            fields = self.handle_removals(fields)  # TODO: Confirm this works and/or use computed_fields technique
-        overrides = self.get_overrides()  # may have some key names not in self.fields, which will later be ignored.
+            fields = self.handle_removals(fields)
+        overrides = self.get_overrides()  # any extra keys not in self.fields will later be ignored silently.
         DEFAULT = overrides.get('_default_', {})
         alt_field_info = self.get_alt_field_info()  # condition_<label> methods are run.
         new_data = {}
@@ -786,6 +771,7 @@ class FormFieldsetMixIn:
     """
 
     untitled_fieldset_class = 'noline'
+    multi_field_row_class = 'nowrap'
     # nowrap_class = 'nowrap'  # TODO: Use this nowrap_class sigil instead of literal string.
     max_label_width = 12
     adjust_label_width = True
@@ -1046,10 +1032,11 @@ class FormFieldsetMixIn:
         all_columns = []
         for name, field in row.items():
             col_kwargs = self.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-            col_kwargs['html_head_attr'] = ' class="nowrap"' if multi_field_row else ''  # TODO: Is this desired effect?
+            col_kwargs['html_head_attr'] = ''
             css_classes = col_kwargs.pop('css_classes')  # a string of space seperated css classes.
             if multi_field_row:
-                css_classes = ' '.join(['nowrap', css_classes])
+                css_classes = ' '.join((self.multi_field_row_class, css_classes))
+                col_kwargs['html_head_attr'] = ' class="{}"'.format(self.multi_field_row_class)
             col_kwargs['html_col_attr'] = ' class="%s"' % css_classes if css_classes else ''
             if allow_colspan and not multi_field_row and col_count > 1:
                 colspan = col_count * 2 - 1 if col_double else col_count
@@ -1107,23 +1094,20 @@ class FormFieldsetMixIn:
     def _html_output_new(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
                          help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
         """Default for HTML output, an alternative to BaseForm._html_output. Used by as_table, as_ul, as_p, etc. """
-        if issubclass(self.__class__, FocusMixIn):
+        # if issubclass(self.__class__, FocusMixIn):
+        if hasattr(self, 'assign_focus_field'):
             self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
-        help_tag = 'span'
+        help_tag = 'span'  # TODO: Move to input parameter.
         allow_colspan = not strict_columns and as_type == 'table'
-        adjust_label_width = getattr(self, 'adjust_label_width', True) and hasattr(self, 'determine_label_width')
-        if as_type == 'table':
-            adjust_label_width = False
-        all_fieldsets = True if as_type == 'fieldset' else False
+        adjust_label_width = False if as_type == 'table' else getattr(self, 'adjust_label_width', True)
+        all_fieldsets = as_type == 'fieldset'
         html_col_tags = (col_head_tag, col_tag, single_col_tag)
         html_args = [row_tag, *html_col_tags, as_type, all_fieldsets]
         col_format, single_col_format = self.column_formats(*html_col_tags, col_head_data, col_data)
         fieldsets = getattr(self, '_fieldsets', None) or self.make_fieldsets()
-        summary = getattr(self, '_fs_summary', None)
+        summary = getattr(self, '_fs_summary', None)  # has: 'top_errors', 'hidden_fields', 'columns'
         if fieldsets[-1][0] == 'summary':
             summary = fieldsets.pop()[1]
-        data_labels = ('top_errors', 'hidden_fields', 'columns')
-        assert isinstance(summary, dict) and all(ea in summary for ea in data_labels), "Malformed fieldsets summary. "
         form_col_count = 1 if all_fieldsets else summary['columns']
         col_double = col_head_tag and as_type == 'table'
         attr_on_lonely_col = bool(col_head_tag or single_col_tag)
