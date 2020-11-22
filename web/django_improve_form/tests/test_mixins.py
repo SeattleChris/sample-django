@@ -1533,10 +1533,54 @@ class FormFieldsetTests(FormTests, TestCase):
     @skip("Not Implemented")
     def test_no_empty_sets_in_computed_fieldsets(self):
         """Any empty fieldset defined in initial fieldset settings are removed in the computed fieldset settings. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # initial: form.fieldsets
-        # computed: form._fieldsets
-        pass
+        original_fieldsets = self.form.fieldsets
+        self.form.fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            ('Non_Fields', {
+                'position': 2,
+                'fields': [
+                    'non-field_name',
+                    'not_a_field'
+                    ],
+            }), )
+        fieldsets = [(label, deepcopy(opts)) for label, opts in self.form.fieldsets if label != 'Non_Fields']
+        remaining_fields = self.form.fields.copy()
+        assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
+        unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
+        remaining_fields.pop('hide_field')
+        opts = {'modifiers': 'prep_remaining', 'position': 'remaining', 'fields': unassigned_field_names}
+        fieldsets.append((None, opts))
+        for fieldset_label, opts in fieldsets:
+            opts['field_names'] = flatten(opts['fields'])
+            rows, column_count = [], 0
+            for names in opts['fields']:
+                if isinstance(names, str):
+                    names = [names]
+                columns = {name: self.form.fields[name] for name in names if name in remaining_fields}
+                # TODO: Remove hidden or otherwise excluded fields.
+                column_count = max(column_count, len(columns))
+                if columns:
+                    rows.append(columns)
+            opts['rows'] = rows
+            opts['column_count'] = column_count
+        self.form.make_fieldsets()
+        actual_fieldsets = self.form._fieldsets
+        self.assertEqual(len(fieldsets), 2)
+        self.assertEqual(len(fieldsets), len(actual_fieldsets))
+        count = 0
+        for expect, got in zip(fieldsets, actual_fieldsets):
+            labels = (expect[0], got[0])
+            labels = str(got[0]) if labels[0] == labels[1] else ' & '.join(str(ea) for ea in labels)
+            fields = (expect[1]['fields'], got[1]['fields'])
+            message = f"Fieldset # {count} named {labels} expected then got: \n{fields[0]} \n{fields[1]}. "
+            self.assertEqual(expect, got, message)
+            count += 1
+        self.assertEqual(fieldsets, actual_fieldsets)
+
+        self.form.fieldsets = original_fieldsets
 
     @skip("Not Implemented")
     def test_computed_fieldsets_structure(self):
