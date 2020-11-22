@@ -1585,10 +1585,69 @@ class FormFieldsetTests(FormTests, TestCase):
     @skip("Not Implemented")
     def test_computed_fieldsets_structure(self):
         """The each fieldset in the computed fieldset settings have all the expected keys in their options. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # initial: form.fieldsets
-        # computed: form._fieldsets
-        pass
+        original_fieldsets = self.form.fieldsets
+        self.form.fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'not_third',
+                    'not_fourth',
+                    'last',
+                    ],
+            }),
+            ('Non_Fields', {
+                'position': 3,
+                'fields': [
+                    'non-field_name',
+                    'not_a_field'
+                    ],
+            }),
+            (None, {
+                'position': None,
+                # 'modifiers': ['password_display', ],
+                'fields': [
+                    # ('password1', 'password2', ),
+                    'generic_field',
+                    'bool_field',
+                    'single_check'
+                ]
+            }),
+            ('address', {
+                'classes': ('collapse', 'address', ),
+                # 'modifiers': ['address', 'prep_country_fields', ],
+                'position': 'end',
+                'fields': [
+                    'billing_address_1',
+                    'billing_address_2',
+                    ('billing_city', 'billing_country_area', 'billing_postcode', ),
+                    ],
+            }), )
+        self.form.make_fieldsets()
+        fieldsets = self.form._fieldsets
+        each_are_tuples = (isinstance(ea, tuple) for ea in fieldsets)
+        correct_fieldset_labels = (isinstance(label, (str, type(None))) for label, opts in fieldsets)
+        opts_are_dictionaries = (isinstance(opts, dict) for label, opts in fieldsets)
+        required_keys = {'position', 'fields', 'field_names', 'rows', 'column_count', }
+        optional_keys = {'classes', 'modifiers', 'row_data', }
+        allowed_keys = required_keys | optional_keys
+        opt_keys = set(flatten([list(opts.keys()) for lbl, opts, in fieldsets]))
+        unaccepted_keys = [key for key in opt_keys if key not in allowed_keys]
+        has_required = (all(key in opts for key in required_keys) for lbl, opts in fieldsets)
+        self.assertIsInstance(fieldsets, list)
+        self.assertTrue(all(each_are_tuples))
+        self.assertTrue(all(correct_fieldset_labels))
+        self.assertTrue(all(opts_are_dictionaries))
+        self.assertEqual(len(unaccepted_keys), 0)
+        self.assertFalse(unaccepted_keys)
+        self.assertTrue(all(has_required))
+
+        self.form.fieldsets = original_fieldsets
 
     def test_raises_if_missed_fields(self):
         """The make_fieldsets method raises ImproperlyConfigured if somehow some fields are not accounted for. """
