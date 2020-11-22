@@ -861,7 +861,7 @@ class FormFieldsetMixIn:
             styled_labels = [name for name, field in visual_group]
         return label_attrs_dict, styled_labels
 
-    def make_fieldsets(self, *fs_args, **kwargs):
+    def make_fieldsets(self, *fs_args, update_form=True, **kwargs):
         """Updates the dictionaries of each fieldset with 'rows' of field dicts, and a flattend 'field_names' list. """
         if hasattr(self, 'prep_fields'):
             self.fields = self.prep_fields()
@@ -883,7 +883,7 @@ class FormFieldsetMixIn:
             field_rows = []
             for ea in opts['fields']:
                 row = [ea] if isinstance(ea, str) else ea
-                existing_fields = {}
+                current_fields = {}
                 for name in row:
                     # It may be a specially coded input
                     if name.startswith('_') and hasattr(self, name[1:]):
@@ -901,9 +901,9 @@ class FormFieldsetMixIn:
                                     for e in bf_errors])
                         hidden_fields.append(str(bf))
                     else:
-                        existing_fields[name] = field
-                if existing_fields:  # only adding non-empty rows. May be empty if these fields are not in current form.
-                    field_rows.append(existing_fields)
+                        current_fields[name] = field
+                if current_fields:  # only adding non-empty rows. May be empty if these fields are not in current form.
+                    field_rows.append(current_fields)
             if field_rows:
                 if hasattr(self, 'handle_modifiers'):  # from FormOverrideMixIn
                     args = [opts, field_rows, remaining_fields, *fs_args]
@@ -919,7 +919,7 @@ class FormFieldsetMixIn:
                 remove_idx.append(index)
         for index in reversed(remove_idx):
             fieldsets.pop(index)
-        max_position += 1
+        max_position += 1  # Possibly adds an extra unneeded space.
         if len(remaining_fields):  # Probably only if self.handle_modifiers unexpectedly added fields.
             raise ImproperlyConfigured(_("Some unassigned fields, perhaps some added during make_fieldset. "))
         lookup = {'end': max_position + 2, 'remaining': max_position + 1, None: max_position}
@@ -927,8 +927,9 @@ class FormFieldsetMixIn:
                      key=lambda ea: lookup.get(ea[1]['position'], ea[1]['position']))
                      ]
         summary = {'top_errors': top_errors, 'hidden_fields': hidden_fields, 'columns': form_column_count}
-        self._fieldsets = fieldsets.copy()
-        self._fs_summary = summary
+        if update_form:
+            self._fieldsets = fieldsets.copy()
+            self._fs_summary = summary
         fieldsets.append(('summary', summary, ))
         return fieldsets
 
