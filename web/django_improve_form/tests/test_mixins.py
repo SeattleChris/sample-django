@@ -1395,13 +1395,30 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fieldsets = original_fieldsets
 
-    @skip("Not Implemented")
     def test_top_errors_has_hidden_field_errors(self):
         """The make_fieldsets appends the top_errors with any errors found for hidden fields. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # top_errors = self.non_field_errors().copy()  # If data not submitted, this will trigger full_clean method.
-        # The hidden field errors are not in non_field_errors, but are only added to the the HTML result.
-        pass
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form._errors = ErrorDict()
+        self.form.cleaned_data = {}
+        name = 'hide_field'
+        test_error = "This is a test error. "
+        expected = self.form.error_class(error_class='nonfield')
+        expected.append(f'(Hidden field {name}) {test_error}')
+        self.form.add_error(name, test_error)
+        self.form.make_fieldsets()
+        top_errors = self.form._fs_summary['top_errors']
+
+        self.assertIn(name, self.form._errors)
+        self.assertEqual(expected, top_errors)
+        self.assertIsNotNone(getattr(self.form, '_fieldsets', None))
+
+        self.form.cleaned_data = original_cleaned_data
+        self.form._errors = original_errors
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
     def test_make_fieldsets_uses_handle_modifiers(self):
         """The make_fieldsets method calls the handle_modifiers method (from FormOverrideMixIn) if it is present. """
@@ -1418,70 +1435,316 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.called_handle_modifiers = original_called_handle_modifiers
 
-    @skip("Not Implemented")
     def test_make_fieldsets_saves_results(self):
         """The make_fieldsets method saves the computed fieldsets to form._fieldsets, and saves a form._fs_summary. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # initial: form.fieldsets
-        # computed: form._fieldsets
-        # summary: form._fs_summary
-        pass
+        original_initial_fieldsets = getattr(self.form, 'fieldsets', None)
+        initial_fieldsets = deepcopy(original_initial_fieldsets)
+        original_computed_fieldsets = getattr(self.form, '_fieldsets', None)
+        original_summary = getattr(self.form, '_fs_summary', None)
+        self.assertIsNotNone(original_initial_fieldsets)
+        self.assertIsNone(original_computed_fieldsets)
+        self.assertIsNone(original_summary)
+        response_fieldsets = self.form.make_fieldsets()
+        label, summary = response_fieldsets.pop()
+        self.assertIsNotNone(self.form._fieldsets)
+        self.assertIsNotNone(self.form._fs_summary)
+        self.assertEqual('summary', label)
+        self.assertEqual(summary, self.form._fs_summary)
+        self.assertEqual(response_fieldsets, self.form._fieldsets)
+        self.assertEqual(initial_fieldsets, self.form.fieldsets)
+
+        self.form.fieldsets = original_initial_fieldsets
+        self.form._fieldsets = original_computed_fieldsets
+        self.form._fs_summary = original_summary
+        if original_computed_fieldsets is None:
+            del self.form._fieldsets
+        if original_summary is None:
+            del self.form._fs_summary
 
     @skip("Not Implemented")
+    def test_missing_initial_fieldsets(self):
+        """If initial fieldsets is not defined, warning is raised. """
+        original_initial_fieldsets = self.form.fieldsets
+        delattr(self.form, 'fieldsets')
+        print("========================= TEST TEST TEST ========================")
+        response_fieldsets = self.form.make_fieldsets()
+        print(response_fieldsets)
+
+        setattr(self.form, 'fieldsets', original_initial_fieldsets)
+
     def test_no_empty_rows_in_computed_fieldsets(self):
         """Any empty rows defined in the initial fieldset settings are removed in the computed fieldset settings. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # initial: form.fieldsets
-        # computed: form._fieldsets
-        pass
+        original_fieldsets = self.form.fieldsets
+        self.form.fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'not_a_field',
+                    ('last_name', 'another_field', ),
+                    ('first_name', 'non-field_name', ),
+                    'generic_field',
+                    'last',
+                    ],
+            }), )
+        fieldsets = [(label, deepcopy(opts)) for label, opts in self.form.fieldsets]
+        remaining_fields = self.form.fields.copy()
+        assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
+        unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
+        remaining_fields.pop('hide_field')
+        opts = {'modifiers': 'prep_remaining', 'position': 'remaining', 'fields': unassigned_field_names}
+        fieldsets.append((None, opts))
+        for fieldset_label, opts in fieldsets:
+            opts['field_names'] = flatten(opts['fields'])
+            rows, column_count = [], 0
+            for names in opts['fields']:
+                if isinstance(names, str):
+                    names = [names]
+                columns = {name: remaining_fields.pop(name) for name in names if name in remaining_fields}
+                # TODO: Remove hidden or otherwise excluded fields.
+                column_count = max(column_count, len(columns))
+                if columns:
+                    rows.append(columns)
+            opts['rows'] = rows
+            opts['column_count'] = column_count
+        self.form.make_fieldsets()
+        actual_fieldsets = self.form._fieldsets
+        self.assertEqual(len(fieldsets), 3)
+        self.assertEqual(len(fieldsets[1][1]['rows']), 4)
+        self.assertEqual(len(fieldsets), len(actual_fieldsets))
+        count = 0
+        for expect, got in zip(fieldsets, actual_fieldsets):
+            labels = str(got[0]) if expect[0] == got[0] else ' & '.join(str(ea) for ea in (expect[0], got[0]))
+            expect_row_names = flatten([list(ea.keys()) for ea in expect[1]['rows']])
+            actual_row_names = flatten([list(ea.keys()) for ea in got[1]['rows']])
+            row_names = str(expect_row_names) + '\n' + str(actual_row_names)
+            message = f"Fieldset # {count} named {labels} expected then got: \n{row_names}"
+            self.assertEqual(expect, got, message)
+            count += 1
+        self.assertEqual(fieldsets, actual_fieldsets)
 
-    @skip("Not Implemented")
+        self.form.fieldsets = original_fieldsets
+
     def test_no_empty_sets_in_computed_fieldsets(self):
         """Any empty fieldset defined in initial fieldset settings are removed in the computed fieldset settings. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # initial: form.fieldsets
-        # computed: form._fieldsets
-        pass
+        original_fieldsets = self.form.fieldsets
+        self.form.fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            ('Non_Fields', {
+                'position': 2,
+                'fields': [
+                    'non-field_name',
+                    'not_a_field'
+                    ],
+            }), )
+        fieldsets = [(label, deepcopy(opts)) for label, opts in self.form.fieldsets if label != 'Non_Fields']
+        remaining_fields = self.form.fields.copy()
+        assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
+        unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
+        remaining_fields.pop('hide_field')
+        opts = {'modifiers': 'prep_remaining', 'position': 'remaining', 'fields': unassigned_field_names}
+        fieldsets.append((None, opts))
+        for fieldset_label, opts in fieldsets:
+            opts['field_names'] = flatten(opts['fields'])
+            rows, column_count = [], 0
+            for names in opts['fields']:
+                if isinstance(names, str):
+                    names = [names]
+                columns = {name: self.form.fields[name] for name in names if name in remaining_fields}
+                # TODO: Remove hidden or otherwise excluded fields.
+                column_count = max(column_count, len(columns))
+                if columns:
+                    rows.append(columns)
+            opts['rows'] = rows
+            opts['column_count'] = column_count
+        self.form.make_fieldsets()
+        actual_fieldsets = self.form._fieldsets
+        self.assertEqual(len(fieldsets), 2)
+        self.assertEqual(len(fieldsets), len(actual_fieldsets))
+        count = 0
+        for expect, got in zip(fieldsets, actual_fieldsets):
+            labels = str(got[0]) if expect[0] == got[0] else ' & '.join(str(ea) for ea in (expect[0], got[0]))
+            expect_row_names = flatten([list(ea.keys()) for ea in expect[1]['rows']])
+            actual_row_names = flatten([list(ea.keys()) for ea in got[1]['rows']])
+            row_names = str(expect_row_names) + '\n' + str(actual_row_names)
+            message = f"Fieldset # {count} named {labels} expected then got: \n{row_names}"
+            self.assertEqual(expect, got, message)
+            count += 1
+        self.assertEqual(fieldsets, actual_fieldsets)
 
-    @skip("Not Implemented")
+        self.form.fieldsets = original_fieldsets
+
     def test_computed_fieldsets_structure(self):
         """The each fieldset in the computed fieldset settings have all the expected keys in their options. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # initial: form.fieldsets
-        # computed: form._fieldsets
-        pass
+        original_fieldsets = self.form.fieldsets
+        self.form.fieldsets = (
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'not_third',
+                    'not_fourth',
+                    'last',
+                    ],
+            }),
+            ('Non_Fields', {
+                'position': 3,
+                'fields': [
+                    'non-field_name',
+                    'not_a_field'
+                    ],
+            }),
+            (None, {
+                'position': None,
+                # 'modifiers': ['password_display', ],
+                'fields': [
+                    # ('password1', 'password2', ),
+                    'generic_field',
+                    'bool_field',
+                    'single_check'
+                ]
+            }),
+            ('address', {
+                'classes': ('collapse', 'address', ),
+                # 'modifiers': ['address', 'prep_country_fields', ],
+                'position': 'end',
+                'fields': [
+                    'billing_address_1',
+                    'billing_address_2',
+                    ('billing_city', 'billing_country_area', 'billing_postcode', ),
+                    ],
+            }), )
+        self.form.make_fieldsets()
+        fieldsets = self.form._fieldsets
+        each_are_tuples = (isinstance(ea, tuple) for ea in fieldsets)
+        correct_fieldset_labels = (isinstance(label, (str, type(None))) for label, opts in fieldsets)
+        opts_are_dictionaries = (isinstance(opts, dict) for label, opts in fieldsets)
+        required_keys = {'position', 'fields', 'field_names', 'rows', 'column_count', }
+        optional_keys = {'classes', 'modifiers', 'row_data', }
+        allowed_keys = required_keys | optional_keys
+        opt_keys = set(flatten([list(opts.keys()) for lbl, opts, in fieldsets]))
+        unaccepted_keys = [key for key in opt_keys if key not in allowed_keys]
+        has_required = (all(key in opts for key in required_keys) for lbl, opts in fieldsets)
+        self.assertIsInstance(fieldsets, list)
+        self.assertTrue(all(each_are_tuples))
+        self.assertTrue(all(correct_fieldset_labels))
+        self.assertTrue(all(opts_are_dictionaries))
+        self.assertEqual(len(unaccepted_keys), 0)
+        self.assertFalse(unaccepted_keys)
+        self.assertTrue(all(has_required))
 
-    # @skip("Not Implemented")
+        self.form.fieldsets = original_fieldsets
+
     def test_raises_if_missed_fields(self):
         """The make_fieldsets method raises ImproperlyConfigured if somehow some fields are not accounted for. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
         # Probably only if self.handle_modifiers unexpectedly added fields.
         name = 'second'
+        self.form.called_handle_modifiers = False
         remove = {'remove_field': name}
-        self.form.handle_modifiers({}, [], remove)
-        print("================== TEST RAISE ERROR CORRECTLY ======================")
-        print(self.form.hold_field)
+        self.form.handle_modifiers({}, [], **remove)
         self.assertNotIn(name, self.form.fields)
         self.assertIn(name, self.form.hold_field)
-        message = "Some unassigned fields, perhaps some added during make_fieldset. "
+        message = "Some unassigned fields, perhaps some added during handle_modifiers. "
         with self.assertRaisesMessage(ImproperlyConfigured, message):
             self.form.make_fieldsets(add_field=name)
+        self.form.called_handle_modifiers = False
 
-    @skip("Not Implemented")
     def test_make_fieldsets_outcome_order(self):
         """The make_fieldsets method assigns and sorts according to the expected order. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # initial: form.fieldsets. ((label, {'position': <int> or 'end' or None}))
-        # lookup = {'end': max_position + 2, 'remaining': max_position + 1, None: max_position}
-        pass
+        original_fieldsets = self.form.fieldsets
+        self.form.fieldsets = (
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'last',
+                    ],
+            }),
+            ('Non_Fields', {
+                'position': 3,
+                'fields': [
+                    'non-field_name',
+                    'not_a_field'
+                    ],
+            }),
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'position': None,
+                'fields': [
+                    'generic_field',
+                    'bool_field',
+                    'single_check'
+                ]
+            }),
+            ('address', {
+                'classes': ('collapse', 'address', ),
+                # 'modifiers': ['address', 'prep_country_fields', ],
+                'position': 'end',
+                'fields': [
+                    'billing_address_1',
+                    'billing_address_2',
+                    ('billing_city', 'billing_country_area', 'billing_postcode', ),
+                    ],
+            }), )
+        fieldsets = [(label, deepcopy(opts)) for label, opts in self.form.fieldsets if label != 'Non_Fields']
+        fieldsets[0], fieldsets[1] = fieldsets[1], fieldsets[0]
+        remaining_fields = self.form.fields.copy()
+        assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
+        unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
+        remaining_fields.pop('hide_field')
+        address_fieldset = fieldsets.pop()
+        opts = {'modifiers': 'prep_remaining', 'position': 'remaining', 'fields': unassigned_field_names}
+        fieldsets.append((None, opts))
+        fieldsets.append(address_fieldset)
+        for fieldset_label, opts in fieldsets:
+            opts['field_names'] = flatten(opts['fields'])
+            rows, column_count = [], 0
+            for names in opts['fields']:
+                if isinstance(names, str):
+                    names = [names]
+                columns = {name: self.form.fields[name] for name in names if name in remaining_fields}
+                # TODO: Remove hidden or otherwise excluded fields.
+                column_count = max(column_count, len(columns))
+                if columns:
+                    rows.append(columns)
+            opts['rows'] = rows
+            opts['column_count'] = column_count
+        self.form.make_fieldsets()
+        actual_fieldsets = self.form._fieldsets
+        self.assertEqual(len(fieldsets), 5)
+        self.assertEqual(len(fieldsets), len(actual_fieldsets))
+        count = 0
+        for expect, got in zip(fieldsets, actual_fieldsets):
+            labels = str(got[0]) if expect[0] == got[0] else ' & '.join(str(ea) for ea in (expect[0], got[0]))
+            expect_row_names = flatten([list(ea.keys()) for ea in expect[1]['rows']])
+            actual_row_names = flatten([list(ea.keys()) for ea in got[1]['rows']])
+            row_names = str(expect_row_names) + '\n' + str(actual_row_names)
+            message = f"Fieldset # {count} named {labels} expected then got: \n{row_names}"
+            self.assertEqual(expect, got, message)
+            count += 1
+        self.assertEqual(fieldsets, actual_fieldsets)
 
-    # @skip("Not Implemented")
-    def test_happy_path_make_fieldsets(self):
+        self.form.fieldsets = original_fieldsets
+
+    def test_overall_make_fieldsets(self):
         """The make_fieldsets method returns the expected response. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # computed: form._fieldsets
-        # summary: form._fs_summary
-        # result: form._fieldsets.update(form._fs_summary)
         original_fieldsets = self.form.fieldsets
         self.form.fieldsets = (
             ('Your Name', {
@@ -1526,12 +1789,10 @@ class FormFieldsetTests(FormTests, TestCase):
                     ],
             }), )
         fieldsets = [(label, deepcopy(opts)) for label, opts in self.form.fieldsets if label != 'Non_Fields']
-        # print("========================= TEMP LOG TEST =============================")
         remaining_fields = self.form.fields.copy()
         assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
         unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
         remaining_fields.pop('hide_field')
-        # print("Hide in unassigned: ", 'hide_field' in unassigned_field_names)
         address_fieldset = fieldsets.pop()
         opts = {'modifiers': 'prep_remaining', 'position': 'remaining', 'fields': unassigned_field_names}
         fieldsets.append((None, opts))
@@ -1542,9 +1803,9 @@ class FormFieldsetTests(FormTests, TestCase):
             for names in opts['fields']:
                 if isinstance(names, str):
                     names = [names]
-                column_count = max(column_count, len(names))
                 columns = {name: self.form.fields[name] for name in names if name in remaining_fields}
                 # TODO: Remove hidden or otherwise excluded fields.
+                column_count = max(column_count, len(columns))
                 if columns:
                     rows.append(columns)
             opts['rows'] = rows
@@ -1554,18 +1815,12 @@ class FormFieldsetTests(FormTests, TestCase):
         self.assertEqual(len(fieldsets), 5)
         self.assertEqual(len(fieldsets), len(actual_fieldsets))
         count = 0
-        # print("*************** Expect and Got ********************")
         for expect, got in zip(fieldsets, actual_fieldsets):
-            # # print(expect[1]['field_names'])
-            # print([tuple(row.keys()) for row in expect[1]['rows']])
-            # print("--------------------------")
-            # print([tuple(row.keys()) for row in got[1]['rows']])
-            # # print(got[1]['field_names'])
-            # print("*********************************************")
-            labels = (expect[0], got[0])
-            labels = str(got[0]) if labels[0] == labels[1] else ' & '.join(str(ea) for ea in labels)
-            fields = (expect[1]['fields'], got[1]['fields'])
-            message = f"Fieldset # {count} named {labels} expected then got: \n{fields[0]} \n{fields[1]}. "
+            labels = str(got[0]) if expect[0] == got[0] else ' & '.join(str(ea) for ea in (expect[0], got[0]))
+            expect_row_names = flatten([list(ea.keys()) for ea in expect[1]['rows']])
+            actual_row_names = flatten([list(ea.keys()) for ea in got[1]['rows']])
+            row_names = str(expect_row_names) + '\n' + str(actual_row_names)
+            message = f"Fieldset # {count} named {labels} expected then got: \n{row_names}"
             self.assertEqual(expect, got, message)
             count += 1
         self.assertEqual(fieldsets, actual_fieldsets)
@@ -1872,16 +2127,44 @@ class FormFieldsetTests(FormTests, TestCase):
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         pass
 
-    @skip("Redundant? Not Implemented")
-    def test_top_errors_at_top(self):
-        """The FormFieldsetMixIn._html_output method mimics the default behavior for including top_errors. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        pass
+    def test_top_errors_at_top_html(self):
+        """The FormFieldsetMixIn new _html_output method mimics the default behavior for including top_errors. """
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form._errors = ErrorDict()
+        self.form.cleaned_data = {}
+        test_error = "This non-field error is placed here just to pick on you. "
+        self.form.add_error(None, test_error)
+        self.form.make_fieldsets()
+        row_tag = 'p'
+        html_output = self.form._html_output_new(  # replicates as_p()
+            row_tag=row_tag,
+            col_head_tag=None,
+            col_tag='span',
+            single_col_tag='',
+            col_head_data='',
+            col_data='%(label)s %(field)s%(help_text)s',
+            help_text_br=False,
+            errors_on_separate_row=True,
+            as_type='p'
+        )
+        html_rows = html_output.split('\n')
+        actual_top_html = html_rows[0]
+        expected_top_html = self.form._html_tag(row_tag, test_error, ' id="top_errors"')
+
+        self.assertIn(NON_FIELD_ERRORS, self.form._errors)
+        self.assertEqual(expected_top_html, actual_top_html)
+
+        self.form.cleaned_data = original_cleaned_data
+        self.form._errors = original_errors
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
     @skip("Redundant? Not Implemented")
     def test_hidden_fields_at_bottom(self):
-        """The FormFieldsetMixIn._html_output method mimics the default behavior for including hidden fields. """
+        """The FormFieldsetMixIn new _html_output method mimics the default behavior for including hidden fields. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         pass

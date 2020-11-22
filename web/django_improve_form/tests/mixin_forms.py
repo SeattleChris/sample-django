@@ -125,6 +125,7 @@ class FormFieldsetForm(FormFieldsetMixIn, Form):
     adjust_label_width = False
     called_prep_fields = False
     called_handle_modifiers = False
+    hold_field = {}
     name_for_coded = 'generic_field'  # Used for testing if 'coded' fieldset fieldnames work as needed.
 
     def prep_fields(self):
@@ -135,17 +136,17 @@ class FormFieldsetForm(FormFieldsetMixIn, Form):
     def handle_modifiers(self, opts, *args, **kwargs):
         """This is a placeholder to mock when FormOverrideMixIn is combined with this FormFieldsetMixIn. """
         self.called_handle_modifiers = True
-        remove_field = kwargs.get('remove_field', None)
-        add_field = kwargs.get('add_field', None)
-        if remove_field:
-            self.hold_field = {remove_field: self.fields.pop(remove_field)}
-        if add_field:
-            self.fields.update({add_field: self.hold_field.pop(add_field)})
-        fix_fields = getattr(self, 'hold_field', None)
-        if fix_fields:
+        remove_name = kwargs.pop('remove_field', None)
+        add_name = kwargs.pop('add_field', None)
+        if remove_name:
+            self.hold_field.update({remove_name: self.fields.pop(remove_name)})
+        if add_name:
+            if add_name not in self.hold_field:
+                raise ValueError(f"Unable to retrieve {add_name} from {self.hold_field}")
+            found = {add_name: self.hold_field.pop(add_name)}
             field_rows, remaining_fields, *fs_args = args
-            remaining_fields.update(fix_fields)
-            self.form.fields.update(fix_fields)
+            remaining_fields.update(found)
+            self.fields.update(found)
             args = (field_rows, remaining_fields, *fs_args)
         return (opts, *args, kwargs)
 
