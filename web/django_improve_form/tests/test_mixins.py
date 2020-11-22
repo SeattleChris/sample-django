@@ -2048,6 +2048,32 @@ class FormFieldsetTests(FormTests, TestCase):
         # columns_data.append(col_html % format_kwargs)
         pass
 
+    # @skip("Redundant. Not Implemented")
+    def test_html_output_formfieldset_use_focus_if_present(self):
+        """The FormFieldsetMixIn new _html_output method will call assign_focus_field method if present. """
+        original_focus_called = self.form.called_assign_focus_field
+        for as_type in ('as_p', 'as_ul', 'as_table', 'as_fieldset'):
+            self.form.called_assign_focus_field = False
+            html_output = getattr(self.form, as_type)()
+            message = "The FormFieldsetMixIn new _html_output failed on {}".format(as_type)
+            self.assertTrue(self.form.called_assign_focus_field, message)
+            self.assertIsNotNone(html_output)
+
+        self.form.called_assign_focus_field = original_focus_called
+
+    # @skip("Redundant. Not Implemented")
+    def test_html_output_use_focus_if_present(self):
+        """The default _html_output method will call assign_focus_field method if present. """
+        original_focus_called = self.form.called_assign_focus_field
+        for as_type in ('as_p', 'as_ul', 'as_table', 'as_fieldset'):
+            self.form.called_assign_focus_field = False
+            html_output = getattr(self.form, as_type + '_old')()
+            message = "The FormFieldsetMixIn OLD _html_output failed on {}".format(as_type)
+            self.assertTrue(self.form.called_assign_focus_field, message)
+            self.assertIsNotNone(html_output)
+
+        self.form.called_assign_focus_field = original_focus_called
+
     def test_html_output_label_attrs_table(self):
         """For as_type='table', regardless of other settings, the 'determine_label_width' method is not called. """
         self.label_calls = []
