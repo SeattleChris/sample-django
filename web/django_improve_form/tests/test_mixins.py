@@ -2127,6 +2127,28 @@ class FormFieldsetTests(FormTests, TestCase):
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         pass
 
+    def test_html_output_label_attrs_table(self):
+        """For as_type='table', regardless of other settings, the 'determine_label_width' method is not called. """
+        self.label_calls = []
+        def fake_label_width(rows): self.label_calls.append(rows); return {}, []
+        original_adjust_label_width = self.form.adjust_label_width
+        self.form.adjust_label_width = True
+        original_label_method = self.form.determine_label_width
+        self.form.determine_label_width = fake_label_width
+        collected = []
+        for as_type in ('as_p', 'as_ul', 'as_table', 'as_fieldset'):
+            collected.append({'type': as_type, 'html': getattr(self.form, as_type)(), 'calls': self.label_calls})
+            self.label_calls = []
+        expected = [opts['rows'] for lbl, opts in self.form._fieldsets]
+        for ea in collected:
+            expect = [] if ea['type'] == 'as_table' else expected
+            message = f"Mismatch for {ea['type']} html_output. "
+            self.assertEqual(expect, ea['calls'], message)
+
+        self.form.determine_label_width = original_label_method
+        self.form.adjust_label_width = original_adjust_label_width
+        del self.label_calls
+
     def test_top_errors_at_top_html(self):
         """The FormFieldsetMixIn new _html_output method mimics the default behavior for including top_errors. """
         original_errors = getattr(self.form, '_errors', None)
