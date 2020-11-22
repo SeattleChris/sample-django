@@ -77,7 +77,10 @@ class FocusMixIn:
     def assign_focus_field(self, name=None, fields=None):
         """Autofocus only on the non-hidden, non-disabled named or first form field from the given or self fields. """
         name = name() if callable(name) else name
-        fields = {name: self.fields[name] for name in fields if name in self.fields} if fields else self.fields
+        if fields:
+            fields = {name: self.fields[name] for name in fields if name in self.fields}
+        else:
+            fields = self.fields
         found = fields.get(name, None) if name else None
         found_name = name if found else None
         if found and (found.disabled or isinstance(found.widget, (HiddenInput, MultipleHiddenInput))):
@@ -1090,6 +1093,12 @@ class FormFieldsetMixIn:
             row_data.extend(row)
         # end iterating field rows within the individual fieldset.
         return row_data
+
+    def _html_output(self, *args, **kwargs):
+        if hasattr(self, 'assign_focus_field'):
+            self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
+        content = super()._html_output(*args, **kwargs)
+        return content
 
     def _html_output_new(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
                          help_text_br, errors_on_separate_row, as_type=None, strict_columns=False):
