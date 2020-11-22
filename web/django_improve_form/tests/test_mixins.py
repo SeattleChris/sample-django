@@ -2042,10 +2042,10 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.called_assign_focus_field = original_focus_called
 
-    def test_html_output_use_focus_if_present(self):
+    def test_html_output_default_use_focus_if_present(self):
         """The default _html_output method will call assign_focus_field method if present. """
         original_focus_called = self.form.called_assign_focus_field
-        for as_type in ('as_p', 'as_ul', 'as_table', 'as_fieldset'):
+        for as_type in ('as_p', 'as_ul', 'as_table'):
             self.form.called_assign_focus_field = False
             html_output = getattr(self.form, as_type + '_old')()
             message = "The FormFieldsetMixIn OLD _html_output failed on {}".format(as_type)
