@@ -1143,16 +1143,15 @@ class FormFieldsetTests(FormTests, TestCase):
         if len(names) > 1:
             double_row = {name: self.form.fields[name] for name in names[:2]}
             field_rows.append(double_row)
-        expected = ({}, [])
+        expected = {}
         actual = self.form.determine_label_width(field_rows)
-
         self.assertEqual(expected, actual)
 
     def test_not_adjust_label_width(self):
         """The determine_label_width method returns empty values if form.adjust_label_width is not True. """
         original_setting = self.form.adjust_label_width
         self.form.adjust_label_width = False
-        expected = ({}, [])
+        expected = {}
         actual = self.form.determine_label_width(self.form.fields)
         self.assertFalse(self.form.adjust_label_width)
         self.assertEqual(expected, actual)
@@ -1174,7 +1173,7 @@ class FormFieldsetTests(FormTests, TestCase):
         self.form.adjust_label_width = True
         allowed = self.get_allowed_width_fields()
         reject_fields = {name: field for name, field in self.form.fields.items() if name not in allowed}
-        expected = ({}, [])
+        expected = {}
         actual = self.form.determine_label_width(reject_fields)
         self.assertEqual(expected, actual)
         self.form.adjust_label_width = original_setting
@@ -1206,9 +1205,10 @@ class FormFieldsetTests(FormTests, TestCase):
         full_label_width = (max(len(ea) for ea in labels) + 1) // 2  # * 0.85 ch
         word_width = max(len(word) for label in labels for word in label.split()) // 2
         expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(word_width)}
+        expected_attrs = {name: expected_attrs for name in allowed_fields}
         max_width = word_width + 1
         self.form.max_label_width = max_width
-        actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
+        actual_attrs = self.form.determine_label_width(self.form.fields)
 
         self.assertLess(max_width, full_label_width)
         self.assertEqual(expected_attrs, actual_attrs)
@@ -1225,9 +1225,10 @@ class FormFieldsetTests(FormTests, TestCase):
         labels = [field.label or pretty_name(name) for name, field in allowed_fields.items()]
         full_label_width = (max(len(ea) for ea in labels) + 1) // 2  # * 0.85 ch
         expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(full_label_width)}
+        expected_attrs = {name: expected_attrs for name in allowed_fields}
         max_width = full_label_width + 5
         self.form.max_label_width = max_width
-        actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
+        actual_attrs = self.form.determine_label_width(self.form.fields)
 
         self.assertGreater(max_width, full_label_width)
         self.assertEqual(expected_attrs, actual_attrs)
@@ -1246,12 +1247,13 @@ class FormFieldsetTests(FormTests, TestCase):
         word_width = max(len(word) for label in labels for word in label.split()) // 2
         expected_width = full_width if full_width < self.form.max_label_width else word_width
         expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(expected_width)}
-        expected_names = list(test_fields.keys())
-        actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
+        # expected_names = list(test_fields.keys())
+        expected_attrs = {name: expected_attrs for name in list(test_fields.keys())}
+        actual_attrs = self.form.determine_label_width(self.form.fields)
 
         self.assertLess(word_width, self.form.max_label_width)
         self.assertEqual(expected_attrs, actual_attrs)
-        self.assertEqual(expected_names, actual_names)
+        # self.assertEqual(expected_names, actual_names)
 
         self.form.adjust_label_width = original_setting
 
@@ -2044,7 +2046,7 @@ class FormFieldsetTests(FormTests, TestCase):
     def test_html_output_label_attrs_table(self):
         """For as_type='table', regardless of other settings, the 'determine_label_width' method is not called. """
         self.label_calls = []
-        def fake_label_width(rows): self.label_calls.append(rows); return {}, []
+        def fake_label_width(rows): self.label_calls.append(rows); return {}
         original_adjust_label_width = self.form.adjust_label_width
         self.form.adjust_label_width = True
         original_label_method = self.form.determine_label_width
