@@ -430,38 +430,44 @@ class FormTests:
     def test_as_table(self, output=None, form=None):
         """All forms should return HTML table rows when .as_table is called. """
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
-        setup['as_type'] = 'as_table'
+        setup['as_type'] = as_type = 'as_table'
         setup['form'] = form or self.form
         output = output or setup['form'].as_table().strip()
         expected = self.get_expected_format(setup)
+        errors = []
         if output != expected:
-            self.log_html_diff(expected, output, as_type='as_table', full=False)
+            errors = self.log_html_diff(expected, output, as_type=as_type, full=False)
+        message = "Suite {}, had {} lines of HTML errors for {} ".format(self.__class__.__name__, len(errors), as_type)
         self.assertNotEqual('', output)
-        self.assertEqual(expected, output)
+        self.assertEqual(expected, output, message)
 
     def test_as_ul(self, output=None, form=None):
         """All forms should return HTML <li>s when .as_ul is called. """
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
-        setup['as_type'] = 'as_ul'
+        setup['as_type'] = as_type = 'as_ul'
         setup['form'] = form or self.form
         output = output or setup['form'].as_ul().strip()
         expected = self.get_expected_format(setup)
+        errors = []
         if output != expected:
-            self.log_html_diff(expected, output, as_type='as_ul', full=False)
+            errors = self.log_html_diff(expected, output, as_type=as_type, full=False)
+        message = "Suite {}, had {} lines of HTML errors for {} ".format(self.__class__.__name__, len(errors), as_type)
         self.assertNotEqual('', output)
-        self.assertEqual(expected, output)
+        self.assertEqual(expected, output, message)
 
     def test_as_p(self, output=None, form=None):
         """All forms should return HTML <p>s when .as_p is called. """
         setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
-        setup['as_type'] = 'as_p'
+        setup['as_type'] = as_type = 'as_p'
         setup['form'] = form or self.form
         output = output or setup['form'].as_p().strip()
         expected = self.get_expected_format(setup)
+        errors = []
         if output != expected:
-            self.log_html_diff(expected, output, as_type='as_p', full=False)
+            errors = self.log_html_diff(expected, output, as_type=as_type, full=False)
+        message = "Suite {}, had {} lines of HTML errors for {} ".format(self.__class__.__name__, len(errors), as_type)
         self.assertNotEqual('', output)
-        self.assertEqual(expected, output)
+        self.assertEqual(expected, output, message)
 
     @skip("Not Implemented")
     def test_html_output(self):
