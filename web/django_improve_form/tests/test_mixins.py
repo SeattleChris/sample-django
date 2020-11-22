@@ -2111,12 +2111,16 @@ class FormFieldsetTests(FormTests, TestCase):
         if original_cleaned_data is None:
             del self.form.cleaned_data
 
-    @skip("Not Implemented")
     def test_hidden_fields_at_bottom(self):
         """The FormFieldsetMixIn new _html_output method mimics the default behavior for including hidden fields. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        pass
+        hidden_fields = self.form.hidden_fields()  # The boundfield objects for all hidden fields.
+        str_hidden = ''.join(str(bf) for bf in hidden_fields)
+        self.assertTrue(str_hidden, "There are no hidden fields to confirm they were included correctly. ")
+        for as_type in ('as_p', 'as_ul', 'as_table', 'as_fieldset'):
+            output = getattr(self.form, as_type)()
+            last_row = output.split('\n')[-1]
+            message = "The hidden field content was not in the final row of HTML. "
+            self.assertIn(str_hidden, last_row, message)
 
     @skip("Redundant? Not Implemented")
     def test_as_fieldset(self):
