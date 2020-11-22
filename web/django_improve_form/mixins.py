@@ -831,14 +831,14 @@ class FormFieldsetMixIn:
         return (opts, field_rows, remaining_fields, *args, kwargs)
 
     def determine_label_width(self, field_rows):
-        """Returns a attr_dict and list of names of fields whose labels should apply these attributes. """
+        """Returns a dict of field names and the HTML formatting attributes to apply to their HTML label element. """
         if isinstance(field_rows, dict):  # such as self.fields
             single_field_rows = [{name: field} for name, field in field_rows.items()]
         else:
             single_field_rows = [row for row in field_rows if len(row) == 1]
-        visual_group, styled_labels, label_attrs_dict = [], [], {}
+        visual_group, label_attrs = [], {}
         if len(single_field_rows) < 2 or not getattr(self, 'adjust_label_width', True):
-            return label_attrs_dict, styled_labels
+            return {}
         for field_dict in single_field_rows:
             name = list(field_dict.keys())[0]
             field = list(field_dict.values())[0]
@@ -857,9 +857,8 @@ class FormFieldsetMixIn:
                         self.max_label_width, [name for name, field in visual_group])
                     raise ImproperlyConfigured(_(message))
             style_text = 'width: {}rem; display: inline-block'.format(width)
-            label_attrs_dict = {'style': style_text}
-            styled_labels = [name for name, field in visual_group]
-        return label_attrs_dict, styled_labels
+            label_attrs = {name: {'style': style_text} for name, fd in visual_group}
+        return label_attrs
 
     def make_fieldsets(self, *fs_args, update_form=True, **kwargs):
         """Updates the dictionaries of each fieldset with 'rows' of field dicts, and a flattend 'field_names' list. """
@@ -1130,10 +1129,7 @@ class FormFieldsetMixIn:
         attr_on_lonely_col = bool(col_head_tag or single_col_tag)
 
         for fieldset_label, opts in fieldsets:
-            label_width_attrs_dict, width_labels = {}, []
-            if adjust_label_width:
-                label_width_attrs_dict, width_labels = self.determine_label_width(opts['rows'])
-            label_attrs = {name: label_width_attrs_dict for name in width_labels}
+            label_attrs = self.determine_label_width(opts['rows']) if adjust_label_width else {}
             col_count = opts['column_count'] if fieldset_label else form_col_count
             format_tags = (col_format, single_col_format, row_tag, col_tag, single_col_tag, help_tag, help_text_br)
             settings = (errors_on_separate_row, label_attrs, col_count, allow_colspan, col_double, attr_on_lonely_col)
