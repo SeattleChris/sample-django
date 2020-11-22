@@ -2128,7 +2128,7 @@ class FormFieldsetTests(FormTests, TestCase):
         pass
 
     def test_top_errors_at_top_html(self):
-        """The FormFieldsetMixIn._html_output method mimics the default behavior for including top_errors. """
+        """The FormFieldsetMixIn new _html_output method mimics the default behavior for including top_errors. """
         original_errors = getattr(self.form, '_errors', None)
         original_cleaned_data = getattr(self.form, 'cleaned_data', None)
         self.form._errors = ErrorDict()
@@ -2136,7 +2136,6 @@ class FormFieldsetTests(FormTests, TestCase):
         test_error = "This non-field error is placed here just to pick on you. "
         self.form.add_error(None, test_error)
         self.form.make_fieldsets()
-        top_errors = self.form._fs_summary['top_errors']
         row_tag = 'p'
         html_output = self.form._html_output_new(  # replicates as_p()
             row_tag=row_tag,
