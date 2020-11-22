@@ -865,12 +865,13 @@ class FormFieldsetMixIn:
         """Updates the dictionaries of each fieldset with 'rows' of field dicts, and a flattend 'field_names' list. """
         if hasattr(self, 'prep_fields'):
             self.fields = self.prep_fields()
-        # if hasattr(self, 'assign_focus_field'):
-        #     # self.named_focus = self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
-        #     self.named_focus = self.assign_focus_field(name=self.named_focus, fields=self.fields_focus)
-        fieldsets = list(getattr(self, 'fieldsets', ((None, {'fields': [], 'position': None}), )))
+        empty_fieldsets = ((None, {'fields': list(self.fields.keys()), 'position': None}), )
+        fieldsets = list(getattr(self, 'fieldsets', empty_fieldsets))
         if not all('fields' in opts and 'position' in opts for lbl, opts in fieldsets):
             raise ImproperlyConfigured(_("There must be 'fields' and 'position' in each fieldset. "))
+        # if fieldsets == empty_fieldsets:
+        #     raise Warning(_("No initial fieldsets setting found. Using default of all field names. "))
+        fieldsets = deepcopy(fieldsets)
         remaining_fields = self.fields.copy()
         assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
         unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
