@@ -1530,7 +1530,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fieldsets = original_fieldsets
 
-    @skip("Not Implemented")
     def test_no_empty_sets_in_computed_fieldsets(self):
         """Any empty fieldset defined in initial fieldset settings are removed in the computed fieldset settings. """
         original_fieldsets = self.form.fieldsets
@@ -1572,17 +1571,17 @@ class FormFieldsetTests(FormTests, TestCase):
         self.assertEqual(len(fieldsets), len(actual_fieldsets))
         count = 0
         for expect, got in zip(fieldsets, actual_fieldsets):
-            labels = (expect[0], got[0])
-            labels = str(got[0]) if labels[0] == labels[1] else ' & '.join(str(ea) for ea in labels)
-            fields = (expect[1]['fields'], got[1]['fields'])
-            message = f"Fieldset # {count} named {labels} expected then got: \n{fields[0]} \n{fields[1]}. "
+            labels = str(got[0]) if expect[0] == got[0] else ' & '.join(str(ea) for ea in (expect[0], got[0]))
+            expect_row_names = flatten([list(ea.keys()) for ea in expect[1]['rows']])
+            actual_row_names = flatten([list(ea.keys()) for ea in got[1]['rows']])
+            row_names = str(expect_row_names) + '\n' + str(actual_row_names)
+            message = f"Fieldset # {count} named {labels} expected then got: \n{row_names}"
             self.assertEqual(expect, got, message)
             count += 1
         self.assertEqual(fieldsets, actual_fieldsets)
 
         self.form.fieldsets = original_fieldsets
 
-    @skip("Not Implemented")
     def test_computed_fieldsets_structure(self):
         """The each fieldset in the computed fieldset settings have all the expected keys in their options. """
         original_fieldsets = self.form.fieldsets
@@ -1663,7 +1662,6 @@ class FormFieldsetTests(FormTests, TestCase):
             self.form.make_fieldsets(add_field=name)
         self.form.called_handle_modifiers = False
 
-    @skip("Not Implemented")
     def test_make_fieldsets_outcome_order(self):
         """The make_fieldsets method assigns and sorts according to the expected order. """
         original_fieldsets = self.form.fieldsets
@@ -1745,13 +1743,8 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fieldsets = original_fieldsets
 
-    # @skip("Not Implemented")
-    def test_happy_path_make_fieldsets(self):
+    def test_overall_make_fieldsets(self):
         """The make_fieldsets method returns the expected response. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # computed: form._fieldsets
-        # summary: form._fs_summary
-        # result: form._fieldsets.update(form._fs_summary)
         original_fieldsets = self.form.fieldsets
         self.form.fieldsets = (
             ('Your Name', {
@@ -1796,12 +1789,10 @@ class FormFieldsetTests(FormTests, TestCase):
                     ],
             }), )
         fieldsets = [(label, deepcopy(opts)) for label, opts in self.form.fieldsets if label != 'Non_Fields']
-        # print("========================= TEMP LOG TEST =============================")
         remaining_fields = self.form.fields.copy()
         assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
         unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
         remaining_fields.pop('hide_field')
-        # print("Hide in unassigned: ", 'hide_field' in unassigned_field_names)
         address_fieldset = fieldsets.pop()
         opts = {'modifiers': 'prep_remaining', 'position': 'remaining', 'fields': unassigned_field_names}
         fieldsets.append((None, opts))
@@ -1812,9 +1803,9 @@ class FormFieldsetTests(FormTests, TestCase):
             for names in opts['fields']:
                 if isinstance(names, str):
                     names = [names]
-                column_count = max(column_count, len(names))
                 columns = {name: self.form.fields[name] for name in names if name in remaining_fields}
                 # TODO: Remove hidden or otherwise excluded fields.
+                column_count = max(column_count, len(columns))
                 if columns:
                     rows.append(columns)
             opts['rows'] = rows
@@ -1824,18 +1815,12 @@ class FormFieldsetTests(FormTests, TestCase):
         self.assertEqual(len(fieldsets), 5)
         self.assertEqual(len(fieldsets), len(actual_fieldsets))
         count = 0
-        # print("*************** Expect and Got ********************")
         for expect, got in zip(fieldsets, actual_fieldsets):
-            # # print(expect[1]['field_names'])
-            # print([tuple(row.keys()) for row in expect[1]['rows']])
-            # print("--------------------------")
-            # print([tuple(row.keys()) for row in got[1]['rows']])
-            # # print(got[1]['field_names'])
-            # print("*********************************************")
-            labels = (expect[0], got[0])
-            labels = str(got[0]) if labels[0] == labels[1] else ' & '.join(str(ea) for ea in labels)
-            fields = (expect[1]['fields'], got[1]['fields'])
-            message = f"Fieldset # {count} named {labels} expected then got: \n{fields[0]} \n{fields[1]}. "
+            labels = str(got[0]) if expect[0] == got[0] else ' & '.join(str(ea) for ea in (expect[0], got[0]))
+            expect_row_names = flatten([list(ea.keys()) for ea in expect[1]['rows']])
+            actual_row_names = flatten([list(ea.keys()) for ea in got[1]['rows']])
+            row_names = str(expect_row_names) + '\n' + str(actual_row_names)
+            message = f"Fieldset # {count} named {labels} expected then got: \n{row_names}"
             self.assertEqual(expect, got, message)
             count += 1
         self.assertEqual(fieldsets, actual_fieldsets)
