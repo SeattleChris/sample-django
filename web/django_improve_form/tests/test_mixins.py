@@ -9,7 +9,7 @@ from django.contrib.admin.utils import flatten
 from django.contrib.auth import get_user_model  # , views
 from django.urls import reverse  # , reverse_lazy
 from django.utils.datastructures import MultiValueDict
-from django.utils.html import conditional_escape, format_html
+from django.utils.html import format_html  # conditional_escape,
 from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
@@ -281,7 +281,6 @@ class FormTests:
                 field_formats[name_for_user] = field_formats.pop('username')
             order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
             form.order_fields(order)
-        # print("======================= GET EXPECTED FORMAT ===============================")
         form_list, hidden_list = [], []
         top_errors = form.non_field_errors().copy()  # If data not submitted, this will trigger full_clean method.
         if issubclass(self.form_class, FormFieldsetMixIn):
@@ -492,7 +491,7 @@ class FormTests:
         """Always True if the assign_focus_field method is absent. Otherwise checks if configured properly. """
         focus_func = getattr(self.form, 'assign_focus_field', None)
         fields = self.get_current_fields()
-        if focus_func:
+        if focus_func and issubclass(self.__class__, FocusMixIn):
             name = name or getattr(self.form, 'named_focus', None)
             expected = focus_func(name, fields)
         else:
@@ -1252,13 +1251,11 @@ class FormFieldsetTests(FormTests, TestCase):
         word_width = max(len(word) for label in labels for word in label.split()) // 2
         expected_width = full_width if full_width < self.form.max_label_width else word_width
         expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(expected_width)}
-        # expected_names = list(test_fields.keys())
         expected_attrs = {name: expected_attrs for name in list(test_fields.keys())}
         actual_attrs = self.form.determine_label_width(self.form.fields)
 
         self.assertLess(word_width, self.form.max_label_width)
         self.assertEqual(expected_attrs, actual_attrs)
-        # self.assertEqual(expected_names, actual_names)
 
         self.form.adjust_label_width = original_setting
 
@@ -2025,30 +2022,14 @@ class FormFieldsetTests(FormTests, TestCase):
         # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Redundant? Not Implemented")
-    def test_form_main_rows_complicated(self):
-        """Expected list of formatted strings, with some labeled and contained fieldsets, for each main form 'row'. """
-        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
-        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
-        pass
-
-    @skip("Redundant. Handled by 'collect_columns' method. Not Implemented")
-    def test_no_wrap_class_multi_field_row(self):
-        """The collect_columns method makes the first html class 'nowrap' on multi_field_row. """
+    @skip("Handled by 'collect_columns' method. Not Implemented")
+    def test_css_class_for_multi_field_row_columns(self):
+        """The collect_columns method applies the multi_field_row_class to HTML attributes on columns. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         # css_classes = ' '.join(['nowrap', css_classes])
         pass
 
-    @skip("Redundant. Not Implemented")
-    def test_multiple_fields_same_row(self):
-        """If a tuple of field names is given in fieldsets, those fields are on the same row in the form. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # columns_data.append(col_html % format_kwargs)
-        pass
-
-    # @skip("Redundant. Not Implemented")
     def test_html_output_formfieldset_use_focus_if_present(self):
         """The FormFieldsetMixIn new _html_output method will call assign_focus_field method if present. """
         original_focus_called = self.form.called_assign_focus_field
@@ -2061,7 +2042,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.called_assign_focus_field = original_focus_called
 
-    # @skip("Redundant. Not Implemented")
     def test_html_output_use_focus_if_present(self):
         """The default _html_output method will call assign_focus_field method if present. """
         original_focus_called = self.form.called_assign_focus_field
@@ -2138,21 +2118,7 @@ class FormFieldsetTests(FormTests, TestCase):
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         pass
 
-    @skip("Not Implemented")
-    def test_html_output_use_focus_feature(self):
-        """The _html_output method calls the 'assign_focus_field' method, if present. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        pass
-
-    @skip("Redundant. Not Implemented")
-    def test_html_output_formfieldset(self):
-        """The _html_output method ... """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        pass
-
-    @skip("Redundant. Not Implemented")
+    @skip("Redundant? Not Implemented")
     def test_as_fieldset(self):
         """The as_fieldset method returns the expected HTML content. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
@@ -2217,7 +2183,6 @@ class FocusTests(FormTests, TestCase):
         original_fields = self.form.fields
         self.form.named_focus = None
         self.form.given_focus = None
-        # all_field_names = list(self.form.fields.keys())
         allowed = [name for name, field in self.form.fields.items()
                    if not field.disabled and not isinstance(field.widget, (HiddenInput, MultipleHiddenInput))]
         self.assertGreater(len(allowed), 1)
