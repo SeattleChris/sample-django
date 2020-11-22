@@ -1460,7 +1460,7 @@ class FormFieldsetTests(FormTests, TestCase):
         self.form.handle_modifiers({}, [], **remove)
         self.assertNotIn(name, self.form.fields)
         self.assertIn(name, self.form.hold_field)
-        message = "Some unassigned fields, perhaps some added during make_fieldset. "
+        message = "Some unassigned fields, perhaps some added during handle_modifiers. "
         with self.assertRaisesMessage(ImproperlyConfigured, message):
             self.form.make_fieldsets(add_field=name)
         self.form.called_handle_modifiers = False

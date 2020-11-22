@@ -921,7 +921,7 @@ class FormFieldsetMixIn:
             fieldsets.pop(index)
         max_position += 1  # Possibly adds an extra unneeded space.
         if len(remaining_fields):  # Probably only if self.handle_modifiers unexpectedly added fields.
-            raise ImproperlyConfigured(_("Some unassigned fields, perhaps some added during make_fieldset. "))
+            raise ImproperlyConfigured(_("Some unassigned fields, perhaps some added during handle_modifiers. "))
         lookup = {'end': max_position + 2, 'remaining': max_position + 1, None: max_position}
         fieldsets = [(k, v) for k, v in sorted(fieldsets,
                      key=lambda ea: lookup.get(ea[1]['position'], ea[1]['position']))
