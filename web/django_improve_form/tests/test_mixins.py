@@ -1607,10 +1607,84 @@ class FormFieldsetTests(FormTests, TestCase):
     @skip("Not Implemented")
     def test_make_fieldsets_outcome_order(self):
         """The make_fieldsets method assigns and sorts according to the expected order. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # initial: form.fieldsets. ((label, {'position': <int> or 'end' or None}))
-        # lookup = {'end': max_position + 2, 'remaining': max_position + 1, None: max_position}
-        pass
+        original_fieldsets = self.form.fieldsets
+        self.form.fieldsets = (
+            (None, {
+                'classes': ('counting', ),
+                'position': 2,
+                'fields': [
+                    ('first', 'second', ),
+                    'last',
+                    ],
+            }),
+            ('Non_Fields', {
+                'position': 3,
+                'fields': [
+                    'non-field_name',
+                    'not_a_field'
+                    ],
+            }),
+            ('Your Name', {
+                'position': 1,
+                'fields': [('first_name', 'last_name', )],
+            }),
+            (None, {
+                'position': None,
+                'fields': [
+                    'generic_field',
+                    'bool_field',
+                    'single_check'
+                ]
+            }),
+            ('address', {
+                'classes': ('collapse', 'address', ),
+                # 'modifiers': ['address', 'prep_country_fields', ],
+                'position': 'end',
+                'fields': [
+                    'billing_address_1',
+                    'billing_address_2',
+                    ('billing_city', 'billing_country_area', 'billing_postcode', ),
+                    ],
+            }), )
+        fieldsets = [(label, deepcopy(opts)) for label, opts in self.form.fieldsets if label != 'Non_Fields']
+        fieldsets[0], fieldsets[1] = fieldsets[1], fieldsets[0]
+        remaining_fields = self.form.fields.copy()
+        assigned_field_names = flatten([flatten(opts['fields']) for fieldset_label, opts in fieldsets])
+        unassigned_field_names = [name for name in remaining_fields if name not in assigned_field_names]
+        remaining_fields.pop('hide_field')
+        address_fieldset = fieldsets.pop()
+        opts = {'modifiers': 'prep_remaining', 'position': 'remaining', 'fields': unassigned_field_names}
+        fieldsets.append((None, opts))
+        fieldsets.append(address_fieldset)
+        for fieldset_label, opts in fieldsets:
+            opts['field_names'] = flatten(opts['fields'])
+            rows, column_count = [], 0
+            for names in opts['fields']:
+                if isinstance(names, str):
+                    names = [names]
+                columns = {name: self.form.fields[name] for name in names if name in remaining_fields}
+                # TODO: Remove hidden or otherwise excluded fields.
+                column_count = max(column_count, len(columns))
+                if columns:
+                    rows.append(columns)
+            opts['rows'] = rows
+            opts['column_count'] = column_count
+        self.form.make_fieldsets()
+        actual_fieldsets = self.form._fieldsets
+        self.assertEqual(len(fieldsets), 5)
+        self.assertEqual(len(fieldsets), len(actual_fieldsets))
+        count = 0
+        for expect, got in zip(fieldsets, actual_fieldsets):
+            labels = str(got[0]) if expect[0] == got[0] else ' & '.join(str(ea) for ea in (expect[0], got[0]))
+            expect_row_names = flatten([list(ea.keys()) for ea in expect[1]['rows']])
+            actual_row_names = flatten([list(ea.keys()) for ea in got[1]['rows']])
+            row_names = str(expect_row_names) + '\n' + str(actual_row_names)
+            message = f"Fieldset # {count} named {labels} expected then got: \n{row_names}"
+            self.assertEqual(expect, got, message)
+            count += 1
+        self.assertEqual(fieldsets, actual_fieldsets)
+
+        self.form.fieldsets = original_fieldsets
 
     # @skip("Not Implemented")
     def test_happy_path_make_fieldsets(self):
