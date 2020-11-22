@@ -9,13 +9,13 @@ from django.contrib.admin.utils import flatten
 from django.contrib.auth import get_user_model  # , views
 from django.urls import reverse  # , reverse_lazy
 from django.utils.datastructures import MultiValueDict
-from django.utils.html import conditional_escape, format_html
+from django.utils.html import format_html  # conditional_escape,
 from django_registration import validators
 from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser, MockSuperUser  # UserModel, APP_NAME
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
 from .mixin_forms import ComputedCountryForm  # # MixIn Interactions # #
-from ..mixins import FormOverrideMixIn, ComputedFieldsMixIn, ComputedUsernameMixIn, FormFieldsetMixIn
+from ..mixins import FormOverrideMixIn, ComputedFieldsMixIn, ComputedUsernameMixIn, FormFieldsetMixIn, FocusMixIn
 from copy import deepcopy
 
 
@@ -262,8 +262,7 @@ class FormTests:
             override_attrs = '' if not size_default else f'size="{size_default}" '
             setup.update(attrs=override_attrs)
             alt_field_info = self.form.get_alt_field_info()
-        if hasattr(self.form, 'assign_focus_field'):
-            # self.form.named_focus = self.assign_focus_field(name=self.form.named_focus, fields=self.form.fields_focus)
+        if issubclass(self.form_class, FocusMixIn):  # has method: assign_focus_field
             focused = getattr(self.form, 'given_focus', None) or getattr(self.form, 'named_focus', None)
             if not focused:
                 ls = [name for name, field in self.form.fields.items()
@@ -282,7 +281,6 @@ class FormTests:
                 field_formats[name_for_user] = field_formats.pop('username')
             order = ['first_name', 'last_name', name_for_email, name_for_user, 'password1', 'password2', ]
             form.order_fields(order)
-        # print("======================= GET EXPECTED FORMAT ===============================")
         form_list, hidden_list = [], []
         top_errors = form.non_field_errors().copy()  # If data not submitted, this will trigger full_clean method.
         if issubclass(self.form_class, FormFieldsetMixIn):
@@ -431,38 +429,44 @@ class FormTests:
     def test_as_table(self, output=None, form=None):
         """All forms should return HTML table rows when .as_table is called. """
         setup = {'start_tag': '<tr><th>', 'label_end': '</th><td>', 'input_end': '<br>', 'end_tag': '</td></tr>'}
-        setup['as_type'] = 'as_table'
+        setup['as_type'] = as_type = 'as_table'
         setup['form'] = form or self.form
         output = output or setup['form'].as_table().strip()
         expected = self.get_expected_format(setup)
+        errors = []
         if output != expected:
-            self.log_html_diff(expected, output, as_type='as_table', full=False)
+            errors = self.log_html_diff(expected, output, as_type=as_type, full=False)
+        message = "Suite {}, had {} lines of HTML errors for {} ".format(self.__class__.__name__, len(errors), as_type)
         self.assertNotEqual('', output)
-        self.assertEqual(expected, output)
+        self.assertEqual(expected, output, message)
 
     def test_as_ul(self, output=None, form=None):
         """All forms should return HTML <li>s when .as_ul is called. """
         setup = {'start_tag': '<li>', 'end_tag': '</li>', 'label_end': ' ', 'input_end': ' '}
-        setup['as_type'] = 'as_ul'
+        setup['as_type'] = as_type = 'as_ul'
         setup['form'] = form or self.form
         output = output or setup['form'].as_ul().strip()
         expected = self.get_expected_format(setup)
+        errors = []
         if output != expected:
-            self.log_html_diff(expected, output, as_type='as_ul', full=False)
+            errors = self.log_html_diff(expected, output, as_type=as_type, full=False)
+        message = "Suite {}, had {} lines of HTML errors for {} ".format(self.__class__.__name__, len(errors), as_type)
         self.assertNotEqual('', output)
-        self.assertEqual(expected, output)
+        self.assertEqual(expected, output, message)
 
     def test_as_p(self, output=None, form=None):
         """All forms should return HTML <p>s when .as_p is called. """
         setup = {'start_tag': '<p>', 'end_tag': '</p>', 'label_end': ' ', 'input_end': ' '}
-        setup['as_type'] = 'as_p'
+        setup['as_type'] = as_type = 'as_p'
         setup['form'] = form or self.form
         output = output or setup['form'].as_p().strip()
         expected = self.get_expected_format(setup)
+        errors = []
         if output != expected:
-            self.log_html_diff(expected, output, as_type='as_p', full=False)
+            errors = self.log_html_diff(expected, output, as_type=as_type, full=False)
+        message = "Suite {}, had {} lines of HTML errors for {} ".format(self.__class__.__name__, len(errors), as_type)
         self.assertNotEqual('', output)
-        self.assertEqual(expected, output)
+        self.assertEqual(expected, output, message)
 
     @skip("Not Implemented")
     def test_html_output(self):
@@ -487,7 +491,7 @@ class FormTests:
         """Always True if the assign_focus_field method is absent. Otherwise checks if configured properly. """
         focus_func = getattr(self.form, 'assign_focus_field', None)
         fields = self.get_current_fields()
-        if focus_func:
+        if focus_func and issubclass(self.__class__, FocusMixIn):
             name = name or getattr(self.form, 'named_focus', None)
             expected = focus_func(name, fields)
         else:
@@ -658,8 +662,6 @@ class FormFieldsetTests(FormTests, TestCase):
         label_attrs = {}
         names = ('first', 'billing_address_1')
         expected = [self.form[name] for name in names]
-        # expected = ['<input type="text" name="first" value="first_value" required id="id_first">']
-        # expected.append('<input type="text" name="billing_address_1" maxlength="191" id="id_billing_address_1">')
         actual = []
         for name in names:
             field = self.form.fields[name]
@@ -803,9 +805,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
     def test_collected_columns_as_table_one_col_from_one(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
-        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
-        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         col_double, allow_colspan = True, True  # as_type == 'table'
         col_args = ('span', False, {})
         name, multi_field_row = 'first', False
@@ -834,8 +833,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
     def test_collected_columns_no_table_one_col_from_one(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
-        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
-        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
         col_double, allow_colspan = False, False  # as_type != 'table'
         col_args = ('span', False, {})
         name, multi_field_row = 'first', False
@@ -862,8 +859,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
     def test_collected_columns_as_table_two_col_from_two(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
-        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
-        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
         col_double, allow_colspan = True, True  # as_type == 'table'
         col_args = ('span', False, {})
         names, multi_field_row = ('first', 'billing_address_1'), True
@@ -891,8 +886,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
     def test_collected_columns_no_table_two_col_from_two(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
-        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
-        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
         col_double, allow_colspan = False, False  # as_type != 'table'
         col_args = ('span', False, {})
         names, multi_field_row = ('first', 'billing_address_1'), True
@@ -918,9 +911,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
     def test_collected_columns_as_table_one_col_from_many(self):
         """For a given row and parameters, returns a list with each element an expected dict. """
-        # form.collect_columns(row, col_settings, help_tag, help_text_br, label_attrs={})
-        # calls: form.collect_col_data(name, field, help_tag, help_text_br, label_attrs)
-        # col_settings = (multi_field_row, col_count, col_double, allow_colspan)
         col_double, allow_colspan = True, True  # as_type == 'table'
         col_args = ('span', False, {})
         name, multi_field_row = 'first', False
@@ -974,7 +964,6 @@ class FormFieldsetTests(FormTests, TestCase):
                 attr = ''
             error_list = [error_txt.format(name) if name in error_names else '' for name in row]
             columns = [{'errors': ea} for ea in error_list]
-            # columns = [{'errors': error_txt.format(name)} for name in row]
             expected = [err if not cur_tag else self.form._html_tag(cur_tag, err, attr) for err in error_list]
             if all(ea == '' for ea in error_list):
                 expected = []
@@ -982,7 +971,6 @@ class FormFieldsetTests(FormTests, TestCase):
             row_summary = {'expected': expected, 'actual': actual, 'field_names': row, 'settings': error_settings}
             row_summary['columns'] = columns
             row_info.append(row_summary)
-        # fieldset_summary = {'fieldset_fields': field_setup, 'error_names': error_names, 'expected': [], 'actual': []}
         return row_info
 
     def test_get_error_data_when_no_errors(self):
@@ -1159,21 +1147,18 @@ class FormFieldsetTests(FormTests, TestCase):
         if len(names) > 1:
             double_row = {name: self.form.fields[name] for name in names[:2]}
             field_rows.append(double_row)
-        expected = ({}, [])
+        expected = {}
         actual = self.form.determine_label_width(field_rows)
-
         self.assertEqual(expected, actual)
 
     def test_not_adjust_label_width(self):
         """The determine_label_width method returns empty values if form.adjust_label_width is not True. """
         original_setting = self.form.adjust_label_width
         self.form.adjust_label_width = False
-        expected = ({}, [])
+        expected = {}
         actual = self.form.determine_label_width(self.form.fields)
-
         self.assertFalse(self.form.adjust_label_width)
         self.assertEqual(expected, actual)
-
         self.form.adjust_label_width = original_setting
 
     def get_allowed_width_fields(self, fields=None):
@@ -1192,16 +1177,10 @@ class FormFieldsetTests(FormTests, TestCase):
         self.form.adjust_label_width = True
         allowed = self.get_allowed_width_fields()
         reject_fields = {name: field for name, field in self.form.fields.items() if name not in allowed}
-        expected = ({}, [])
+        expected = {}
         actual = self.form.determine_label_width(reject_fields)
         self.assertEqual(expected, actual)
         self.form.adjust_label_width = original_setting
-
-    @skip("Redundant. Not Implemented")
-    def test_table_not_adjust_label_width(self):
-        """Regardless of form.adjust_label_width, determine_label_width is not needed for as_table display. """
-        # if as_type == 'table': adjust_label_width = False
-        pass
 
     def test_raises_too_wide_label_width(self):
         """The determine_label_width method raises ImproperlyConfigured if the computed width is greater than max. """
@@ -1230,9 +1209,10 @@ class FormFieldsetTests(FormTests, TestCase):
         full_label_width = (max(len(ea) for ea in labels) + 1) // 2  # * 0.85 ch
         word_width = max(len(word) for label in labels for word in label.split()) // 2
         expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(word_width)}
+        expected_attrs = {name: expected_attrs for name in allowed_fields}
         max_width = word_width + 1
         self.form.max_label_width = max_width
-        actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
+        actual_attrs = self.form.determine_label_width(self.form.fields)
 
         self.assertLess(max_width, full_label_width)
         self.assertEqual(expected_attrs, actual_attrs)
@@ -1249,9 +1229,10 @@ class FormFieldsetTests(FormTests, TestCase):
         labels = [field.label or pretty_name(name) for name, field in allowed_fields.items()]
         full_label_width = (max(len(ea) for ea in labels) + 1) // 2  # * 0.85 ch
         expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(full_label_width)}
+        expected_attrs = {name: expected_attrs for name in allowed_fields}
         max_width = full_label_width + 5
         self.form.max_label_width = max_width
-        actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
+        actual_attrs = self.form.determine_label_width(self.form.fields)
 
         self.assertGreater(max_width, full_label_width)
         self.assertEqual(expected_attrs, actual_attrs)
@@ -1270,12 +1251,11 @@ class FormFieldsetTests(FormTests, TestCase):
         word_width = max(len(word) for label in labels for word in label.split()) // 2
         expected_width = full_width if full_width < self.form.max_label_width else word_width
         expected_attrs = {'style': 'width: {}rem; display: inline-block'.format(expected_width)}
-        expected_names = list(test_fields.keys())
-        actual_attrs, actual_names = self.form.determine_label_width(self.form.fields)
+        expected_attrs = {name: expected_attrs for name in list(test_fields.keys())}
+        actual_attrs = self.form.determine_label_width(self.form.fields)
 
         self.assertLess(word_width, self.form.max_label_width)
         self.assertEqual(expected_attrs, actual_attrs)
-        self.assertEqual(expected_names, actual_names)
 
         self.form.adjust_label_width = original_setting
 
@@ -1422,9 +1402,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
     def test_make_fieldsets_uses_handle_modifiers(self):
         """The make_fieldsets method calls the handle_modifiers method (from FormOverrideMixIn) if it is present. """
-        # method: form.make_fieldsets(self, *fs_args, **kwargs)
-        # args = [opts, field_rows, remaining_fields, *fs_args]
-        # opts, field_rows, remaining_fields, *fs_args, kwargs = self.handle_modifiers(*args, **kwargs)
         original_called_handle_modifiers = self.form.called_handle_modifiers = False
         full_fieldsets = self.form.make_fieldsets()
 
@@ -1465,8 +1442,10 @@ class FormFieldsetTests(FormTests, TestCase):
     def test_missing_initial_fieldsets(self):
         """If initial fieldsets is not defined, warning is raised. """
         original_initial_fieldsets = self.form.fieldsets
+        print("========================= TEST UNABLE TO DELETE THE PROPERTY FOR TESTING ========================")
+        print(original_initial_fieldsets)
+        print("--------------------------------------")
         delattr(self.form, 'fieldsets')
-        print("========================= TEST TEST TEST ========================")
         response_fieldsets = self.form.make_fieldsets()
         print(response_fieldsets)
 
@@ -1650,7 +1629,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
     def test_raises_if_missed_fields(self):
         """The make_fieldsets method raises ImproperlyConfigured if somehow some fields are not accounted for. """
-        # Probably only if self.handle_modifiers unexpectedly added fields.
         name = 'second'
         self.form.called_handle_modifiers = False
         remove = {'remove_field': name}
@@ -1827,18 +1805,26 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fieldsets = original_fieldsets
 
-    @skip("Redundant. Not Implemented")
     def test_html_tag(self):
         """The _html_tag method returns the HTML element with the given contents and attributes. """
-        # form._html_tag(self, tag, contents, attr_string='')
-        # result: '<tag%(attr_string)s>%(contents)s</tag>'
-        pass
+        tag = 'fake_tag_given'
+        attrs = ' id="fake_element" fake_attr="pointless value"'
+        content = 'This is some test content'
+        expected = '<%(tag)s%(attr)s>%(content)s</%(tag)s>' % {'tag': tag, 'attr': attrs, 'content': content}
+        actual = self.form._html_tag(tag, content, attrs)
+        self.assertEqual(expected, actual)
 
-    @skip("Redundant. Not Implemented")
     def test_column_formats(self):
         """The column_formats method returns the column and single_column strings with formatting placeholders. """
-        # form.column_formats(self, col_head_tag, col_tag, single_col_tag, col_head_data, col_data)
-        pass
+        attrs = '%(html_col_attr)s'
+        col_tag = 'span'
+        single_col_tag = ''
+        col_data = '%(errors)s%(label)s %(field)s%(help_text)s'
+        expected_col = self.form._html_tag(col_tag, col_data, attrs)
+        expected_single = col_data if not single_col_tag else self.form._html_tag(single_col_tag, col_data, attrs)
+        actual_col, actual_single = self.form.column_formats(None, col_tag, single_col_tag, '', col_data)
+        self.assertEqual(expected_col, actual_col)
+        self.assertEqual(expected_single, actual_single)
 
     def test_column_formats_col_head_tag(self):
         """The column_formats method, when col_head_tag is present, returns the expected response. """
@@ -1855,18 +1841,6 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.assertEqual(expected_html, col_html)
         self.assertEqual(expected_html, single_col_html)
-
-    @skip("Redundant. Not Implemented")
-    def test_make_row(self):
-        """If there are errors, the make_row method returns a list of 2 strings, with errors first. """
-        # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
-        pass
-
-    @skip("Redundant. Not Implemented")
-    def test_make_row_no_errors(self):
-        """The make_row method returns a list of 1 string if no errors but has columns_data. """
-        # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
-        pass
 
     def test_make_headless_row_empty_single_col_tag(self):
         """Used for top_errors and embedding fieldsets. The row has no column head, but fits within the page format. """
@@ -2048,84 +2022,59 @@ class FormFieldsetTests(FormTests, TestCase):
         # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
         pass
 
-    @skip("Redundant? Not Implemented")
-    def test_form_main_rows_complicated(self):
-        """Expected list of formatted strings, with some labeled and contained fieldsets, for each main form 'row'. """
-        # form.form_main_rows(self, html_args, fieldsets, form_col_count)
-        # html_args = (row_tag, col_head_tag, col_tag, single_col_tag, as_type, all_fieldsets)
-        pass
-
-    @skip("Redundant? Currently unused feature for as_table (or other similar). Not Implemented")
-    def test_html_output_error_lines_in_table(self):
-        """The _html_output method, if errors_on_separate_row for as_table, configures colspan appropriately. """
-        # form.make_row(self, columns_data, error_data, row_tag, html_row_attr='')
-        pass
-
-    @skip("Redundant. Handled by 'collect_columns' method. Not Implemented")
-    def test_no_wrap_class_multi_field_row(self):
-        """The collect_columns method makes the first html class 'nowrap' on multi_field_row. """
+    @skip("Handled by 'collect_columns' method. Not Implemented")
+    def test_css_class_for_multi_field_row_columns(self):
+        """The collect_columns method applies the multi_field_row_class to HTML attributes on columns. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         # css_classes = ' '.join(['nowrap', css_classes])
         pass
 
-    @skip("Redundant. Handled by 'collect_col_data' method. Not Implemented")
-    def test_html_output_expected_labels(self):
-        """The _html_output method uses boundfield label. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # label = conditional_escape(bf.label)
-        # label = bf.label_tag(label, attrs) or ''
-        pass
+    def test_html_output_formfieldset_use_focus_if_present(self):
+        """The FormFieldsetMixIn new _html_output method will call assign_focus_field method if present. """
+        original_focus_called = self.form.called_assign_focus_field
+        for as_type in ('as_p', 'as_ul', 'as_table', 'as_fieldset'):
+            self.form.called_assign_focus_field = False
+            html_output = getattr(self.form, as_type)()
+            message = "The FormFieldsetMixIn new _html_output failed on {}".format(as_type)
+            self.assertTrue(self.form.called_assign_focus_field, message)
+            self.assertIsNotNone(html_output)
 
-    @skip("Redundant. Not Implemented")
-    def test_width_labels_on_expected_fields(self):
-        """The _html_output method uses boundfield label, adding width_attrs for multi_field_row fields. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # attrs = label_width_attrs_dict if name in width_labels else {}
-        # label = conditional_escape(bf.label)
-        # label = bf.label_tag(label, attrs) or ''
+        self.form.called_assign_focus_field = original_focus_called
 
-    @skip("Redundant. Moved to 'collect_col_data' method. Not Implemented")
-    def test_help_text_included(self):
-        """The _html_output method includes help_text content with expected format, if present. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        pass
+    def test_html_output_default_use_focus_if_present(self):
+        """The default _html_output method will call assign_focus_field method if present. """
+        original_focus_called = self.form.called_assign_focus_field
+        for as_type in ('as_p', 'as_ul', 'as_table'):
+            self.form.called_assign_focus_field = False
+            html_output = getattr(self.form, as_type + '_old')()
+            message = "The FormFieldsetMixIn OLD _html_output failed on {}".format(as_type)
+            self.assertTrue(self.form.called_assign_focus_field, message)
+            self.assertIsNotNone(html_output)
 
-    @skip("Redundant. Moved to 'collect_col_data' method. Not Implemented")
-    def test_help_aria(self):
-        """If help_text provided, the input field will have the aria-describedby set to id of help text span. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # field_attrs_dict.update({'aria-describedby': help_id})
-        # field_display = bf.as_widget(attrs=field_attrs_dict)
-        pass
+        self.form.called_assign_focus_field = original_focus_called
 
-    @skip("Redundant. Moved to 'collect_columns' method. Not Implemented")
-    def test_colspan(self):
-        """If a table has a single field row that should span multiple columns, the needed html_col_attr is applied. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # if allow_colspan and not multi_field_row and col_count > 1:
-        # colspan = col_count * 2 - 1 if col_double else col_count
-        pass
+    def test_html_output_label_attrs_table(self):
+        """For as_type='table', regardless of other settings, the 'determine_label_width' method is not called. """
+        self.label_calls = []
+        def fake_label_width(rows): self.label_calls.append(rows); return {}
+        original_adjust_label_width = self.form.adjust_label_width
+        self.form.adjust_label_width = True
+        original_label_method = self.form.determine_label_width
+        self.form.determine_label_width = fake_label_width
+        collected = []
+        for as_type in ('as_p', 'as_ul', 'as_table', 'as_fieldset'):
+            collected.append({'type': as_type, 'html': getattr(self.form, as_type)(), 'calls': self.label_calls})
+            self.label_calls = []
+        expected = [opts['rows'] for lbl, opts in self.form._fieldsets]
+        for ea in collected:
+            expect = [] if ea['type'] == 'as_table' else expected
+            message = f"Mismatch for {ea['type']} html_output. "
+            self.assertEqual(expect, ea['calls'], message)
 
-    @skip("Redundant. Not Implemented")
-    def test_multiple_fields_same_row(self):
-        """If a tuple of field names is given in fieldsets, those fields are on the same row in the form. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        # columns_data.append(col_html % format_kwargs)
-        pass
-
-    @skip("Redundant. Not Implemented")
-    def test_html_output_formfieldset(self):
-        """The _html_output method ... """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        pass
+        self.form.determine_label_width = original_label_method
+        self.form.adjust_label_width = original_adjust_label_width
+        del self.label_calls
 
     def test_top_errors_at_top_html(self):
         """The FormFieldsetMixIn new _html_output method mimics the default behavior for including top_errors. """
@@ -2147,7 +2096,7 @@ class FormFieldsetTests(FormTests, TestCase):
             help_text_br=False,
             errors_on_separate_row=True,
             as_type='p'
-        )
+            )
         html_rows = html_output.split('\n')
         actual_top_html = html_rows[0]
         expected_top_html = self.form._html_tag(row_tag, test_error, ' id="top_errors"')
@@ -2162,16 +2111,55 @@ class FormFieldsetTests(FormTests, TestCase):
         if original_cleaned_data is None:
             del self.form.cleaned_data
 
-    @skip("Redundant? Not Implemented")
     def test_hidden_fields_at_bottom(self):
         """The FormFieldsetMixIn new _html_output method mimics the default behavior for including hidden fields. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        pass
+        hidden_fields = self.form.hidden_fields()  # The boundfield objects for all hidden fields.
+        str_hidden = ''.join(str(bf) for bf in hidden_fields)
+        self.assertTrue(str_hidden, "There are no hidden fields to confirm they were included correctly. ")
+        for as_type in ('as_p', 'as_ul', 'as_table', 'as_fieldset'):
+            output = getattr(self.form, as_type)()
+            last_row = output.split('\n')[-1]
+            message = "Hidden fields not found in final HTML row for {}".format(as_type.upper())
+            self.assertIn(str_hidden, last_row, message)
 
-    @skip("Not Implemented")
+    @skip("Not Yet Working Correctly")
+    def test_when_only_hidden_fields(self):
+        """When there are no errors, and only hidden fields, the form should still include the hidden fields. """
+        original_fields = self.form.fields
+        test_fields = deepcopy(original_fields)
+        all_names = [name for name in test_fields]
+        for name, field in test_fields.items():
+            widget = field.hidden_widget
+            # field.widget = HiddenInput
+            widget = widget()
+            if field.localize:
+                widget.is_localized = True
+            widget.is_required = field.required
+            extra_attrs = field.widget_attrs(widget)
+            if extra_attrs:
+                widget.attrs.update(extra_attrs)
+            field.widget = widget
+            # field.widget.is_hidden = True
+        self.form.fields = test_fields
+        hidden_fields = self.form.hidden_fields()
+        hidden_names = [bf.name for bf in hidden_fields]
+        str_hidden = ''.join(str(bf) for bf in hidden_fields)
+        print("===================== TEST TESTERING TEST TEST =============================")
+        print(all_names)
+        print("-----------------------------------")
+        print(hidden_names)
+        self.assertEqual(all_names, hidden_names)
+        for as_type in ('as_p', 'as_ul', 'as_table', 'as_fieldset'):
+            output = getattr(self.form, as_type)()
+            # last_row = output.split('\n')[-1]
+            message = "Hidden fields not found in output for {}".format(as_type.upper())
+            self.assertIn(str_hidden, output, message)
+
+        self.form.fields = original_fields
+
+    @skip("Redundant? Not Implemented")
     def test_as_fieldset(self):
-        """The as_fieldset method successfully calles the _html_output and generates the expected HTML. """
+        """The as_fieldset method returns the expected HTML content. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         pass
@@ -2234,7 +2222,6 @@ class FocusTests(FormTests, TestCase):
         original_fields = self.form.fields
         self.form.named_focus = None
         self.form.given_focus = None
-        # all_field_names = list(self.form.fields.keys())
         allowed = [name for name, field in self.form.fields.items()
                    if not field.disabled and not isinstance(field.widget, (HiddenInput, MultipleHiddenInput))]
         self.assertGreater(len(allowed), 1)
