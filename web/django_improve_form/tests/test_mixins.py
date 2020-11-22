@@ -1801,12 +1801,14 @@ class FormFieldsetTests(FormTests, TestCase):
 
         self.form.fieldsets = original_fieldsets
 
-    @skip("Redundant. Not Implemented")
     def test_html_tag(self):
         """The _html_tag method returns the HTML element with the given contents and attributes. """
-        # form._html_tag(self, tag, contents, attr_string='')
-        # result: '<tag%(attr_string)s>%(contents)s</tag>'
-        pass
+        tag = 'fake_tag_given'
+        attrs = ' id="fake_element" fake_attr="pointless value"'
+        content = 'This is some test content'
+        expected = '<%(tag)s%(attr)s>%(content)s</%(tag)s>' % {'tag': tag, 'attr': attrs, 'content': content}
+        actual = self.form._html_tag(tag, content, attrs)
+        self.assertEqual(expected, actual)
 
     @skip("Redundant. Not Implemented")
     def test_column_formats(self):
