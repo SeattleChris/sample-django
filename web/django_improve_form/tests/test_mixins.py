@@ -15,7 +15,7 @@ from .helper_general import MockRequest, AnonymousUser, MockUser, MockStaffUser,
 from .mixin_forms import FocusForm, CriticalForm, ComputedForm, OverrideForm, FormFieldsetForm  # # Base MixIns # #
 from .mixin_forms import ComputedUsernameForm, CountryForm  # # Extended MixIns # #
 from .mixin_forms import ComputedCountryForm  # # MixIn Interactions # #
-from ..mixins import FormOverrideMixIn, ComputedFieldsMixIn, ComputedUsernameMixIn, FormFieldsetMixIn
+from ..mixins import FormOverrideMixIn, ComputedFieldsMixIn, ComputedUsernameMixIn, FormFieldsetMixIn, FocusMixIn
 from copy import deepcopy
 
 
@@ -262,8 +262,7 @@ class FormTests:
             override_attrs = '' if not size_default else f'size="{size_default}" '
             setup.update(attrs=override_attrs)
             alt_field_info = self.form.get_alt_field_info()
-        if hasattr(self.form, 'assign_focus_field'):
-            # self.form.named_focus = self.assign_focus_field(name=self.form.named_focus, fields=self.form.fields_focus)
+        if issubclass(self.form_class, FocusMixIn):  # has method: assign_focus_field
             focused = getattr(self.form, 'given_focus', None) or getattr(self.form, 'named_focus', None)
             if not focused:
                 ls = [name for name, field in self.form.fields.items()
