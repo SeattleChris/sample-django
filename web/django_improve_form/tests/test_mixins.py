@@ -2164,7 +2164,7 @@ class FormFieldsetTests(FormTests, TestCase):
 
     @skip("Redundant? Not Implemented")
     def test_hidden_fields_at_bottom(self):
-        """The FormFieldsetMixIn._html_output method mimics the default behavior for including hidden fields. """
+        """The FormFieldsetMixIn new _html_output method mimics the default behavior for including hidden fields. """
         # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         pass
