@@ -2119,7 +2119,7 @@ class FormFieldsetTests(FormTests, TestCase):
         for as_type in ('as_p', 'as_ul', 'as_table', 'as_fieldset'):
             output = getattr(self.form, as_type)()
             last_row = output.split('\n')[-1]
-            message = "The hidden field content was not in the final row of HTML. "
+            message = "Hidden fields not found in final HTML row for {}".format(as_type.upper())
             self.assertIn(str_hidden, last_row, message)
 
     @skip("Redundant? Not Implemented")
