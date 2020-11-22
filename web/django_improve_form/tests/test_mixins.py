@@ -2127,12 +2127,41 @@ class FormFieldsetTests(FormTests, TestCase):
         #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
         pass
 
-    @skip("Redundant? Not Implemented")
-    def test_top_errors_at_top(self):
+    def test_top_errors_at_top_html(self):
         """The FormFieldsetMixIn._html_output method mimics the default behavior for including top_errors. """
-        # form._html_output(self, row_tag, col_head_tag, col_tag, single_col_tag, col_head_data, col_data,
-        #                   help_text_br, errors_on_separate_row, as_type=None, strict_columns=False)
-        pass
+        original_errors = getattr(self.form, '_errors', None)
+        original_cleaned_data = getattr(self.form, 'cleaned_data', None)
+        self.form._errors = ErrorDict()
+        self.form.cleaned_data = {}
+        test_error = "This non-field error is placed here just to pick on you. "
+        self.form.add_error(None, test_error)
+        self.form.make_fieldsets()
+        top_errors = self.form._fs_summary['top_errors']
+        row_tag = 'p'
+        html_output = self.form._html_output_new(  # replicates as_p()
+            row_tag=row_tag,
+            col_head_tag=None,
+            col_tag='span',
+            single_col_tag='',
+            col_head_data='',
+            col_data='%(label)s %(field)s%(help_text)s',
+            help_text_br=False,
+            errors_on_separate_row=True,
+            as_type='p'
+        )
+        html_rows = html_output.split('\n')
+        actual_top_html = html_rows[0]
+        expected_top_html = self.form._html_tag(row_tag, test_error, ' id="top_errors"')
+
+        self.assertIn(NON_FIELD_ERRORS, self.form._errors)
+        self.assertEqual(expected_top_html, actual_top_html)
+
+        self.form.cleaned_data = original_cleaned_data
+        self.form._errors = original_errors
+        if original_errors is None:
+            del self.form._errors
+        if original_cleaned_data is None:
+            del self.form.cleaned_data
 
     @skip("Redundant? Not Implemented")
     def test_hidden_fields_at_bottom(self):
