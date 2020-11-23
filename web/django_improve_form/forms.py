@@ -39,13 +39,13 @@ def make_names(constructors, early, setting, extras, address, model, user_model=
         initial = [*initial, *early]
     if hasattr(model, 'get_email_field_name'):
         initial.append(model.get_email_field_name())
-    elif user_model:
+    elif user_model and hasattr(user_model, 'get_email_field_name'):
         initial.append(user_model.get_email_field_name())
     else:
         raise ImproperlyConfigured(_("The model or User model must have a 'get_email_field_name' method. "))
     if hasattr(model, 'USERNAME_FIELD'):
         initial.append(model.USERNAME_FIELD)
-    elif user_model:
+    elif user_model and hasattr(user_model, 'USERNAME_FIELD'):
         initial.append(user_model.USERNAME_FIELD)
     else:
         raise ImproperlyConfigured(_("The model or User model must have a 'USERNAME_FIELD' property. "))
