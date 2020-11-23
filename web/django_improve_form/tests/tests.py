@@ -124,3 +124,29 @@ class MakeNamesModelTests(TestCase):
                      'address_names', 'model', 'user_model', 'address_on_profile_name')
         args = [getattr(self, name, None) for name in arg_names]
         return args
+
+    def test_user_works_address_fail(self):
+        """Most fields on Model, email and username on UserModel, address_names not found. """
+        models = []
+        name_for_email, name_for_user = None, None
+        for model in (self.model, self.user_model):
+            if hasattr(model, 'get_email_field_name') and hasattr(model, 'USERNAME_FIELD'):
+                models.append(model)
+        target = models[0]
+        name_for_email = target.get_email_field_name()
+        name_for_user = target.USERNAME_FIELD
+        initial = [*self.constructor_names, *self.early_names]
+        settings = [self.username_flag_name, "password1", "password2", *self.extra_names]
+        expected_fields = [*initial, *settings]
+        expected_alt = [name_for_email, name_for_user]  # self.username_flag_name, *self.extra_names,
+        expected_missing = [
+            'billing_address_1', 'billing_address_2',
+            'billing_city', 'billing_country_area', 'billing_postcode',
+            'billing_country_code',
+            ]
+        actual_fields, actual_alt, actual_missing = make_names(*self.get_name_args())
+
+        self.assertEqual(expected_fields, actual_fields)
+        self.assertEqual(expected_alt, actual_alt)
+        self.assertEqual(expected_missing, actual_missing)
+
