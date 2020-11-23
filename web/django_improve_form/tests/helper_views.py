@@ -1,7 +1,9 @@
 from django.test import Client, RequestFactory  # , TestCase,  TransactionTestCase
 from django.urls import reverse
-from unittest import skip  # @skip("Not Implemented")
-from .helper_general import AnonymousUser, UserModel  # , MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
+from django.contrib.auth import get_user_model
+# from unittest import skip  # @skip("Not Implemented")
+from .helper_general import AnonymousUser  # , MockRequest
+# , UserModel, MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
 from pprint import pprint
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
@@ -144,6 +146,7 @@ class BaseRegisterTests(MimicAsView):
         if self.user_type == 'anonymous':
             user = AnonymousUser()
         else:
+            UserModel = get_user_model()
             user_setup.update(lookup_user_settings.get(self.user_type, {}))
             user = UserModel.objects.create(**user_setup)
             user.save()
@@ -159,7 +162,7 @@ class BaseRegisterTests(MimicAsView):
         for key, val in expected_defaults.items():
             self.assertEqual(context[key], val)
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_register(self):
         pw_fake = 'TestPW!42'
         data = OTHER_USER.copy()
