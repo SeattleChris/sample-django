@@ -195,9 +195,16 @@ class MakeNamesModelTests(TestCase):
     @skip("Not Implemented")
     def test_no_user_like_model(self):
         """Both the 'model_class' and 'user_model_class' are lacking the expected User model methods. """
-
-        pass
-
+        self.user_model_class = FailModel
+        self.user_model = FailModel()
+        models = []
+        for model in (self.model, self.user_model):
+            if hasattr(model, 'get_email_field_name') and hasattr(model, 'USERNAME_FIELD'):
+                models.append(model)
+        self.assertFalse(models)
+        message = "The model or User model must have a 'get_email_field_name' method. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            make_names(*self.get_name_args())
 
     @skip("Not Implemented")
     def test_no_username_ref_model(self):
