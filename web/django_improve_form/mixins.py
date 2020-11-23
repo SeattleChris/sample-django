@@ -23,46 +23,6 @@ def get_html_name(form, name):
     return form.add_prefix(name)
 
 
-def _html_tag(tag, contents, attr_string=''):
-    """Wraps 'contents' in an HTML element with an open and closed 'tag', applying the 'attr_string' attributes. """
-    return '<' + tag + attr_string + '>' + contents + '</' + tag + '>'
-
-
-def as_test(form):
-    """Prepares and calls different 'as_<variation>' method variations. """
-    from pprint import pprint
-    self = form
-    container = 'ul'  # table, ul, p, fieldset, ...
-    func = getattr(self, 'as_' + container)
-    display_data = func()
-    if container not in ('p', 'fieldset', ):
-        display_data = _html_tag(container, display_data)
-    print("==================== Final Stage!=================================")
-    pprint(self._meta.model)
-    print("----------------------- self.data ------------------------------")
-    data = getattr(self, 'data', None)
-    if data:
-        for key in data:
-            print(f"{key} : {data.getlist(key)}")
-    else:
-        print("NO DATA PRESENT")
-    print("----------------------- self.fields ------------------------------")
-    pprint(self.fields)
-    if hasattr(self, 'computed_fields'):
-        print("--------------------- computed fields ----------------------------")
-        pprint(self.computed_fields)
-    print("------------------------------------------------------------------")
-    return mark_safe(display_data)
-
-
-def test_field_order(data):
-    """Deprecated. Log printing the dict, array, or tuple in the order they are currently stored. """
-    from pprint import pprint
-    log_lines = [(key, value) for key, value in data.items()] if isinstance(data, dict) else data
-    for line in log_lines:
-        pprint(line)
-
-
 class FocusMixIn:
     """Autofocus given to a field not hidden or disabled. Can limit to a fields subset, and prioritize a named one. """
     named_focus = None

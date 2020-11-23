@@ -1,13 +1,9 @@
 from django.test import Client, RequestFactory  # , TestCase,  TransactionTestCase
 from django.urls import reverse
-from unittest import skip
-# from django.conf import settings
-# from django.core.exceptions import ObjectDoesNotExist
-# from django.utils.module_loading import import_string
+from django.contrib.auth import get_user_model
 # from unittest import skip  # @skip("Not Implemented")
-# from datetime import time, timedelta, datetime as dt  # date,
-# Resource = import_string('APPNAME.models.Resource')
-from .helper_general import AnonymousUser, UserModel  # , MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
+from .helper_general import AnonymousUser  # , MockRequest
+# , UserModel, MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
 from pprint import pprint
 
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
@@ -107,6 +103,7 @@ class MimicAsView:
         variants = []
         # Create the data
         categories = [Category.objects.create(**cat_const, name=var) for var in cat_vars]
+        data = []
         for var in variants:
             data = [Model.objects.create(**consts, var_name=var, category=ea) for ea in categories]
         return data
@@ -139,26 +136,18 @@ class BaseRegisterTests(MimicAsView):
         # self.expected_form.Meta.model = getattr(self.expected_form.Meta, 'model', None) or get_user_model()
         self.view = self.setup_view('get')
         user_setup = USER_DEFAULTS.copy()
+        user = None
+        lookup_user_settings = {
+            'superuser': {'is_staff': True, 'is_superuser': True},
+            'admin': {'is_staff': True, 'is_superuser': False},
+            'user': {'is_staff': False, 'is_superuser': False},
+            'inactive': {'is_staff': False, 'is_superuser': False, 'is_active': False},
+            }
         if self.user_type == 'anonymous':
             user = AnonymousUser()
-        elif self.user_type == 'superuser':
-            temp = {'is_staff': True, 'is_superuser': True}
-            user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
-            user.save()
-        elif self.user_type == 'admin':
-            temp = {'is_staff': True, 'is_superuser': False}
-            user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
-            user.save()
-        elif self.user_type == 'user':
-            temp = {'is_staff': False, 'is_superuser': False}
-            user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
-            user.save()
-        elif self.user_type == 'inactive':
-            temp = {'is_staff': False, 'is_superuser': False, 'is_active': False}
-            user_setup.update(temp)
+        else:
+            UserModel = get_user_model()
+            user_setup.update(lookup_user_settings.get(self.user_type, {}))
             user = UserModel.objects.create(**user_setup)
             user.save()
         self.view.request.user = user
@@ -173,9 +162,22 @@ class BaseRegisterTests(MimicAsView):
         for key, val in expected_defaults.items():
             self.assertEqual(context[key], val)
 
-    @skip("Not Implemented")
+    # @skip("Not Implemented")
     def test_register(self):
-        form = self.view.get_form()
-        register = self.view.register(form)
-        print("======================== SIMPLE FLOW TESTS - REGISTER =======================")
+        pw_fake = 'TestPW!42'
+        data = OTHER_USER.copy()
+        data.pop('password')
+        data.update({name: pw_fake for name in ('password1', 'password2')})
+        req_kwargs = {'data': data, 'session': 'fakesessionname'}
+        self.post_view = self.setup_view('post', req_kwargs)
+        form = self.post_view.get_form()
+        print("======================== TESTS - REGISTER =======================")
+        pprint(form)
+        print("-------------------------------------------")
+        pprint(self.post_view.request)
+        print("-------------------------------------------")
+        pprint(self.view.request)
+        print("-------------------------------------------")
+        # form.cleaned_data = {'password1': pw_fake, 'password2': pw_fake}
+        register = self.post_view.register(form)
         pprint(register)
