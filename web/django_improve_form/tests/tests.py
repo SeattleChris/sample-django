@@ -93,6 +93,13 @@ class FailModel:
         self.prop = names
 
 
+class HalfFailModel(FailModel):
+    ignore = {'custom_username', }
+
+    def get_email_field_name(self):
+        return 'email_field'
+
+
 class MockModel(FailModel):
     ignore = {'custom_username', }
     USERNAME_FIELD = 'username_field'
@@ -209,9 +216,16 @@ class MakeNamesModelTests(TestCase):
     @skip("Not Implemented")
     def test_no_username_ref_model(self):
         """Both the 'model_class' and 'user_model_class' are lacking the 'USERNAME_FIELD' reference. """
-
-        pass
-
+        self.user_model_class = HalfFailModel
+        self.user_model = HalfFailModel()
+        models = []
+        for model in (self.model, self.user_model):
+            if hasattr(model, 'get_email_field_name') and hasattr(model, 'USERNAME_FIELD'):
+                models.append(model)
+        self.assertFalse(models)
+        message = "The model or User model must have a 'USERNAME_FIELD' property. "
+        with self.assertRaisesMessage(ImproperlyConfigured, message):
+            make_names(*self.get_name_args())
 
     @skip("Not Implemented")
     def test_no_settings_passed(self):
