@@ -1,4 +1,4 @@
-from django.test import TestCase  # , TransactionTestCase, Client, RequestFactory,
+from django.test import TestCase, override_settings  # , TransactionTestCase, Client, RequestFactory,
 # from unittest import skip
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
 from .helper_admin import AdminSetupTests  # , AdminModelManagement
@@ -26,6 +26,10 @@ class ModelActivateFlowTests(BaseRegisterTests, TestCase):
     expected_form = RegisterModelForm
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
 
+    @override_settings(ACCOUNT_ACTIVATION_DAYS=2, ROOT_URLCONF='django_improve_form.urls_activation')
+    def test_register(self):
+        super().test_register()
+
 
 class SimpleFlowTests(BaseRegisterTests, TestCase):
     url_name = 'django_registration_register'
@@ -51,6 +55,7 @@ class ModifyUserTests(BaseRegisterTests, TestCase):
         self.assertFalse(hasattr(self.viewClass, 'register'))
 
 
+@override_settings(ACCOUNT_ACTIVATION_DAYS=2, ROOT_URLCONF='django_improve_form.urls_activation')
 class ActivateFlowTests(BaseRegisterTests, TestCase):
     url_name = 'initial_signup'
     viewClass = RegisterActivateFlowView
