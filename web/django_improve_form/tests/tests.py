@@ -1,11 +1,13 @@
 from django.test import TestCase  # , TransactionTestCase, Client, RequestFactory,
-# from unittest import skip
+from unittest import skip
+from django.core.exceptions import ImproperlyConfigured  # , ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
 # from django.contrib.auth import get_user_model
 from .helper_admin import AdminSetupTests  # , AdminModelManagement
 from .helper_views import BaseRegisterTests  # , USER_DEFAULTS, MimicAsView,
 from ..views import RegisterSimpleFlowView, RegisterActivateFlowView, ModifyUser
 from ..views import RegisterModelSimpleFlowView, RegisterModelActivateFlowView
 from ..forms import RegisterUserForm, RegisterChangeForm, RegisterModelForm
+from ..forms import _assign_available_names, make_names, default_names
 # from django.conf import settings
 # from django.core.exceptions import ObjectDoesNotExist
 # from django.db.models import Q, Max, Subquery
@@ -99,3 +101,26 @@ class MockModel(FailModel):
         return 'email_field'
 
 
+class MakeNamesModelTests(TestCase):
+
+    model_class = FailModel
+    user_model_class = MockModel
+    model = model_class()
+    user_model = user_model_class()
+    constructor_names = ['construct_one', 'construct_two', 'construct_three']  # Model field names, or None for defaults
+    # early_names = []
+    early_names = ['early_one', 'early_two']  # User model fields the form should have BEFORE email, username, password.
+    username_flag_name = 'custom_username'  # Set to None if the User model does not have this field type.
+    extra_names = ['extra_one', 'extra_two', 'extra_three']  # User model fields the has AFTER email, username, password
+    address_names = None  # Assumes defaults or the provided list of model fields. Set to [] for no address.
+    address_on_profile_name = None  # ProfileModel  # Set to the model used as profile if it stores the address fields.
+    # fields, user_fields, missing = make_names(constructor_names, early_names, username_flag_name, extra_names,
+    #                                           address_names, model, user_model, address_on_profile_name)
+    # make_names_args = (constructor_names, early_names, username_flag_name, extra_names,
+    #                    address_names, model, user_model, address_on_profile_name)
+
+    def get_name_args(self):
+        arg_names = ('constructor_names', 'early_names', 'username_flag_name', 'extra_names',
+                     'address_names', 'model', 'user_model', 'address_on_profile_name')
+        args = [getattr(self, name, None) for name in arg_names]
+        return args
