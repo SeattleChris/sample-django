@@ -230,9 +230,44 @@ class MakeNamesModelTests(TestCase):
     @skip("Not Implemented")
     def test_no_settings_passed(self):
         """If the third parameter for 'make_names' function is not a str, tuple, or list, then use an empty list. """
+        self.username_flag_name = None
+        models = []
+        name_for_email, name_for_user = None, None
+        for model in (self.model, self.user_model):
+            if hasattr(model, 'get_email_field_name') and hasattr(model, 'USERNAME_FIELD'):
+                models.append(model)
+        if not models:
+            if not name_for_email:
+                message = "The model or User model must have a 'get_email_field_name' method. "
+            else:
+                message = "The model or User model must have a 'USERNAME_FIELD' property. "
+            with self.assertRaisesMessage(ImproperlyConfigured, message):
+                make_names(*self.get_name_args())
+            return
+        else:
+            target = models[0]
+            name_for_email = target.get_email_field_name()
+            name_for_user = target.USERNAME_FIELD
 
-        pass
+        initial = [*self.constructor_names, *self.early_names]
+        settings = ["password1", "password2", *self.extra_names]  # Since it is None, not self.username_flag_name
+        expected_fields = [*initial, *settings]
+        expected_alt = [name_for_email, name_for_user]
+        address_names = [
+            'billing_address_1', 'billing_address_2',
+            'billing_city', 'billing_country_area', 'billing_postcode',
+            'billing_country_code',
+            ]
+        expected_missing = address_names
+        actual_fields, actual_alt, actual_missing = make_names(*self.get_name_args())
+        print("================== test_no_settings_passed: Results ========================")
+        print(expected_fields, '\n\n', expected_alt, '\n\n', expected_missing, '\n')
+        print("---------------------------------\n")
+        print(actual_fields, '\n\n', actual_alt, '\n\n', actual_missing, '\n')
 
+        self.assertEqual(expected_fields, actual_fields)
+        self.assertEqual(expected_alt, actual_alt)
+        self.assertEqual(expected_missing, actual_missing)
 
     @skip("Not Implemented")
     def test_misc_feature(self):
