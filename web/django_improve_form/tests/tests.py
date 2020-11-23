@@ -150,3 +150,52 @@ class MakeNamesModelTests(TestCase):
         self.assertEqual(expected_alt, actual_alt)
         self.assertEqual(expected_missing, actual_missing)
 
+    @skip("Not Implemented")
+    def test_profile_address(self):
+        """The address fields are on the Profile model. """
+
+        pass
+
+
+    @skip("Not Implemented")
+    def test_no_user_like_model(self):
+        """Both the 'model_class' and 'user_model_class' are lacking the expected User model methods. """
+
+        pass
+
+
+    @skip("Not Implemented")
+    def test_no_username_ref_model(self):
+        """Both the 'model_class' and 'user_model_class' are lacking the 'USERNAME_FIELD' reference. """
+
+        pass
+
+
+    @skip("Not Implemented")
+    def test_no_settings_passed(self):
+        """If the third parameter for 'make_names' function is not a str, tuple, or list, then use an empty list. """
+
+        pass
+
+
+    @skip("Not Implemented")
+    def test_misc_feature(self):
+        """Docs """
+
+        pass
+
+    # @skip("Not Implemented")
+    # def test_no_user_like_model(self):
+    #     """Both the 'model_class' and 'user_model_class' are lacking the expected User model methods. """
+    #     self.user_model_class = FailModel
+    #     self.user_model = FailModel()
+    #     models = []
+    #     for model in (self.model, self.user_model):
+    #         if hasattr(model, 'get_email_field_name') and hasattr(model, 'USERNAME_FIELD'):
+    #             models.append(model)
+    #     self.assertFalse(models)
+    #     message = "The model or User model must have a 'get_email_field_name' method. "
+    #     with self.assertRaisesMessage(ImproperlyConfigured, message):
+    #         make_names(*self.get_name_args())
+
+# End tests.py
