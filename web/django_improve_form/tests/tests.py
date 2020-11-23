@@ -1,5 +1,5 @@
 from django.test import TestCase  # , TransactionTestCase, Client, RequestFactory,
-from unittest import skip
+# from unittest import skip
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
 # from django.contrib.auth import get_user_model
 from .helper_admin import AdminSetupTests  # , AdminModelManagement
@@ -7,7 +7,7 @@ from .helper_views import BaseRegisterTests  # , USER_DEFAULTS, MimicAsView,
 from ..views import RegisterSimpleFlowView, RegisterActivateFlowView, ModifyUser
 from ..views import RegisterModelSimpleFlowView, RegisterModelActivateFlowView
 from ..forms import RegisterUserForm, RegisterChangeForm, RegisterModelForm
-from ..forms import _assign_available_names, make_names, default_names
+from ..forms import make_names, default_names
 # from django.conf import settings
 # from django.core.exceptions import ObjectDoesNotExist
 # from django.db.models import Q, Max, Subquery
