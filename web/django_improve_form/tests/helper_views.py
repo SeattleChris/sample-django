@@ -1,12 +1,6 @@
 from django.test import Client, RequestFactory  # , TestCase,  TransactionTestCase
 from django.urls import reverse
-from unittest import skip
-# from django.conf import settings
-# from django.core.exceptions import ObjectDoesNotExist
-# from django.utils.module_loading import import_string
-# from unittest import skip  # @skip("Not Implemented")
-# from datetime import time, timedelta, datetime as dt  # date,
-# Resource = import_string('APPNAME.models.Resource')
+from unittest import skip  # @skip("Not Implemented")
 from .helper_general import AnonymousUser, UserModel  # , MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
 from pprint import pprint
 
@@ -107,6 +101,7 @@ class MimicAsView:
         variants = []
         # Create the data
         categories = [Category.objects.create(**cat_const, name=var) for var in cat_vars]
+        data = []
         for var in variants:
             data = [Model.objects.create(**consts, var_name=var, category=ea) for ea in categories]
         return data
@@ -139,26 +134,17 @@ class BaseRegisterTests(MimicAsView):
         # self.expected_form.Meta.model = getattr(self.expected_form.Meta, 'model', None) or get_user_model()
         self.view = self.setup_view('get')
         user_setup = USER_DEFAULTS.copy()
+        user = None
+        lookup_user_settings = {
+            'superuser': {'is_staff': True, 'is_superuser': True},
+            'admin': {'is_staff': True, 'is_superuser': False},
+            'user': {'is_staff': False, 'is_superuser': False},
+            'inactive': {'is_staff': False, 'is_superuser': False, 'is_active': False},
+            }
         if self.user_type == 'anonymous':
             user = AnonymousUser()
-        elif self.user_type == 'superuser':
-            temp = {'is_staff': True, 'is_superuser': True}
-            user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
-            user.save()
-        elif self.user_type == 'admin':
-            temp = {'is_staff': True, 'is_superuser': False}
-            user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
-            user.save()
-        elif self.user_type == 'user':
-            temp = {'is_staff': False, 'is_superuser': False}
-            user_setup.update(temp)
-            user = UserModel.objects.create(**user_setup)
-            user.save()
-        elif self.user_type == 'inactive':
-            temp = {'is_staff': False, 'is_superuser': False, 'is_active': False}
-            user_setup.update(temp)
+        else:
+            user_setup.update(lookup_user_settings.get(self.user_type, {}))
             user = UserModel.objects.create(**user_setup)
             user.save()
         self.view.request.user = user
@@ -175,7 +161,9 @@ class BaseRegisterTests(MimicAsView):
 
     @skip("Not Implemented")
     def test_register(self):
+        pw_fake = 'TestPW!42'
         form = self.view.get_form()
+        form.cleaned_data = {'password1': pw_fake}
         register = self.view.register(form)
         print("======================== SIMPLE FLOW TESTS - REGISTER =======================")
         pprint(register)
