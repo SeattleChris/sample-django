@@ -1,7 +1,8 @@
 from django.test import Client, RequestFactory  # , TestCase,  TransactionTestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-# from unittest import skip  # @skip("Not Implemented")
+from django.core.exceptions import ImproperlyConfigured  # , ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
+from unittest import skip  # @skip("Not Implemented")
 from .helper_general import AnonymousUser  # , MockRequest
 # , UserModel, MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
 from pprint import pprint
@@ -142,8 +143,31 @@ class BaseRegisterTests(MimicAsView):
     def setUp(self):
         # self.viewClass.model = getattr(self.viewClass, 'model', None) or get_user_model()
         # self.expected_form.Meta.model = getattr(self.expected_form.Meta, 'model', None) or get_user_model()
-        self.view = self.setup_view('get')
-        user_setup = USER_DEFAULTS.copy()
+        user_kwargs = {} if self.request_method not in ('post', 'put') else {'password_count': 2}
+        user, user_setup = self.setup_user(**user_kwargs)
+        req_kwargs = self.request_kwargs.copy()
+        if self.request_method in ('post', 'put') and 'data' not in req_kwargs:
+            req_kwargs.update(data=user_setup)
+        self.view = self.setup_view(self.request_method, req_kwargs)
+        self.view.request.user = user
+        if self.user_type != 'anonymous' and hasattr(self.view, 'get_object'):
+            self.view.object = user  # TODO: Should MimicAsView be updated to actually call the view get method?
+
+    def setup_user(self, initial=1, exclude=(), extra={}, password_count=1, **kwargs):
+        """Returns dict of user settings. Use password_count=2 for password confirmation inputs. """
+        initial_lookup = {1: USER_DEFAULTS.copy(), 2: OTHER_USER.copy()}
+        if isinstance(initial, int):
+            initial = initial_lookup[initial]
+        elif not isinstance(initial, dict):
+            raise ImproperlyConfigured("If not passing an integer, the initial parameter should be a dictionary. ")
+        if exclude:
+            initial = {key: value for key, value in initial.items() if key not in exclude}
+        initial.update(extra)
+        if password_count == 2:
+            old_password = initial.pop('password')
+            initial.setdefault('password1', old_password)
+            initial.setdefault('password2', old_password)
+        user_setup = initial.copy()
         user = None
         lookup_user_settings = {
             'superuser': {'is_staff': True, 'is_superuser': True},
@@ -158,9 +182,7 @@ class BaseRegisterTests(MimicAsView):
             user_setup.update(lookup_user_settings.get(self.user_type, {}))
             user = UserModel.objects.create(**user_setup)
             user.save()
-        self.view.request.user = user
-        if self.user_type != 'anonymous' and hasattr(self.view, 'get_object'):
-            self.view.object = user  # TODO: Should MimicAsView be updated to actually call the view get method?
+        return user, initial
 
     def test_get_context_data(self):
         expected_defaults = self.viewClass.default_context
@@ -170,7 +192,7 @@ class BaseRegisterTests(MimicAsView):
         for key, val in expected_defaults.items():
             self.assertEqual(context[key], val)
 
-    # @skip("Not Implemented")
+    @skip("Not working yet. Not Implemented")
     def test_register(self):
         pw_fake = 'TestPW!42'
         data = OTHER_USER.copy()
