@@ -63,6 +63,7 @@ class MimicAsView:
     url_name = ''  # find in app.urls
     viewClass = None  # find in app.views
     query_order_by = None  # expected tuple or list if order_by is needed.
+    request_as_factory = True  # Otherwise use Client.
 
     def setup_view(self, method, req_kwargs=None, template_name=None, *args, **init_kwargs):
         """A view instance that mimics as_view() returned callable. For args and kwargs match format as reverse(). """
@@ -73,8 +74,13 @@ class MimicAsView:
         allowed_methods = set(ea.lower() for ea in allowed_methods)
         if method not in allowed_methods:  # or not getattr(self.viewClass, method, None)
             raise ValueError("Method '{}' not recognized as an allowed method string. ".format(method))
-        factory = RequestFactory()
-        request = getattr(factory, method)('/', **req_kwargs)
+        if self.request_as_factory:
+            factory = RequestFactory()
+            request = getattr(factory, method)('/', **req_kwargs)
+        else:
+            c = Client()
+            request = getattr(c, method)(self.url_name, **req_kwargs)
+            self.my_client = c
         # TODO: Should MimicAsView be updated to actually call the view get method?
         key = 'template_name'
         template_name = template_name or getattr(self, key, None) or getattr(self.viewClass, key, None)
@@ -130,6 +136,8 @@ class BaseRegisterTests(MimicAsView):
     viewClass = None
     expected_form = None
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
+    request_method = 'get'
+    request_kwargs = {}
 
     def setUp(self):
         # self.viewClass.model = getattr(self.viewClass, 'model', None) or get_user_model()
