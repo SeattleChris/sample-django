@@ -194,20 +194,22 @@ class BaseRegisterTests(MimicAsView):
 
     @skip("Not working yet. Not Implemented")
     def test_register(self):
-        pw_fake = 'TestPW!42'
-        data = OTHER_USER.copy()
-        data.pop('password')
-        data.update({name: pw_fake for name in ('password1', 'password2')})
-        req_kwargs = {'data': data, 'session': 'fakesessionname'}
-        self.post_view = self.setup_view('post', req_kwargs)
-        form = self.post_view.get_form()
+        # pw_fake = 'TestPW!42'
+        # data = OTHER_USER.copy()
+        # data.pop('password')
+        # data.update({name: pw_fake for name in ('password1', 'password2')})
+        # req_kwargs = {'data': data, 'session': 'fakesessionname'}
+        # self.post_view = self.setup_view('post', req_kwargs)
+        # form = self.post_view.get_form()
+        form = self.view.get_form()
         print("======================== TESTS - REGISTER =======================")
         pprint(form)
         print("-------------------------------------------")
-        pprint(self.post_view.request)
-        print("-------------------------------------------")
         pprint(self.view.request)
+        # pprint(self.post_view.request)
         print("-------------------------------------------")
+        # pprint(self.view.request)
+        # print("-------------------------------------------")
         # form.cleaned_data = {'password1': pw_fake, 'password2': pw_fake}
         register = self.post_view.register(form)
         pprint(register)
