@@ -167,46 +167,54 @@ class BaseRegisterTests(MimicAsView):
     def setUp(self):
         # self.viewClass.model = getattr(self.viewClass, 'model', None) or get_user_model()
         # self.expected_form.Meta.model = getattr(self.expected_form.Meta, 'model', None) or get_user_model()
-        user_kwargs = {} if self.request_method not in ('post', 'put') else {'password_count': 2}
-        user, user_setup = self.setup_user(**user_kwargs)
+        user = self.make_user()
         req_kwargs = self.request_kwargs.copy()
         if self.request_method in ('post', 'put') and 'data' not in req_kwargs:
+            user_kwargs = {'form_only': True}
+            if self.user_type != 'anonymous':
+                user_kwargs.update(initial=2)
+            user_setup = self.setup_user(**user_kwargs)
             req_kwargs.update(data=user_setup)
         self.view = self.setup_view(self.request_method, req_kwargs)
         self.view.request.user = user
         if self.user_type != 'anonymous' and hasattr(self.view, 'get_object'):
             self.view.object = user  # TODO: Should MimicAsView be updated to actually call the view get method?
 
-    def setup_user(self, initial=1, exclude=(), extra={}, password_count=1, **kwargs):
+    def setup_user(self, initial=1, exclude=(), extra={}, form_only=False, **kwargs):
         """Returns dict of user settings. Use password_count=2 for password confirmation inputs. """
-        initial_lookup = {1: USER_DEFAULTS.copy(), 2: OTHER_USER.copy()}
+        initial_lookup = {1: USER_DEFAULTS, 2: OTHER_USER}
         if isinstance(initial, int):
             initial = initial_lookup[initial]
         elif not isinstance(initial, dict):
             raise ImproperlyConfigured("If not passing an integer, the initial parameter should be a dictionary. ")
-        if exclude:
-            initial = {key: value for key, value in initial.items() if key not in exclude}
-        initial.update(extra)
-        if password_count == 2:
-            old_password = initial.pop('password')
-            initial.setdefault('password1', old_password)
-            initial.setdefault('password2', old_password)
         user_setup = initial.copy()
-        user = None
+        if exclude:
+            user_setup = {key: value for key, value in user_setup.items() if key not in exclude}
+        user_setup.update(extra)
+        if form_only:
+            old_password = user_setup.pop('password', '')
+            user_setup.setdefault('password1', old_password)
+            user_setup.setdefault('password2', old_password)
+        return user_setup
+
+    def make_user(self, user_type=None, **kwargs):
+        """For the given settings in kwargs, create and return a User object. """
+        user_type = self.user_type if user_type is None else user_type
         lookup_user_settings = {
             'superuser': {'is_staff': True, 'is_superuser': True},
             'admin': {'is_staff': True, 'is_superuser': False},
             'user': {'is_staff': False, 'is_superuser': False},
             'inactive': {'is_staff': False, 'is_superuser': False, 'is_active': False},
             }
-        if self.user_type == 'anonymous':
+        if user_type == 'anonymous':
             user = AnonymousUser()
         else:
             UserModel = get_user_model()
-            user_setup.update(lookup_user_settings.get(self.user_type, {}))
-            user = UserModel.objects.create(**user_setup)
+            kwargs = self.setup_user(**kwargs)
+            kwargs.update(lookup_user_settings.get(user_type, {}))
+            user = UserModel.objects.create(**kwargs)
             user.save()
-        return user, initial
+        return user
 
     def test_get_context_data(self):
         expected_defaults = self.viewClass.default_context
