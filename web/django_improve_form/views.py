@@ -6,7 +6,7 @@ from django.utils.translation import gettext as _
 from django_registration.backends.one_step.views import RegistrationView as RegistrationViewOneStep
 from django_registration.backends.activation.views import RegistrationView as RegistrationViewTwoStep
 from .forms import RegisterUserForm, RegisterModelForm, RegisterChangeForm
-from pprint import pprint  # TODO: Remove after debug
+# from pprint import pprint  # TODO: Remove after debug
 
 # Create your views here.
 
@@ -35,10 +35,10 @@ class RegisterSimpleFlowView(RegistrationViewOneStep):
         return context
 
     def register(self, form):
-        print("===================== RegisterSimpleFlowView.register ============================")
-        pprint(form)
-        print("----------------------------------------------------------------------------------")
-        pprint(self)
+        # print("===================== RegisterSimpleFlowView.register ============================")
+        # pprint(form)
+        # print("----------------------------------------------------------------------------------")
+        # pprint(self)
         return super().register(form)
 
 
@@ -66,10 +66,10 @@ class RegisterActivateFlowView(RegistrationViewTwoStep):
         return context
 
     def register(self, form):
-        print("===================== RegisterActivateFlowView.register ============================")
-        pprint(form)
-        print("----------------------------------------------------------------------------------")
-        pprint(self)
+        # print("===================== RegisterActivateFlowView.register ============================")
+        # pprint(form)
+        # print("----------------------------------------------------------------------------------")
+        # pprint(self)
         return super().register(form)
 
 

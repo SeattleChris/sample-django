@@ -1,12 +1,8 @@
 from django.urls import path, include
-# from django.views.generic.base import TemplateView
-# from django.contrib.auth.views import PasswordChangeView, LoginView
-# from .views import RegisterSimpleFlowView, RegisterActivateFlowView, ModifyUser
-# from .views import RegisterModelSimpleFlowView, RegisterModelActivateFlowView
-from .urls import urlpatterns as one_step_urls
+from .urls_simple import urlpatterns as one_step_urls
 
 urlpatterns = [
-    path('', include('django_registration.backends.activation.urls')),
+    path('register', include('django_registration.backends.activation.urls')),
     *one_step_urls[1:],
 ]
 

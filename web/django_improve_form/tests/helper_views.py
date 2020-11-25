@@ -2,13 +2,13 @@ from django.test import Client, RequestFactory  # , TestCase,  TransactionTestCa
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
-from unittest import skip  # @skip("Not Implemented")
-from .helper_general import AnonymousUser  # , MockRequest
-# , UserModel, MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
+from unittest import skip
+from .helper_general import AnonymousUser  # , UserModel, MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
 from pprint import pprint
 
-USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
-OTHER_USER = {'email': 'other@fake.com', 'password': 'test1234', 'first_name': 'other_user', 'last_name': 'fake_y'}
+UserModel = get_user_model()
+USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'TestPW!42', 'first_name': 'f_user', 'last_name': 'fake_y'}
+OTHER_USER = {'email': 'other@fake.com', 'password': 'TestPW!42', 'first_name': 'other_user', 'last_name': 'fake_y'}
 
 
 class TestFormLoginRequired:
@@ -65,23 +65,27 @@ class MimicAsView:
     viewClass = None  # find in app.views
     query_order_by = None  # expected tuple or list if order_by is needed.
     request_as_factory = True  # Otherwise use Client.
+    login_ability_needed = False
+    request_method = 'get'
+    request_kwargs = {}
 
     def setup_view(self, method, req_kwargs=None, template_name=None, *args, **init_kwargs):
         """A view instance that mimics as_view() returned callable. For args and kwargs match format as reverse(). """
-        req_kwargs = req_kwargs or {}
+        method = method or self.request_method
         if isinstance(method, str):
             method = method.lower()
         allowed_methods = getattr(self.viewClass, 'http_method_names', {'get', })
         allowed_methods = set(ea.lower() for ea in allowed_methods)
         if method not in allowed_methods:  # or not getattr(self.viewClass, method, None)
             raise ValueError("Method '{}' not recognized as an allowed method string. ".format(method))
-        if self.request_as_factory:
+        if method in ('post', 'put'):
+            req_kwargs = self.setup_post_request(req_kwargs)
+        req_kwargs = req_kwargs or {}
+        if self.request_as_factory and not self.login_ability_needed:
             factory = RequestFactory()
             request = getattr(factory, method)('/', **req_kwargs)
         else:
-            c = Client()
-            request = getattr(c, method)(self.url_name, **req_kwargs)
-            self.my_client = c
+            request = getattr(self.client, method)(reverse(self.url_name), **req_kwargs)
         # TODO: Should MimicAsView be updated to actually call the view get method?
         key = 'template_name'
         template_name = template_name or getattr(self, key, None) or getattr(self.viewClass, key, None)
@@ -91,6 +95,27 @@ class MimicAsView:
         view.args = args
         view.kwargs = init_kwargs
         return view
+
+    def setup_post_request(self, initial=None, exclude=(), extra=(), **kwargs):
+        """Returns request kwargs, with some form submission data, for a POST request. """
+        req_kwargs = self.request_kwargs.copy() if initial is None else initial
+        files = req_kwargs.get('files', {})
+        files.update(kwargs.get('files', {}))
+        if files:
+            req_kwargs['files'] = files
+        data = req_kwargs.get('data', {})
+        data.update(kwargs.get('data', {}))
+        if exclude:
+            data = {k: v for k, v in data.items() if k not in exclude}
+        extra_kwargs = {}
+        if isinstance(extra, dict):
+            extra_kwargs = extra
+        elif extra:
+            extra_kwargs = {name: kwargs[name] for name in extra if name in kwargs}
+            # needed_names = [name for name in extra if name not in extra_kwargs]
+        data.update(extra_kwargs)
+        req_kwargs['data'] = data
+        return req_kwargs
 
     def prep_http_method(self, method):
         """To emulate View.as_view() we could do this on EACH http method. Normally as_view is only made with one. """
@@ -137,52 +162,57 @@ class BaseRegisterTests(MimicAsView):
     viewClass = None
     expected_form = None
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
-    request_method = 'get'
-    request_kwargs = {}
 
     def setUp(self):
         # self.viewClass.model = getattr(self.viewClass, 'model', None) or get_user_model()
         # self.expected_form.Meta.model = getattr(self.expected_form.Meta, 'model', None) or get_user_model()
-        user_kwargs = {} if self.request_method not in ('post', 'put') else {'password_count': 2}
-        user, user_setup = self.setup_user(**user_kwargs)
+        user = self.make_user()
         req_kwargs = self.request_kwargs.copy()
         if self.request_method in ('post', 'put') and 'data' not in req_kwargs:
+            user_kwargs = {'form_only': True}
+            if self.user_type != 'anonymous':
+                user_kwargs.update(initial=2)
+            user_setup = self.setup_user(**user_kwargs)
             req_kwargs.update(data=user_setup)
         self.view = self.setup_view(self.request_method, req_kwargs)
         self.view.request.user = user
         if self.user_type != 'anonymous' and hasattr(self.view, 'get_object'):
             self.view.object = user  # TODO: Should MimicAsView be updated to actually call the view get method?
 
-    def setup_user(self, initial=1, exclude=(), extra={}, password_count=1, **kwargs):
+    def setup_user(self, initial=1, exclude=(), extra={}, form_only=False, **kwargs):
         """Returns dict of user settings. Use password_count=2 for password confirmation inputs. """
-        initial_lookup = {1: USER_DEFAULTS.copy(), 2: OTHER_USER.copy()}
+        initial_lookup = {1: USER_DEFAULTS, 2: OTHER_USER}
         if isinstance(initial, int):
             initial = initial_lookup[initial]
         elif not isinstance(initial, dict):
             raise ImproperlyConfigured("If not passing an integer, the initial parameter should be a dictionary. ")
-        if exclude:
-            initial = {key: value for key, value in initial.items() if key not in exclude}
-        initial.update(extra)
-        if password_count == 2:
-            old_password = initial.pop('password')
-            initial.setdefault('password1', old_password)
-            initial.setdefault('password2', old_password)
         user_setup = initial.copy()
-        user = None
+        if exclude:
+            user_setup = {key: value for key, value in user_setup.items() if key not in exclude}
+        user_setup.update(extra)
+        if form_only:
+            old_password = user_setup.pop('password', '')
+            user_setup.setdefault('password1', old_password)
+            user_setup.setdefault('password2', old_password)
+        return user_setup
+
+    def make_user(self, user_type=None, **kwargs):
+        """For the given settings in kwargs, create and return a User object. """
+        user_type = self.user_type if user_type is None else user_type
         lookup_user_settings = {
             'superuser': {'is_staff': True, 'is_superuser': True},
             'admin': {'is_staff': True, 'is_superuser': False},
             'user': {'is_staff': False, 'is_superuser': False},
             'inactive': {'is_staff': False, 'is_superuser': False, 'is_active': False},
             }
-        if self.user_type == 'anonymous':
+        if user_type == 'anonymous':
             user = AnonymousUser()
         else:
-            UserModel = get_user_model()
-            user_setup.update(lookup_user_settings.get(self.user_type, {}))
-            user = UserModel.objects.create(**user_setup)
+            kwargs = self.setup_user(**kwargs)
+            kwargs.update(lookup_user_settings.get(user_type, {}))
+            user = UserModel.objects.create(**kwargs)
             user.save()
-        return user, initial
+        return user
 
     def test_get_context_data(self):
         expected_defaults = self.viewClass.default_context
@@ -192,22 +222,80 @@ class BaseRegisterTests(MimicAsView):
         for key, val in expected_defaults.items():
             self.assertEqual(context[key], val)
 
-    @skip("Not working yet. Not Implemented")
-    def test_register(self):
-        pw_fake = 'TestPW!42'
+    def update_to_post_form(self):
+        """Called if needing an HTTP POST request on the form when we currently only have a GET. """
         data = OTHER_USER.copy()
-        data.pop('password')
-        data.update({name: pw_fake for name in ('password1', 'password2')})
-        req_kwargs = {'data': data, 'session': 'fakesessionname'}
-        self.post_view = self.setup_view('post', req_kwargs)
-        form = self.post_view.get_form()
-        print("======================== TESTS - REGISTER =======================")
+        pw_fake = data.pop('password')
+        pw_data = {name: pw_fake for name in ('password1', 'password2')}
+        data.update(pw_data)
+        req_kwargs = {'data': data}
+        self.view = self.setup_view('post', req_kwargs)
+        form = self.view.get_form()
+        if getattr(form, 'cleaned_data', None) is None:
+            form.cleaned_data = pw_data
+        return form
+
+    @skip("Temporary Test. Not Implemented")
+    def test_form_process(self):
+        """Does the given form with submitted data validate? """
+        self.old_view = self.view
+        print(f"==================== {self.view.__class__.__name__} TEST FORM PROCESS ==========================")
+        if self.request_method not in ('post', 'put'):
+            form = self.update_to_post_form()
+        else:
+            form = self.view.get_form()
         pprint(form)
+        # pprint(dir(form))
+        print("-----------------------------------------------")
+        if not form.is_valid():
+            pprint(form.errors)
+        else:
+            print("VALID FORM! ")
+        # pprint(dir(self.view))
+        new_user = 'NOT CREATED YET'
+        try:
+            new_user = form.save()
+        except Exception as e:
+            print("Got an exception on saving. ")
+            pprint(e)
+        print(new_user)
+        pass
+        if self.view != self.old_view:
+            self.view = self.old_view
+
+    # @skip("Not working yet. Not Implemented")
+    def test_register(self):
+        self.old_view = self.view
+        if self.request_method not in ('post', 'put'):
+            form = self.update_to_post_form()
+        else:
+            form = self.view.get_form()
+        print(f"======================== {self.view.__class__.__name__} TESTS - REGISTER =======================")
+        pprint(getattr(form, 'request', 'FORM REQUEST NOT FOUND'))
+        pprint(getattr(self.view, 'request', 'View REQUEST NOT FOUND'))
+        pprint(getattr(self.view.request, 'session', 'SESSION NOT FOUND'))
         print("-------------------------------------------")
-        pprint(self.post_view.request)
+        pprint(form)
         print("-------------------------------------------")
         pprint(self.view.request)
         print("-------------------------------------------")
-        # form.cleaned_data = {'password1': pw_fake, 'password2': pw_fake}
-        register = self.post_view.register(form)
-        pprint(register)
+        # pprint(dir(self.view.request))
+        # print("-------------------------------------------")
+        new_user = self.view.register(form)
+        pprint("Register Return: ", new_user)
+        expected_username = form.data.get('email', 'NOT_FOUND')
+        print(expected_username)
+        print("-------***************************------")
+
+        self.assertIsInstance(new_user, UserModel)
+        self.assertEqual(expected_username, getattr(new_user, 'email', None))
+        self.assertEqual(expected_username, getattr(new_user, 'username', None))
+
+        if self.view != self.old_view:
+            self.view = self.old_view
+            del self.old_view
+
+    @skip("Not Implemented")
+    def test_other(self):
+        """Placeholder for other tests. """
+        pass

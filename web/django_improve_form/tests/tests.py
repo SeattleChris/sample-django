@@ -13,34 +13,41 @@ class AdminGeneralModelsTests(AdminSetupTests, TestCase):
     pass
 
 
+@override_settings(ROOT_URLCONF='django_improve_form.tests.urls_simple')
 class ModelSimpleFlowTests(BaseRegisterTests, TestCase):
     url_name = 'model_signup'
     viewClass = RegisterModelSimpleFlowView
     expected_form = RegisterModelForm
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
+    # request_as_factory = False
+    request_method = 'post'
 
 
+@override_settings(ACCOUNT_ACTIVATION_DAYS=2, ROOT_URLCONF='django_improve_form.tests.urls_activation')
 class ModelActivateFlowTests(BaseRegisterTests, TestCase):
     url_name = 'model_initial'
     viewClass = RegisterModelActivateFlowView
     expected_form = RegisterModelForm
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
-    request_as_factory = False
-    request_method = 'get'
+    # request_as_factory = False
+    request_method = 'post'
     request_kwargs = {}
 
-    @override_settings(ACCOUNT_ACTIVATION_DAYS=2, ROOT_URLCONF='django_improve_form.urls_activation')
     def test_register(self):
         super().test_register()
 
 
+@override_settings(ROOT_URLCONF='django_improve_form.tests.urls_simple')
 class SimpleFlowTests(BaseRegisterTests, TestCase):
     url_name = 'django_registration_register'
     viewClass = RegisterSimpleFlowView
     expected_form = RegisterUserForm
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
+    # request_as_factory = False
+    request_method = 'post'
 
 
+@override_settings(ROOT_URLCONF='django_improve_form.tests.urls_simple')
 class ModifyUserTests(BaseRegisterTests, TestCase):
     url_name = 'user_update'
     viewClass = ModifyUser
@@ -58,14 +65,14 @@ class ModifyUserTests(BaseRegisterTests, TestCase):
         self.assertFalse(hasattr(self.viewClass, 'register'))
 
 
-@override_settings(ACCOUNT_ACTIVATION_DAYS=2, ROOT_URLCONF='django_improve_form.urls_activation')
+@override_settings(ACCOUNT_ACTIVATION_DAYS=2, ROOT_URLCONF='django_improve_form.tests.urls_activation')
 class ActivateFlowTests(BaseRegisterTests, TestCase):
     url_name = 'initial_signup'
     viewClass = RegisterActivateFlowView
     expected_form = RegisterUserForm
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
-    request_as_factory = False
-    request_method = 'get'
+    # request_as_factory = False
+    request_method = 'post'
 
 
 DEFAULT_MODEL_NAMES = [
