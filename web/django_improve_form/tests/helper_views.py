@@ -65,16 +65,21 @@ class MimicAsView:
     viewClass = None  # find in app.views
     query_order_by = None  # expected tuple or list if order_by is needed.
     request_as_factory = True  # Otherwise use Client.
+    request_method = 'get'
+    request_kwargs = {}
 
     def setup_view(self, method, req_kwargs=None, template_name=None, *args, **init_kwargs):
         """A view instance that mimics as_view() returned callable. For args and kwargs match format as reverse(). """
-        req_kwargs = req_kwargs or {}
+        method = method or self.request_method
         if isinstance(method, str):
             method = method.lower()
         allowed_methods = getattr(self.viewClass, 'http_method_names', {'get', })
         allowed_methods = set(ea.lower() for ea in allowed_methods)
         if method not in allowed_methods:  # or not getattr(self.viewClass, method, None)
             raise ValueError("Method '{}' not recognized as an allowed method string. ".format(method))
+        if method in ('post', 'put'):
+            req_kwargs = self.setup_post_request(req_kwargs)
+        req_kwargs = req_kwargs or {}
         if self.request_as_factory:
             factory = RequestFactory()
             request = getattr(factory, method)('/', **req_kwargs)
@@ -91,6 +96,27 @@ class MimicAsView:
         view.args = args
         view.kwargs = init_kwargs
         return view
+
+    def setup_post_request(self, initial=None, exclude=(), extra=(), **kwargs):
+        """Returns request kwargs, with some form submission data, for a POST request. """
+        req_kwargs = self.request_kwargs.copy() if initial is None else initial
+        files = req_kwargs.get('files', {})
+        files.update(kwargs.get('files', {}))
+        if files:
+            req_kwargs['files'] = files
+        data = req_kwargs.get('data', {})
+        data.update(kwargs.get('data', {}))
+        if exclude:
+            data = {k: v for k, v in data.items() if k not in exclude}
+        extra_kwargs = {}
+        if isinstance(extra, dict):
+            extra_kwargs = extra
+        elif extra:
+            extra_kwargs = {name: kwargs[name] for name in extra if name in kwargs}
+            # needed_names = [name for name in extra if name not in extra_kwargs]
+        data.update(extra_kwargs)
+        req_kwargs['data'] = data
+        return req_kwargs
 
     def prep_http_method(self, method):
         """To emulate View.as_view() we could do this on EACH http method. Normally as_view is only made with one. """
@@ -137,8 +163,6 @@ class BaseRegisterTests(MimicAsView):
     viewClass = None
     expected_form = None
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
-    request_method = 'get'
-    request_kwargs = {}
 
     def setUp(self):
         # self.viewClass.model = getattr(self.viewClass, 'model', None) or get_user_model()
