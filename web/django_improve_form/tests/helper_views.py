@@ -235,11 +235,11 @@ class BaseRegisterTests(MimicAsView):
             form.cleaned_data = pw_data
         return form
 
-    @skip("Temporary Test. Not Implemented")
-    def test_form_process(self):
-        """Does the given form with submitted data validate? """
+    # @skip("Not Implemented")
+    def test_form_settings_can_save(self):
+        """Is the test data a valid input for a successful form submission. """
         self.old_view = self.view
-        print(f"==================== {self.view.__class__.__name__} TEST FORM PROCESS ==========================")
+        print(f"==================== {self.view.__class__.__name__} TEST FORM Save User ==========================")
         if self.request_method not in ('post', 'put'):
             form = self.update_to_post_form()
         else:
@@ -262,8 +262,10 @@ class BaseRegisterTests(MimicAsView):
         pass
         if self.view != self.old_view:
             self.view = self.old_view
+        if isinstance(new_user, UserModel):
+            new_user.delete()
 
-    # @skip("Not working yet. Not Implemented")
+    @skip("Not working yet. Not Implemented")
     def test_register(self):
         self.old_view = self.view
         if self.request_method not in ('post', 'put'):
@@ -294,6 +296,8 @@ class BaseRegisterTests(MimicAsView):
         if self.view != self.old_view:
             self.view = self.old_view
             del self.old_view
+        if isinstance(new_user, UserModel):
+            new_user.delete()
 
     @skip("Not Implemented")
     def test_other(self):
