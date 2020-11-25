@@ -235,6 +235,7 @@ class BaseRegisterTests(MimicAsView):
             form.cleaned_data = pw_data
         return form
 
+    @skip("Temporary Test. Not Implemented")
     def test_form_process(self):
         """Does the given form with submitted data validate? """
         self.old_view = self.view
@@ -244,7 +245,7 @@ class BaseRegisterTests(MimicAsView):
         else:
             form = self.view.get_form()
         pprint(form)
-        pprint(dir(form))
+        # pprint(dir(form))
         print("-----------------------------------------------")
         if not form.is_valid():
             pprint(form.errors)
@@ -262,7 +263,7 @@ class BaseRegisterTests(MimicAsView):
         if self.view != self.old_view:
             self.view = self.old_view
 
-    @skip("Not working yet. Not Implemented")
+    # @skip("Not working yet. Not Implemented")
     def test_register(self):
         self.old_view = self.view
         if self.request_method not in ('post', 'put'):
@@ -292,6 +293,7 @@ class BaseRegisterTests(MimicAsView):
 
         if self.view != self.old_view:
             self.view = self.old_view
+            del self.old_view
 
     @skip("Not Implemented")
     def test_other(self):
