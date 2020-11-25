@@ -18,6 +18,8 @@ class ModelSimpleFlowTests(BaseRegisterTests, TestCase):
     viewClass = RegisterModelSimpleFlowView
     expected_form = RegisterModelForm
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
+    # request_as_factory = False
+    request_method = 'post'
 
 
 class ModelActivateFlowTests(BaseRegisterTests, TestCase):
@@ -25,8 +27,8 @@ class ModelActivateFlowTests(BaseRegisterTests, TestCase):
     viewClass = RegisterModelActivateFlowView
     expected_form = RegisterModelForm
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
-    request_as_factory = False
-    request_method = 'get'
+    # request_as_factory = False
+    request_method = 'post'
     request_kwargs = {}
 
     @override_settings(ACCOUNT_ACTIVATION_DAYS=2, ROOT_URLCONF='django_improve_form.urls_activation')
@@ -39,6 +41,8 @@ class SimpleFlowTests(BaseRegisterTests, TestCase):
     viewClass = RegisterSimpleFlowView
     expected_form = RegisterUserForm
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
+    # request_as_factory = False
+    request_method = 'post'
 
 
 class ModifyUserTests(BaseRegisterTests, TestCase):
@@ -64,8 +68,8 @@ class ActivateFlowTests(BaseRegisterTests, TestCase):
     viewClass = RegisterActivateFlowView
     expected_form = RegisterUserForm
     user_type = 'anonymous'  # 'superuser' | 'admin' | 'user' | 'inactive' | 'anonymous'
-    request_as_factory = False
-    request_method = 'get'
+    # request_as_factory = False
+    request_method = 'post'
 
 
 DEFAULT_MODEL_NAMES = [
