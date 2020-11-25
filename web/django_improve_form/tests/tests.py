@@ -3,10 +3,11 @@ from unittest import skip
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
 from .helper_admin import AdminSetupTests  # , AdminModelManagement
 from .helper_views import BaseRegisterTests  # , USER_DEFAULTS, MimicAsView,
+from .helper_general import ProfileModel, FailUserModel, HalfFailUserModel,MockModel
 from ..views import RegisterSimpleFlowView, RegisterActivateFlowView, ModifyUser
 from ..views import RegisterModelSimpleFlowView, RegisterModelActivateFlowView
 from ..forms import RegisterUserForm, RegisterChangeForm, RegisterModelForm
-from ..forms import make_names, default_names
+from ..forms import make_names
 
 
 class AdminGeneralModelsTests(AdminSetupTests, TestCase):
@@ -83,53 +84,9 @@ class ActivateFlowTests(BaseRegisterTests, TestCase):
     request_method = 'post'
 
 
-DEFAULT_MODEL_NAMES = [
-    'extra_one', 'construct_one', 'email_field', 'custom_username', 'early_one', 'construct_two',
-    'extra_two', 'construct_three', 'username_field', 'early_two', 'generic_field', 'extra_three',
-    ]
-
-
-class ProfileModel:
-
-    def __init__(self, ignore=(), extra=()):
-        c_, names = default_names()
-        names = [name for name in names if name not in ignore]
-        names = [*names, *extra]
-        for name in names:
-            setattr(self, name, self.__class__.__name__.lower()[:-5] + '_' + name)
-        self.prop = names
-
-
-class FailModel:
-    ignore = {'email_field', 'username_field'}
-
-    def __init__(self, ignore=None, extra=()):
-        ignore = self.ignore if ignore is None else ignore
-        names = [name for name in DEFAULT_MODEL_NAMES if name not in ignore]
-        names = [*names, *extra]
-        for name in names:
-            setattr(self, name, self.__class__.__name__.lower()[:-5] + '_' + name)
-        self.prop = names
-
-
-class HalfFailModel(FailModel):
-    ignore = {'custom_username', }
-
-    def get_email_field_name(self):
-        return 'email_field'
-
-
-class MockModel(FailModel):
-    ignore = {'custom_username', }
-    USERNAME_FIELD = 'username_field'
-
-    def get_email_field_name(self):
-        return 'email_field'
-
-
 class MakeNamesModelTests(TestCase):
 
-    model_class = FailModel
+    model_class = FailUserModel
     user_model_class = MockModel
     model = model_class()
     user_model = user_model_class()
@@ -195,8 +152,8 @@ class MakeNamesModelTests(TestCase):
 
     def test_no_user_like_model(self):
         """Both the 'model_class' and 'user_model_class' are lacking the expected User model methods. """
-        self.user_model_class = FailModel
-        self.user_model = FailModel()
+        self.user_model_class = FailUserModel
+        self.user_model = FailUserModel()
         models = []
         for model in (self.model, self.user_model):
             if hasattr(model, 'get_email_field_name') and hasattr(model, 'USERNAME_FIELD'):
@@ -208,8 +165,8 @@ class MakeNamesModelTests(TestCase):
 
     def test_no_username_ref_model(self):
         """Both the 'model_class' and 'user_model_class' are lacking the 'USERNAME_FIELD' reference. """
-        self.user_model_class = HalfFailModel
-        self.user_model = HalfFailModel()
+        self.user_model_class = HalfFailUserModel
+        self.user_model = HalfFailUserModel()
         models = []
         for model in (self.model, self.user_model):
             if hasattr(model, 'get_email_field_name') and hasattr(model, 'USERNAME_FIELD'):

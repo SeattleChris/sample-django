@@ -1,6 +1,7 @@
 from unittest import skip
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
+from ..forms import default_names
 UserModel = import_string('django.contrib.auth.models.User')
 AnonymousUser = import_string('django.contrib.auth.models.AnonymousUser')
 APP_NAME = __package__.split('.')[0]
@@ -35,6 +36,49 @@ class MockSuperUser(MockStaffUser):
 
     def has_perm(self, perm):
         return True
+
+
+class ProfileModel:
+
+    def __init__(self, ignore=(), extra=()):
+        c_, names = default_names()
+        names = [name for name in names if name not in ignore]
+        names = [*names, *extra]
+        for name in names:
+            setattr(self, name, self.__class__.__name__.lower()[:-5] + '_' + name)
+        self.prop = names
+
+
+class FailUserModel:
+    ignore = {'email_field', 'username_field'}
+    field_names = [
+        'extra_one', 'construct_one', 'email_field', 'custom_username', 'early_one', 'construct_two',
+        'extra_two', 'construct_three', 'username_field', 'early_two', 'generic_field', 'extra_three',
+        ]
+
+    def __init__(self, ignore=None, extra=(), field_names=None):
+        ignore = self.ignore if ignore is None else ignore
+        field_names = self.field_names if field_names is None else field_names
+        names = [name for name in field_names if name not in ignore]
+        names = [*names, *extra]
+        for name in names:
+            setattr(self, name, self.__class__.__name__.lower()[:-5] + '_' + name)
+        self.prop = names
+
+
+class HalfFailUserModel(FailUserModel):
+    ignore = {'custom_username', }
+
+    def get_email_field_name(self):
+        return 'email_field'
+
+
+class MockModel(FailUserModel):
+    ignore = {'custom_username', }
+    USERNAME_FIELD = 'username_field'
+
+    def get_email_field_name(self):
+        return 'email_field'
 
 
 def models_from_mod_setup(data, mod_opts=None):
