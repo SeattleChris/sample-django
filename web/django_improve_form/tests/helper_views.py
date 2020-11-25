@@ -223,22 +223,54 @@ class BaseRegisterTests(MimicAsView):
         for key, val in expected_defaults.items():
             self.assertEqual(context[key], val)
 
+    def update_to_post_form(self):
+        """Called if needing an HTTP POST request on the form when we currently only have a GET. """
+        pw_fake = 'TestPW!42'
+        data = OTHER_USER.copy()
+        data.pop('password')
+        pw_data = {name: pw_fake for name in ('password1', 'password2')}
+        data.update(pw_data)
+        req_kwargs = {'data': data}
+        self.view = self.setup_view('post', req_kwargs)
+        form = self.view.get_form()
+        if getattr(form, 'cleaned_data', None) is None:
+            form.cleaned_data = pw_data
+        return form
+
+    def test_form_process(self):
+        """Does the given form with submitted data validate? """
+        self.old_view = self.view
+        print(f"==================== {self.view.__class__.__name__} TEST FORM PROCESS ==========================")
+        if self.request_method not in ('post', 'put'):
+            form = self.update_to_post_form()
+        else:
+            form = self.view.get_form()
+        pprint(form)
+        pprint(dir(form))
+        print("-----------------------------------------------")
+        if not form.is_valid():
+            pprint(form.errors)
+        else:
+            print("VALID FORM! ")
+        # pprint(dir(self.view))
+        new_user = 'NOT CREATED YET'
+        try:
+            new_user = form.save()
+        except Exception as e:
+            print("Got an exception on saving. ")
+            pprint(e)
+        print(new_user)
+        pass
+        if self.view != self.old_view:
+            self.view = self.old_view
+
     @skip("Not working yet. Not Implemented")
     def test_register(self):
         self.old_view = self.view
-        extra_cleaned_data = {}
         if self.request_method not in ('post', 'put'):
-            pw_fake = 'TestPW!42'
-            data = OTHER_USER.copy()
-            data.pop('password')
-            pw_data = {name: pw_fake for name in ('password1', 'password2')}
-            data.update(pw_data)
-            extra_cleaned_data.update(pw_data)
-            req_kwargs = {'data': data}
-            self.view = self.setup_view('post', req_kwargs)
-        form = self.view.get_form()
-        if getattr(form, 'cleaned_data', None) is None:
-            form.cleaned_data = extra_cleaned_data
+            form = self.update_to_post_form()
+        else:
+            form = self.view.get_form()
         print(f"======================== {self.view.__class__.__name__} TESTS - REGISTER =======================")
         pprint(getattr(form, 'request', 'FORM REQUEST NOT FOUND'))
         pprint(getattr(self.view, 'request', 'View REQUEST NOT FOUND'))
@@ -253,3 +285,12 @@ class BaseRegisterTests(MimicAsView):
         register = self.view.register(form)
         # register = self.view.register(form)
         pprint(register)
+
+        pass
+        if self.view != self.old_view:
+            self.view = self.old_view
+
+    @skip("Not Implemented")
+    def test_other(self):
+        """Placeholder for other tests. """
+        pass
