@@ -2,11 +2,11 @@ from django.test import Client, RequestFactory  # , TestCase,  TransactionTestCa
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
-from unittest import skip  # @skip("Not Implemented")
-from .helper_general import AnonymousUser  # , MockRequest
-# , UserModel, MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
+from unittest import skip
+from .helper_general import AnonymousUser  # , UserModel, MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
 from pprint import pprint
 
+UserModel = get_user_model()
 USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'TestPW!42', 'first_name': 'f_user', 'last_name': 'fake_y'}
 OTHER_USER = {'email': 'other@fake.com', 'password': 'TestPW!42', 'first_name': 'other_user', 'last_name': 'fake_y'}
 
@@ -208,7 +208,6 @@ class BaseRegisterTests(MimicAsView):
         if user_type == 'anonymous':
             user = AnonymousUser()
         else:
-            UserModel = get_user_model()
             kwargs = self.setup_user(**kwargs)
             kwargs.update(lookup_user_settings.get(user_type, {}))
             user = UserModel.objects.create(**kwargs)
@@ -225,9 +224,8 @@ class BaseRegisterTests(MimicAsView):
 
     def update_to_post_form(self):
         """Called if needing an HTTP POST request on the form when we currently only have a GET. """
-        pw_fake = 'TestPW!42'
         data = OTHER_USER.copy()
-        data.pop('password')
+        pw_fake = data.pop('password')
         pw_data = {name: pw_fake for name in ('password1', 'password2')}
         data.update(pw_data)
         req_kwargs = {'data': data}
@@ -280,13 +278,18 @@ class BaseRegisterTests(MimicAsView):
         print("-------------------------------------------")
         pprint(self.view.request)
         print("-------------------------------------------")
-        pprint(dir(self.view.request))
-        print("-------------------------------------------")
-        register = self.view.register(form)
-        # register = self.view.register(form)
-        pprint(register)
+        # pprint(dir(self.view.request))
+        # print("-------------------------------------------")
+        new_user = self.view.register(form)
+        pprint("Register Return: ", new_user)
+        expected_username = form.data.get('email', 'NOT_FOUND')
+        print(expected_username)
+        print("-------***************************------")
 
-        pass
+        self.assertIsInstance(new_user, UserModel)
+        self.assertEqual(expected_username, getattr(new_user, 'email', None))
+        self.assertEqual(expected_username, getattr(new_user, 'username', None))
+
         if self.view != self.old_view:
             self.view = self.old_view
 
