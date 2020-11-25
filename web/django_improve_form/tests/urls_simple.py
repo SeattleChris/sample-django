@@ -28,7 +28,7 @@ urlpatterns = [
     # path('', include('django_registration.backends.activation.urls')),  # Two-step, defaults and/or remaining views.
     path("admin/", admin.site.urls),
     path('', home_view, name='home'),
-    path('named', NamedView.as_view(), name='named_path'),
+    path('named', NamedView.as_view(), name='profile_page'),
     # path('signup', RegisterSimpleFlowView.as_view(), name='signup'),  # One-step, customized.
     path('signup', RegisterSimpleFlowView.as_view(), name='django_registration_register'),  # One-step, customized.
     path('initial', RegisterActivateFlowView.as_view(), name='initial_signup'),  # Two-step, customized.
