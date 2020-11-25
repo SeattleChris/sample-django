@@ -1,5 +1,5 @@
 from django.test import TestCase, override_settings  # , TransactionTestCase, Client, RequestFactory,
-# from unittest import skip
+from unittest import skip
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
 from .helper_admin import AdminSetupTests  # , AdminModelManagement
 from .helper_views import BaseRegisterTests  # , USER_DEFAULTS, MimicAsView,
@@ -58,6 +58,14 @@ class ModifyUserTests(BaseRegisterTests, TestCase):
         expected = self.view.request.user
         actual = self.view.get_object()
         self.assertAlmostEqual(expected, actual)
+
+    @skip("Not Implemented")
+    def test_form_settings_can_save(self):
+        super().test_form_settings_can_save()
+
+    @skip("Not Implemented")
+    def test_form_created_user_can_login(self):
+        super().test_form_created_user_can_login()
 
     def test_register(self):
         """ModifyUser is expected to NOT have a register method. """
