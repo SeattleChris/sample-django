@@ -1982,10 +1982,10 @@ class FormFieldsetTests(FormTests, TestCase):
                     expected.append(fieldset_el)
                 else:
                     expected.extend(row_data)
-            print(f"======================== TEST MAIN ROWS as type: {as_type} ==========================")
             self.assertEqual(len(expected), len(actual))
             for expect, got in zip(expected, actual):
                 if expect != got:
+                    print(f"======================== TEST MAIN ROWS as type: {as_type} ==========================")
                     print(expect)
                     print("*****************")
                     print(got)
