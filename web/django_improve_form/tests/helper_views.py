@@ -7,8 +7,8 @@ from .helper_general import AnonymousUser  # , MockRequest
 # , UserModel, MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
 from pprint import pprint
 
-USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'test1234', 'first_name': 'f_user', 'last_name': 'fake_y'}
-OTHER_USER = {'email': 'other@fake.com', 'password': 'test1234', 'first_name': 'other_user', 'last_name': 'fake_y'}
+USER_DEFAULTS = {'email': 'user_fake@fake.com', 'password': 'TestPW!42', 'first_name': 'f_user', 'last_name': 'fake_y'}
+OTHER_USER = {'email': 'other@fake.com', 'password': 'TestPW!42', 'first_name': 'other_user', 'last_name': 'fake_y'}
 
 
 class TestFormLoginRequired:
