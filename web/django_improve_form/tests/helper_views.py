@@ -65,6 +65,7 @@ class MimicAsView:
     viewClass = None  # find in app.views
     query_order_by = None  # expected tuple or list if order_by is needed.
     request_as_factory = True  # Otherwise use Client.
+    login_ability_needed = False
     request_method = 'get'
     request_kwargs = {}
 
@@ -80,13 +81,11 @@ class MimicAsView:
         if method in ('post', 'put'):
             req_kwargs = self.setup_post_request(req_kwargs)
         req_kwargs = req_kwargs or {}
-        if self.request_as_factory:
+        if self.request_as_factory and not self.login_ability_needed:
             factory = RequestFactory()
             request = getattr(factory, method)('/', **req_kwargs)
         else:
-            c = Client()
-            request = getattr(c, method)(self.url_name, **req_kwargs)
-            self.my_client = c
+            request = getattr(self.client, method)(reverse(self.url_name), **req_kwargs)
         # TODO: Should MimicAsView be updated to actually call the view get method?
         key = 'template_name'
         template_name = template_name or getattr(self, key, None) or getattr(self.viewClass, key, None)
