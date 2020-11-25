@@ -1,6 +1,7 @@
 from django.test import Client, RequestFactory  # , TestCase,  TransactionTestCase
 from django.urls import reverse
-from django.contrib.auth import get_user_model
+# from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model, login
 from django.core.exceptions import ImproperlyConfigured  # , ValidationError, NON_FIELD_ERRORS  # , ObjectDoesNotExist
 from unittest import skip
 from .helper_general import AnonymousUser  # , UserModel, MockRequest, MockUser, MockStaffUser, MockSuperUser, APP_NAME
@@ -259,7 +260,53 @@ class BaseRegisterTests(MimicAsView):
             print("Got an exception on saving. ")
             pprint(e)
         print(new_user)
-        pass
+
+        self.assertTrue(form.is_valid())
+        self.assertIsInstance(new_user, UserModel)
+
+        if self.view != self.old_view:
+            self.view = self.old_view
+        if isinstance(new_user, UserModel):
+            new_user.delete()
+
+    # @skip("Not Implemented")
+    def test_form_created_user_can_login(self):
+        """For test data that can be saved, can the newly created user authenticate and login for simple view? """
+        self.old_view = self.view
+        print(f"=================== {self.view.__class__.__name__} TEST FORM User Authenticate ======================")
+        if self.request_method not in ('post', 'put'):
+            form = self.update_to_post_form()
+        else:
+            form = self.view.get_form()
+        new_user = 'NOT CREATED YET'
+        try:
+            new_user = form.save()
+        except Exception as e:
+            print("Got an exception on saving. ")
+            pprint(e)
+        print(new_user)
+        self.assertIsInstance(new_user, UserModel)
+        new_user = authenticate(
+            **{UserModel.USERNAME_FIELD: new_user.get_username(), 'password': form.cleaned_data["password1"]}
+            )
+        logged_in, client_login = False, False
+        try:
+            login(self.view.request, new_user)
+            logged_in = True
+        except Exception as e:
+            print("Got an exception on Login. ")
+            print(e)
+        try:
+            self.client.login(username=new_user.username, password=new_user.password)
+            # login(self.view.request, new_user)
+            client_login = True
+        except Exception as e:
+            print("Got an exception on Client Login. ")
+            print(e)
+
+        self.assertTrue(logged_in or client_login)
+        self.assertTrue(logged_in)
+
         if self.view != self.old_view:
             self.view = self.old_view
         if isinstance(new_user, UserModel):
