@@ -5,7 +5,7 @@ command_line = ./web/manage.py test -v 2
 omit =
     */virtualenvs/*
     */tests/*
-    manage.py
+    web/manage.py
 data_file = cover/.coverage
 
 [report]
