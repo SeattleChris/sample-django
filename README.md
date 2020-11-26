@@ -27,6 +27,9 @@ Overview Steps:
   * TODO: UPDATE PIP COMMAND LINE HERE
 * Confirm the project works, recognizing the app from the installed packages.
 * Create a repo for the standalone Django app. Move all app code and expected typical support files.
+  * APP_DIRECTORY
+  * APPNAME.egg-info
+  * cp path/to/current/{README.rst,setup.cfg,load_tests.py,tox.ini,boot_django.py,pyroject.toml,} path/to/final
 * Update `setup.cfg` with the new repo for url, and any other changes needed.
 * Confirm all tests and functionality as expected and documented.
 * Publish to PyPI (see section below).
