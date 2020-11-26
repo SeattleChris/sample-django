@@ -3,7 +3,7 @@ import os
 import django
 from django.conf import settings
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "APPNAME"))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "django_improve_form"))
 
 
 def boot_django():
@@ -17,7 +17,7 @@ def boot_django():
             }
         },
         INSTALLED_APPS=(
-            "APPNAME",
+            "django_improve_form",
         ),
         TIME_ZONE="UTC",
         USE_TZ=True,

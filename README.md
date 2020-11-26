@@ -16,7 +16,7 @@ Overview Steps:
 * Create an app with the standard django-admin commands. Develop as desired & confirm it works.
 * Make sure there are tests for the app, and they work, before the following steps to make it a stand alone app.
 * Move the app code to a new directory at the root of the repo. This directory name can match the app name.
-* Do a global search for APPNAME and replace it with the stand alone app name.
+* Do a global search for APPNAME, exclude `APPNAME_DIRECTORY, README.md, web/` and replace it with the stand alone app name.
 * Confirm project changes:
   * settings should include the app in the installed_apps list
   * urls should include the app urls.

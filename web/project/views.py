@@ -15,3 +15,8 @@ def home_view(request):
 class NamedView(TemplateView):
     template_name = "generic/base.html"
     extra_context = {'css_sheets': ['css/home.css'], }
+
+
+class ProfileView(TemplateView):
+    template_name = "generic/base.html"
+    extra_context = {'page_title': 'Placeholder Profile Page', 'article_1__title': 'Profile Page Placeholder'}
