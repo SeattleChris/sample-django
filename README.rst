@@ -1,4 +1,4 @@
-APPNAME
+django_improve_form
 ===============
 
 This is a stand alone Django app that can be installed as a package and integrated in your Django project.
@@ -12,10 +12,10 @@ This app can be installed and used in your django project by:
 
 .. code-block:: bash
 
-    $ pip install APPNAME
+    $ pip install django_improve_form
 
 
-Edit your `settings.py` file to include `'APPNAME'` in the `INSTALLED_APPS`
+Edit your `settings.py` file to include `'django_improve_form'` in the `INSTALLED_APPS`
 listing.
 
 .. code-block:: python
@@ -23,7 +23,7 @@ listing.
     INSTALLED_APPS = [
         ...
 
-        'APPNAME',
+        'django_improve_form',
     ]
 
 
@@ -35,7 +35,7 @@ Edit your project `urls.py` file to import the URLs:
     url_patterns = [
         ...
 
-        path('APPNAME/', include('APPNAME.urls')),
+        path('django_improve_form/', include('django_improve_form.urls')),
     ]
 
 
@@ -44,18 +44,18 @@ Finally, add the models to your database:
 
 .. code-block:: bash
 
-    $ ./manage.py makemigrations APPNAME
+    $ ./manage.py makemigrations django_improve_form
 
 
 The "project" Branch
 --------------------
 
-The `master branch <https://github.com/seattlechris/APPNAME/tree/master>`_ contains the final code.
+The `master branch <https://github.com/seattlechris/django_improve_form/tree/master>`_ contains the final code.
 
 
 Docs & Source
 -------------
 
 * Article: https://realpython.com/installable-django-app/
-* Source: https://github.com/realpython/APPNAME
-* PyPI: https://pypi.org/project/APPNAME/
+* Source: https://github.com/realpython/django_improve_form
+* PyPI: https://pypi.org/project/django_improve_form/

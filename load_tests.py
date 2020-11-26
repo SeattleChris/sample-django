@@ -5,7 +5,7 @@ from boot_django import boot_django
 
 # call the django setup routine
 boot_django()
-default_labels = ["APPNAME.tests", ]
+default_labels = ["django_improve_form.tests", ]
 
 
 def get_suite(labels=default_labels):
