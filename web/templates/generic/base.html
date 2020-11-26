@@ -18,7 +18,7 @@
   {% endif %}
 
   {% block head %}
-  <title>DEFAULT SITE TITLE</title>
+  <title>{{ page_title|default:"DEFAULT SITE TITLE" }}</title>
   {% endblock head %}
 
   {% endblock super_head %}
@@ -35,6 +35,7 @@
     <ul class="site-nav">
       <li><a href="{% url 'admin:index' %}" title="Admin">Admin</a></li>
       <li><a href="{% url 'named_path' %}" title="SEO and User helpful title">Named Path</a></li>
+      <li><a href="{% url 'profile_page' %}" title="This is a profile page">Profile Placeholder</a></li>
       <li><a href="#">Info</a></li>
     </ul>
   </nav>
@@ -48,7 +49,7 @@
 
   <h1><a href="{% url 'home' %}" title="Home Site">Home Topic</a></h1>
   <article>
-    <h2>First Article in First Section</h2>
+    <h2>{{ article_1__title|default:"First Article in First Section" }}</h2>
     <p>
       {% lorem %}
       <img src="https://placehold.it/120x60/000000/FFFFFF" alt="Placeholder image" />
