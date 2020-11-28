@@ -7,7 +7,7 @@ from ..urls import urlpatterns
 from io import StringIO
 import json
 import re
-urllist = import_string('project.management.commands.urllist.Command')
+urllist = import_string('django_improve_form.management.commands.urllist.Command')
 
 
 class UrllistTests(TestCase):
