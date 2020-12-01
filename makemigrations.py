@@ -4,4 +4,4 @@ from boot_django import boot_django
 
 # call the django setup routine
 boot_django()
-call_command("makemigrations", "django_improve_form")
+call_command("makemigrations", "APPNAME")
